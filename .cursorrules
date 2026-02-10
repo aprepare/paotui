@@ -1,0 +1,30 @@
+# Cursor Rules - 校园跑腿小程序
+
+## 项目背景
+这是一个微信小程序项目，使用 uni-app + Vue3 开发。为校园用户提供跑腿、二手交易、论坛功能。
+
+## 编码要求
+1. 使用 Vue3 组合式 API：`<script setup>` + `ref` / `reactive` / `computed`
+2. 样式必须 `<style scoped>`，单位用 `rpx`（750rpx = 屏幕宽度）
+3. 页面跳转用 `uni.navigateTo()`，Tab页跳转用 `uni.switchTab()`
+4. 弹窗提示用 `uni.showToast()`
+5. 不使用第三方 UI 库，手写样式
+
+## 设计规范
+- 主色 `#4A90D9`，辅色 `#FF6B6B`，背景 `#F5F7FA`
+- 卡片：白色背景 + `border-radius: 16rpx` + `box-shadow: 0 4rpx 12rpx rgba(0,0,0,0.08)`
+- 按钮：`background: linear-gradient(135deg, #4A90D9, #357ABD)` + `border-radius: 48rpx`
+- 价格文字用 `#FF6B6B` + `font-weight: bold`
+
+## 后端计划
+后期接入微信云开发：
+- 数据库：云数据库（NoSQL）
+- 云函数：处理业务逻辑
+- 存储：图片上传用云存储
+- 支付：微信支付（需商户号）
+
+## 注意事项
+- 这是微信小程序，不支持 DOM 操作
+- 图片上传用 `uni.chooseImage()` + 云存储
+- 用户发布内容必须调用 `security.msgSecCheck` 做内容审核
+- 当前使用 Mock 数据，后续替换为云数据库调用
