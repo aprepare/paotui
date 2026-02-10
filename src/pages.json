@@ -1,0 +1,138 @@
+{
+	"pages": [
+		{
+			"path": "pages/index/index",
+			"style": {
+				"navigationBarTitleText": "校园跑腿",
+				"navigationBarBackgroundColor": "#4A90D9",
+				"navigationBarTextStyle": "white"
+			}
+		},
+		{
+			"path": "pages/market/index",
+			"style": {
+				"navigationBarTitleText": "二手市场",
+				"navigationBarBackgroundColor": "#4A90D9",
+				"navigationBarTextStyle": "white"
+			}
+		},
+		{
+			"path": "pages/forum/index",
+			"style": {
+				"navigationBarTitleText": "校园广场",
+				"navigationBarBackgroundColor": "#4A90D9",
+				"navigationBarTextStyle": "white"
+			}
+		},
+		{
+			"path": "pages/mine/index",
+			"style": {
+				"navigationBarTitleText": "我的",
+				"navigationBarBackgroundColor": "#4A90D9",
+				"navigationBarTextStyle": "white"
+			}
+		},
+		{
+			"path": "pages/order/create",
+			"style": {
+				"navigationBarTitleText": "发布跑腿",
+				"navigationBarBackgroundColor": "#4A90D9",
+				"navigationBarTextStyle": "white"
+			}
+		},
+		{
+			"path": "pages/order/detail",
+			"style": {
+				"navigationBarTitleText": "订单详情",
+				"navigationBarBackgroundColor": "#4A90D9",
+				"navigationBarTextStyle": "white"
+			}
+		},
+		{
+			"path": "pages/order/list",
+			"style": {
+				"navigationBarTitleText": "我的订单",
+				"navigationBarBackgroundColor": "#4A90D9",
+				"navigationBarTextStyle": "white"
+			}
+		},
+		{
+			"path": "pages/market/create",
+			"style": {
+				"navigationBarTitleText": "发布商品",
+				"navigationBarBackgroundColor": "#4A90D9",
+				"navigationBarTextStyle": "white"
+			}
+		},
+		{
+			"path": "pages/market/detail",
+			"style": {
+				"navigationBarTitleText": "商品详情",
+				"navigationBarBackgroundColor": "#4A90D9",
+				"navigationBarTextStyle": "white"
+			}
+		},
+		{
+			"path": "pages/forum/create",
+			"style": {
+				"navigationBarTitleText": "发布帖子",
+				"navigationBarBackgroundColor": "#4A90D9",
+				"navigationBarTextStyle": "white"
+			}
+		},
+		{
+			"path": "pages/forum/detail",
+			"style": {
+				"navigationBarTitleText": "帖子详情",
+				"navigationBarBackgroundColor": "#4A90D9",
+				"navigationBarTextStyle": "white"
+			}
+		},
+		{
+			"path": "pages/login/index",
+			"style": {
+				"navigationBarTitleText": "登录",
+				"navigationBarBackgroundColor": "#4A90D9",
+				"navigationBarTextStyle": "white"
+			}
+		}
+	],
+	"globalStyle": {
+		"navigationBarTextStyle": "white",
+		"navigationBarTitleText": "校园跑腿",
+		"navigationBarBackgroundColor": "#4A90D9",
+		"backgroundColor": "#F5F7FA"
+	},
+	"tabBar": {
+		"color": "#999999",
+		"selectedColor": "#4A90D9",
+		"borderStyle": "black",
+		"backgroundColor": "#ffffff",
+		"list": [
+			{
+				"pagePath": "pages/index/index",
+				"text": "跑腿",
+				"iconPath": "static/tab/run.png",
+				"selectedIconPath": "static/tab/run-active.png"
+			},
+			{
+				"pagePath": "pages/market/index",
+				"text": "二手",
+				"iconPath": "static/tab/market.png",
+				"selectedIconPath": "static/tab/market-active.png"
+			},
+			{
+				"pagePath": "pages/forum/index",
+				"text": "广场",
+				"iconPath": "static/tab/forum.png",
+				"selectedIconPath": "static/tab/forum-active.png"
+			},
+			{
+				"pagePath": "pages/mine/index",
+				"text": "我的",
+				"iconPath": "static/tab/mine.png",
+				"selectedIconPath": "static/tab/mine-active.png"
+			}
+		]
+	}
+}
