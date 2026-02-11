@@ -33,6 +33,94 @@
 			}
 		},
 		{
+			"path": "pages/express/index",
+			"style": {
+				"navigationBarTitleText": "代取快递",
+				"navigationBarBackgroundColor": "#4A90D9",
+				"navigationBarTextStyle": "white"
+			}
+		},
+		{
+			"path": "pages/express/create",
+			"style": {
+				"navigationBarTitleText": "发布快递单",
+				"navigationBarBackgroundColor": "#4A90D9",
+				"navigationBarTextStyle": "white"
+			}
+		},
+		{
+			"path": "pages/express/detail",
+			"style": {
+				"navigationBarTitleText": "快递详情",
+				"navigationBarBackgroundColor": "#4A90D9",
+				"navigationBarTextStyle": "white"
+			}
+		},
+		{
+			"path": "pages/express/rider-register",
+			"style": {
+				"navigationBarTitleText": "骑手注册",
+				"navigationBarBackgroundColor": "#FF9800",
+				"navigationBarTextStyle": "white"
+			}
+		},
+		{
+			"path": "pages/express/building-orders",
+			"style": {
+				"navigationBarTitleText": "楼栋订单",
+				"navigationBarBackgroundColor": "#4A90D9",
+				"navigationBarTextStyle": "white"
+			}
+		},
+		{
+			"path": "pages/errand/index",
+			"style": {
+				"navigationBarTitleText": "万能跑腿",
+				"navigationBarBackgroundColor": "#FF9800",
+				"navigationBarTextStyle": "white"
+			}
+		},
+		{
+			"path": "pages/errand/create",
+			"style": {
+				"navigationBarTitleText": "发布任务",
+				"navigationBarBackgroundColor": "#FF9800",
+				"navigationBarTextStyle": "white"
+			}
+		},
+		{
+			"path": "pages/errand/detail",
+			"style": {
+				"navigationBarTitleText": "任务详情",
+				"navigationBarBackgroundColor": "#FF9800",
+				"navigationBarTextStyle": "white"
+			}
+		},
+		{
+			"path": "pages/carpool/index",
+			"style": {
+				"navigationBarTitleText": "校园拼车",
+				"navigationBarBackgroundColor": "#43A047",
+				"navigationBarTextStyle": "white"
+			}
+		},
+		{
+			"path": "pages/carpool/create",
+			"style": {
+				"navigationBarTitleText": "发起拼车",
+				"navigationBarBackgroundColor": "#43A047",
+				"navigationBarTextStyle": "white"
+			}
+		},
+		{
+			"path": "pages/carpool/detail",
+			"style": {
+				"navigationBarTitleText": "拼车详情",
+				"navigationBarBackgroundColor": "#43A047",
+				"navigationBarTextStyle": "white"
+			}
+		},
+		{
 			"path": "pages/order/create",
 			"style": {
 				"navigationBarTitleText": "发布跑腿",
@@ -111,7 +199,7 @@
 		"list": [
 			{
 				"pagePath": "pages/index/index",
-				"text": "跑腿",
+				"text": "首页",
 				"iconPath": "static/tab/run.png",
 				"selectedIconPath": "static/tab/run-active.png"
 			},

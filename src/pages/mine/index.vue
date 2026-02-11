@@ -28,12 +28,22 @@
       <text class="section-title">我的服务</text>
       <view class="menu-list">
         <view class="menu-item" @click="goPage('/pages/order/list')">
-          <text class="menu-icon">📋</text>
-          <text class="menu-text">我的订单</text>
+          <text class="menu-icon">📦</text>
+          <text class="menu-text">我的快递单</text>
           <text class="menu-arrow">›</text>
         </view>
         <view class="menu-item" @click="goPage('/pages/order/list')">
           <text class="menu-icon">🏃</text>
+          <text class="menu-text">我的跑腿任务</text>
+          <text class="menu-arrow">›</text>
+        </view>
+        <view class="menu-item" @click="goPage('/pages/order/list')">
+          <text class="menu-icon">🚗</text>
+          <text class="menu-text">我的拼车</text>
+          <text class="menu-arrow">›</text>
+        </view>
+        <view class="menu-item" @click="goPage('/pages/order/list')">
+          <text class="menu-icon">📋</text>
           <text class="menu-text">我的接单</text>
           <text class="menu-arrow">›</text>
         </view>
@@ -45,6 +55,21 @@
         <view class="menu-item">
           <text class="menu-icon">💬</text>
           <text class="menu-text">我的帖子</text>
+          <text class="menu-arrow">›</text>
+        </view>
+      </view>
+    </view>
+    <view class="menu-section">
+      <text class="section-title">骑手中心</text>
+      <view class="menu-list">
+        <view class="menu-item" @click="goPage('/pages/express/rider-register')">
+          <text class="menu-icon">🏅</text>
+          <text class="menu-text">骑手注册/认证</text>
+          <text class="menu-arrow">›</text>
+        </view>
+        <view class="menu-item" @click="goPage('/pages/express/building-orders')">
+          <text class="menu-icon">🏢</text>
+          <text class="menu-text">楼栋订单统计</text>
           <text class="menu-arrow">›</text>
         </view>
       </view>
