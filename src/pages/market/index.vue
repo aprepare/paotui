@@ -69,7 +69,7 @@ const leftList = computed(() => goodsList.value.filter((_, i) => i % 2 === 0))
 const rightList = computed(() => goodsList.value.filter((_, i) => i % 2 === 1))
 
 const goDetail = (id) => {
-  uni.navigateTo({ url: `/pages/market/detail?id=${id}` })
+  uni.navigateTo({ url: '/pages/market/detail?id=' + id })
 }
 const goCreate = () => {
   uni.navigateTo({ url: '/pages/market/create' })

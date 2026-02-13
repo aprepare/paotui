@@ -1,7 +1,14 @@
 <template>
   <view class="forum-page">
+    <view class="search-bar">
+      <view class="search-input">
+        <text class="search-icon">🔍</text>
+        <input placeholder="搜索帖子/用户" v-model="keyword" />
+      </view>
+    </view>
+
     <view class="post-list">
-      <view v-for="post in posts" :key="post.id" class="post-card" @click="goDetail(post.id)">
+      <view v-for="post in filteredPosts" :key="post.id" class="post-card" @click="goDetail(post.id)">
         <view class="post-header">
           <view class="avatar">{{ post.avatar }}</view>
           <view class="user-info">
@@ -34,11 +41,16 @@
     <view class="fab-btn" @click="goCreate">
       <text>✏️</text>
     </view>
+
+    <ServiceFab :bottom="320" />
   </view>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
+import ServiceFab from '@/components/ServiceFab.vue'
+
+const keyword = ref('')
 
 const posts = ref([
   { id: 1, avatar: '🧑‍🎓', nickname: '学霸小王', time: '5分钟前', content: '图书馆三楼靠窗的位置真的绝了，安静又有阳光，考研党冲！有一起自习的小伙伴吗？', images: [{ emoji: '📚', bg: '#E3F2FD' }], likes: 32, comments: 8, liked: false },
@@ -48,12 +60,18 @@ const posts = ref([
   { id: 5, avatar: '📸', nickname: '摄影爱好者', time: '3小时前', content: '今天的晚霞太美了！在教学楼天台拍的，分享给大家~', images: [{ emoji: '🌅', bg: '#FFE0B2' }], likes: 256, comments: 41, liked: true }
 ])
 
+const filteredPosts = computed(() => {
+  const key = keyword.value.trim()
+  if (!key) return posts.value
+  return posts.value.filter(p => p.content.includes(key) || p.nickname.includes(key))
+})
+
 const toggleLike = (post) => {
   post.liked = !post.liked
   post.likes += post.liked ? 1 : -1
 }
 const goDetail = (id) => {
-  uni.navigateTo({ url: `/pages/forum/detail?id=${id}` })
+  uni.navigateTo({ url: '/pages/forum/detail?id=' + id })
 }
 const goCreate = () => {
   uni.navigateTo({ url: '/pages/forum/create' })
@@ -61,8 +79,14 @@ const goCreate = () => {
 </script>
 
 <style scoped>
-.forum-page { background: #F5F7FA; min-height: 100vh; padding-bottom: 120rpx; }
-.post-list { padding: 20rpx 24rpx; }
+.forum-page { background: #F5F7FA; min-height: 100vh; padding-bottom: 140rpx; }
+
+.search-bar { padding: 20rpx 24rpx 12rpx; }
+.search-input { display: flex; align-items: center; background: #fff; border-radius: 40rpx; padding: 16rpx 24rpx; box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.06); }
+.search-icon { margin-right: 12rpx; font-size: 28rpx; }
+.search-input input { flex: 1; font-size: 28rpx; }
+
+.post-list { padding: 8rpx 24rpx 20rpx; }
 .post-card { background: #fff; border-radius: 16rpx; padding: 28rpx; margin-bottom: 20rpx; box-shadow: 0 4rpx 12rpx rgba(0,0,0,0.08); }
 .post-header { display: flex; align-items: center; margin-bottom: 16rpx; }
 .avatar { width: 72rpx; height: 72rpx; border-radius: 50%; background: #E3F2FD; display: flex; align-items: center; justify-content: center; font-size: 36rpx; margin-right: 16rpx; }

@@ -17,11 +17,6 @@
         </view>
         <view class="divider"></view>
         <view class="form-item">
-          <text class="form-label">身份证号</text>
-          <input placeholder="请输入身份证号码" v-model="form.idCard" />
-        </view>
-        <view class="divider"></view>
-        <view class="form-item">
           <text class="form-label">手机号码</text>
           <input type="number" placeholder="请输入手机号" v-model="form.phone" />
         </view>
@@ -39,7 +34,7 @@
         <view class="divider"></view>
         <view class="form-item">
           <text class="form-label">学号</text>
-          <input placeholder="请输入学号" v-model="form.studentId" />
+          <input type="number" placeholder="12位学号" v-model="form.studentId" maxlength="12" @input="onStudentIdInput" />
         </view>
         <view class="divider"></view>
         <view class="form-item">
@@ -100,7 +95,6 @@ const buildingList = ['1号宿舍楼', '2号宿舍楼', '3号宿舍楼', '5号�
 
 const form = reactive({
   realName: '',
-  idCard: '',
   phone: '',
   school: '',
   studentId: '',
@@ -108,6 +102,11 @@ const form = reactive({
   studentCardUploaded: false,
   agreed: false
 })
+const onStudentIdInput = (e) => {
+  // 仅保留数字，最多12位
+  const v = String(e.detail.value || '').replace(/\D/g, '').slice(0, 12)
+  form.studentId = v
+}
 
 const onBuildingChange = (e) => {
   form.building = buildingList[e.detail.value]
@@ -128,12 +127,16 @@ const submit = () => {
     uni.showToast({ title: '请先同意服务协议', icon: 'none' })
     return
   }
-  if (!form.realName || !form.idCard || !form.phone) {
-    uni.showToast({ title: '请填写完整实名信息', icon: 'none' })
+  if (!form.realName || !form.phone) {
+    uni.showToast({ title: '请填写真实姓名和手机号', icon: 'none' })
     return
   }
   if (!form.school || !form.studentId) {
     uni.showToast({ title: '请填写学生信息', icon: 'none' })
+    return
+  }
+  if (String(form.studentId).length !== 12) {
+    uni.showToast({ title: '学号必须为12位数字', icon: 'none' })
     return
   }
   if (!form.studentCardUploaded) {

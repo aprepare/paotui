@@ -17,11 +17,12 @@ onHide(() => {
 <style>
 /* 全局样式 */
 page {
-  background-color: #F5F7FA;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background-color: #F0F2F5;
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif;
   font-size: 28rpx;
-  color: #333333;
+  color: #1A1A2E;
   box-sizing: border-box;
+  -webkit-font-smoothing: antialiased;
 }
 
 view, text, image, input, textarea, button {
@@ -30,72 +31,27 @@ view, text, image, input, textarea, button {
 
 /* 主题色变量 */
 :root {
-  --primary: #4A90D9;
-  --primary-light: #6BA5E3;
-  --primary-dark: #3A7BC8;
-  --accent: #FF6B6B;
-  --accent-light: #FF8A8A;
-  --bg: #F5F7FA;
+  --primary: #2B6CB0;
+  --primary-light: #4299E1;
+  --primary-dark: #1A4F8B;
+  --primary-bg: #EBF4FF;
+  --accent: #E53E3E;
+  --accent-light: #FC8181;
+  --bg: #F0F2F5;
   --card-bg: #FFFFFF;
-  --text-primary: #333333;
-  --text-secondary: #666666;
-  --text-hint: #999999;
-  --border: #EEEEEE;
-  --success: #52C41A;
-  --warning: #FAAD14;
-  --shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.08);
-  --shadow-light: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
+  --text-primary: #1A1A2E;
+  --text-secondary: #4A5568;
+  --text-hint: #A0AEC0;
+  --border: #E2E8F0;
+  --success: #38A169;
+  --warning: #DD6B20;
+  --shadow-sm: 0 1rpx 3rpx rgba(0,0,0,0.04), 0 1rpx 2rpx rgba(0,0,0,0.06);
+  --shadow: 0 4rpx 6rpx rgba(0,0,0,0.04), 0 2rpx 4rpx rgba(0,0,0,0.06);
+  --shadow-md: 0 8rpx 24rpx rgba(0,0,0,0.06), 0 4rpx 8rpx rgba(0,0,0,0.04);
+  --shadow-lg: 0 16rpx 48rpx rgba(0,0,0,0.08), 0 8rpx 16rpx rgba(0,0,0,0.04);
 }
 
-/* 通用卡片样式 */
-.card {
-  background: #FFFFFF;
-  border-radius: 20rpx;
-  padding: 28rpx;
-  margin: 20rpx 24rpx;
-  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.08);
-}
-
-/* 按钮样式 */
-.btn-primary {
-  background: linear-gradient(135deg, #4A90D9, #6BA5E3);
-  color: #FFFFFF;
-  border: none;
-  border-radius: 44rpx;
-  padding: 24rpx 48rpx;
-  font-size: 30rpx;
-  font-weight: 600;
-  text-align: center;
-  line-height: 1;
-}
-
-.btn-primary::after {
-  border: none;
-}
-
-.btn-accent {
-  background: linear-gradient(135deg, #FF6B6B, #FF8A8A);
-  color: #FFFFFF;
-  border: none;
-  border-radius: 44rpx;
-  padding: 24rpx 48rpx;
-  font-size: 30rpx;
-  font-weight: 600;
-  text-align: center;
-  line-height: 1;
-}
-
-.btn-accent::after {
-  border: none;
-}
-
-/* 安全区域 */
-.safe-bottom {
-  padding-bottom: env(safe-area-inset-bottom);
-}
-
-/* 隐藏滚动条 */
-::-webkit-scrollbar {
-  display: none;
-}
+/* 全局动画 - 点击反馈 */
+.tap-active { transition: transform 0.15s ease, opacity 0.15s ease; }
+.tap-active:active { transform: scale(0.96); opacity: 0.85; }
 </style>

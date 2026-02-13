@@ -19,3 +19,7 @@ dist
 *.njsproj
 *.sln
 *.sw?
+
+# Windows reserved names
+nul
+project.private.config.json

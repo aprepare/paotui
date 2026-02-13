@@ -105,12 +105,36 @@
       <view class="runner-info">
         <text class="runner-avatar">🧑‍🎓</text>
         <view class="runner-detail">
-          <text class="runner-name">{{ order.runner.name }}</text>
+          <view class="runner-top">
+            <text class="runner-name">{{ order.runner.name }}</text>
+            <view class="runner-level">
+              <text>{{ rider.levelName }}</text>
+            </view>
+          </view>
           <text class="runner-phone">{{ order.runner.phone }}</text>
+          <text class="runner-active">活跃度：{{ rider.activeScore }}</text>
         </view>
         <view class="call-btn" @click="callRunner">
           <text>📞 联系</text>
         </view>
+      </view>
+
+      <!-- 骑手实时位置（前端模拟/预留接口） -->
+      <view class="location-card">
+        <view class="location-row">
+          <text class="location-label">📍 实时位置</text>
+          <text class="location-time">{{ rider.location.updatedAt }}</text>
+        </view>
+        <text class="location-text">{{ rider.location.desc }}</text>
+        <view class="location-actions">
+          <view class="loc-btn" @click="refreshLocation">
+            <text>刷新位置</text>
+          </view>
+          <view class="loc-btn outline" @click="openMap">
+            <text>打开地图</text>
+          </view>
+        </view>
+        <text class="location-tip">说明：后续接入后端可展示真实 GPS 坐标</text>
       </view>
     </view>
 
@@ -128,6 +152,18 @@ import { ref, computed } from 'vue'
 
 const steps = ['待接单', '已接单', '配送中', '已完成']
 const isRider = ref(false) // mock：当前用户是否为骑手
+
+// mock：骑手账号信息 + 实时位置（后续从后端获取）
+const rider = ref({
+  levelName: '值得信赖',
+  activeScore: 82,
+  location: {
+    lat: 0,
+    lng: 0,
+    desc: '配送中 · 从 菜鸟驿站A区 出发',
+    updatedAt: '刚刚'
+  }
+})
 
 const order = ref({
   id: 1, sizeText: '小件', sizeClass: 'small',
@@ -185,6 +221,24 @@ const uploadPhoto = (type) => {
       uni.showToast({ title: '照片上传成功', icon: 'success' })
     }
   })
+}
+
+const refreshLocation = () => {
+  // 纯前端模拟：更新一条位置描述
+  const options = [
+    '骑手已到达 菜鸟驿站A区',
+    '骑手正在前往 6号宿舍楼',
+    '骑手已进入 宿舍楼大厅',
+    '骑手等待取件中'
+  ]
+  rider.value.location.desc = options[Math.floor(Math.random() * options.length)]
+  rider.value.location.updatedAt = '刚刚'
+  uni.showToast({ title: '位置已刷新（模拟）', icon: 'success' })
+}
+
+const openMap = () => {
+  // 需要真实 lat/lng 才能准确打开地图，这里先用提示代替
+  uni.showToast({ title: '暂无真实坐标，后续接入接口', icon: 'none' })
 }
 
 const callRunner = () => {
@@ -247,10 +301,25 @@ const callRunner = () => {
 .runner-info { display: flex; align-items: center; }
 .runner-avatar { font-size: 48rpx; margin-right: 16rpx; }
 .runner-detail { flex: 1; }
-.runner-name { font-size: 28rpx; font-weight: bold; color: #333; display: block; }
-.runner-phone { font-size: 24rpx; color: #999; }
+.runner-top { display: flex; align-items: center; gap: 12rpx; }
+.runner-name { font-size: 28rpx; font-weight: bold; color: #333; }
+.runner-level { background: #FFF3E0; border-radius: 16rpx; padding: 4rpx 12rpx; }
+.runner-level text { font-size: 20rpx; color: #FF9800; font-weight: bold; }
+.runner-phone { font-size: 24rpx; color: #999; display: block; margin-top: 6rpx; }
+.runner-active { font-size: 22rpx; color: #666; display: block; margin-top: 6rpx; }
 .call-btn { padding: 12rpx 24rpx; background: #E3F2FD; border-radius: 24rpx; }
 .call-btn text { font-size: 24rpx; color: #4A90D9; }
+
+.location-card { background: #F5F7FA; border-radius: 12rpx; padding: 18rpx 16rpx; margin-top: 16rpx; }
+.location-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10rpx; }
+.location-label { font-size: 24rpx; color: #333; font-weight: bold; }
+.location-time { font-size: 22rpx; color: #999; }
+.location-text { font-size: 24rpx; color: #666; display: block; line-height: 36rpx; }
+.location-actions { display: flex; gap: 12rpx; margin-top: 12rpx; }
+.loc-btn { padding: 10rpx 18rpx; background: #E3F2FD; border-radius: 20rpx; }
+.loc-btn.outline { background: #fff; border: 2rpx solid #4A90D9; }
+.loc-btn text { font-size: 22rpx; color: #4A90D9; font-weight: bold; }
+.location-tip { font-size: 20rpx; color: #999; margin-top: 10rpx; display: block; }
 
 .action-bar { position: fixed; bottom: 0; left: 0; right: 0; padding: 20rpx 24rpx 40rpx; background: #fff; }
 .action-btn { background: linear-gradient(135deg, #4A90D9, #357ABD); border-radius: 48rpx; padding: 28rpx; text-align: center; }

@@ -70,7 +70,7 @@ const totalCompleted = ref(23)
 const totalEarnings = ref(89)
 
 const goBuilding = (name) => {
-  uni.navigateTo({ url: `/pages/express/index?building=${encodeURIComponent(name)}` })
+  uni.navigateTo({ url: '/pages/express/index?building=' + encodeURIComponent(name) })
 }
 </script>
 

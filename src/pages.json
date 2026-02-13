@@ -1,226 +1,56 @@
 {
 	"pages": [
-		{
-			"path": "pages/index/index",
-			"style": {
-				"navigationBarTitleText": "校园跑腿",
-				"navigationBarBackgroundColor": "#4A90D9",
-				"navigationBarTextStyle": "white"
-			}
-		},
-		{
-			"path": "pages/market/index",
-			"style": {
-				"navigationBarTitleText": "二手市场",
-				"navigationBarBackgroundColor": "#4A90D9",
-				"navigationBarTextStyle": "white"
-			}
-		},
-		{
-			"path": "pages/forum/index",
-			"style": {
-				"navigationBarTitleText": "校园广场",
-				"navigationBarBackgroundColor": "#4A90D9",
-				"navigationBarTextStyle": "white"
-			}
-		},
-		{
-			"path": "pages/mine/index",
-			"style": {
-				"navigationBarTitleText": "我的",
-				"navigationBarBackgroundColor": "#4A90D9",
-				"navigationBarTextStyle": "white"
-			}
-		},
-		{
-			"path": "pages/express/index",
-			"style": {
-				"navigationBarTitleText": "代取快递",
-				"navigationBarBackgroundColor": "#4A90D9",
-				"navigationBarTextStyle": "white"
-			}
-		},
-		{
-			"path": "pages/express/create",
-			"style": {
-				"navigationBarTitleText": "发布快递单",
-				"navigationBarBackgroundColor": "#4A90D9",
-				"navigationBarTextStyle": "white"
-			}
-		},
-		{
-			"path": "pages/express/detail",
-			"style": {
-				"navigationBarTitleText": "快递详情",
-				"navigationBarBackgroundColor": "#4A90D9",
-				"navigationBarTextStyle": "white"
-			}
-		},
-		{
-			"path": "pages/express/rider-register",
-			"style": {
-				"navigationBarTitleText": "骑手注册",
-				"navigationBarBackgroundColor": "#FF9800",
-				"navigationBarTextStyle": "white"
-			}
-		},
-		{
-			"path": "pages/express/building-orders",
-			"style": {
-				"navigationBarTitleText": "楼栋订单",
-				"navigationBarBackgroundColor": "#4A90D9",
-				"navigationBarTextStyle": "white"
-			}
-		},
-		{
-			"path": "pages/errand/index",
-			"style": {
-				"navigationBarTitleText": "万能跑腿",
-				"navigationBarBackgroundColor": "#FF9800",
-				"navigationBarTextStyle": "white"
-			}
-		},
-		{
-			"path": "pages/errand/create",
-			"style": {
-				"navigationBarTitleText": "发布任务",
-				"navigationBarBackgroundColor": "#FF9800",
-				"navigationBarTextStyle": "white"
-			}
-		},
-		{
-			"path": "pages/errand/detail",
-			"style": {
-				"navigationBarTitleText": "任务详情",
-				"navigationBarBackgroundColor": "#FF9800",
-				"navigationBarTextStyle": "white"
-			}
-		},
-		{
-			"path": "pages/carpool/index",
-			"style": {
-				"navigationBarTitleText": "校园拼车",
-				"navigationBarBackgroundColor": "#43A047",
-				"navigationBarTextStyle": "white"
-			}
-		},
-		{
-			"path": "pages/carpool/create",
-			"style": {
-				"navigationBarTitleText": "发起拼车",
-				"navigationBarBackgroundColor": "#43A047",
-				"navigationBarTextStyle": "white"
-			}
-		},
-		{
-			"path": "pages/carpool/detail",
-			"style": {
-				"navigationBarTitleText": "拼车详情",
-				"navigationBarBackgroundColor": "#43A047",
-				"navigationBarTextStyle": "white"
-			}
-		},
-		{
-			"path": "pages/order/create",
-			"style": {
-				"navigationBarTitleText": "发布跑腿",
-				"navigationBarBackgroundColor": "#4A90D9",
-				"navigationBarTextStyle": "white"
-			}
-		},
-		{
-			"path": "pages/order/detail",
-			"style": {
-				"navigationBarTitleText": "订单详情",
-				"navigationBarBackgroundColor": "#4A90D9",
-				"navigationBarTextStyle": "white"
-			}
-		},
-		{
-			"path": "pages/order/list",
-			"style": {
-				"navigationBarTitleText": "我的订单",
-				"navigationBarBackgroundColor": "#4A90D9",
-				"navigationBarTextStyle": "white"
-			}
-		},
-		{
-			"path": "pages/market/create",
-			"style": {
-				"navigationBarTitleText": "发布商品",
-				"navigationBarBackgroundColor": "#4A90D9",
-				"navigationBarTextStyle": "white"
-			}
-		},
-		{
-			"path": "pages/market/detail",
-			"style": {
-				"navigationBarTitleText": "商品详情",
-				"navigationBarBackgroundColor": "#4A90D9",
-				"navigationBarTextStyle": "white"
-			}
-		},
-		{
-			"path": "pages/forum/create",
-			"style": {
-				"navigationBarTitleText": "发布帖子",
-				"navigationBarBackgroundColor": "#4A90D9",
-				"navigationBarTextStyle": "white"
-			}
-		},
-		{
-			"path": "pages/forum/detail",
-			"style": {
-				"navigationBarTitleText": "帖子详情",
-				"navigationBarBackgroundColor": "#4A90D9",
-				"navigationBarTextStyle": "white"
-			}
-		},
-		{
-			"path": "pages/login/index",
-			"style": {
-				"navigationBarTitleText": "登录",
-				"navigationBarBackgroundColor": "#4A90D9",
-				"navigationBarTextStyle": "white"
-			}
-		}
+		{ "path": "pages/index/index", "style": { "navigationBarTitleText": "校园跑腿", "navigationBarBackgroundColor": "#1A4F8B", "navigationBarTextStyle": "white", "enablePullDownRefresh": true, "backgroundTextStyle": "dark" } },
+		{ "path": "pages/welfare/index", "style": { "navigationBarTitleText": "校园福利", "navigationBarBackgroundColor": "#DD6B20", "navigationBarTextStyle": "white" } },
+		{ "path": "pages/market/index", "style": { "navigationBarTitleText": "二手市场", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } },
+		{ "path": "pages/forum/index", "style": { "navigationBarTitleText": "校园广场", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } },
+		{ "path": "pages/mine/index", "style": { "navigationBarTitleText": "我的", "navigationBarBackgroundColor": "#1A4F8B", "navigationBarTextStyle": "white" } },
+		{ "path": "pages/express/index", "style": { "navigationBarTitleText": "代取快递", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white", "enablePullDownRefresh": true, "backgroundTextStyle": "dark" } },
+		{ "path": "pages/express/create", "style": { "navigationBarTitleText": "发布快递单", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } },
+		{ "path": "pages/express/detail", "style": { "navigationBarTitleText": "快递详情", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } },
+		{ "path": "pages/express/rider-register", "style": { "navigationBarTitleText": "骑手注册", "navigationBarBackgroundColor": "#DD6B20", "navigationBarTextStyle": "white" } },
+		{ "path": "pages/express/building-orders", "style": { "navigationBarTitleText": "楼栋订单", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } },
+		{ "path": "pages/errand/index", "style": { "navigationBarTitleText": "万能跑腿", "navigationBarBackgroundColor": "#DD6B20", "navigationBarTextStyle": "white", "enablePullDownRefresh": true, "backgroundTextStyle": "dark" } },
+		{ "path": "pages/errand/create", "style": { "navigationBarTitleText": "发布任务", "navigationBarBackgroundColor": "#DD6B20", "navigationBarTextStyle": "white" } },
+		{ "path": "pages/errand/detail", "style": { "navigationBarTitleText": "任务详情", "navigationBarBackgroundColor": "#DD6B20", "navigationBarTextStyle": "white" } },
+		{ "path": "pages/carpool/index", "style": { "navigationBarTitleText": "校园拼车", "navigationBarBackgroundColor": "#38A169", "navigationBarTextStyle": "white" } },
+		{ "path": "pages/carpool/create", "style": { "navigationBarTitleText": "发起拼车", "navigationBarBackgroundColor": "#38A169", "navigationBarTextStyle": "white" } },
+		{ "path": "pages/carpool/detail", "style": { "navigationBarTitleText": "拼车详情", "navigationBarBackgroundColor": "#38A169", "navigationBarTextStyle": "white" } },
+		{ "path": "pages/order/create", "style": { "navigationBarTitleText": "发布跑腿", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } },
+		{ "path": "pages/order/detail", "style": { "navigationBarTitleText": "订单详情", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } },
+		{ "path": "pages/order/list", "style": { "navigationBarTitleText": "我的订单", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } },
+		{ "path": "pages/market/create", "style": { "navigationBarTitleText": "发布商品", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } },
+		{ "path": "pages/market/detail", "style": { "navigationBarTitleText": "商品详情", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } },
+		{ "path": "pages/forum/create", "style": { "navigationBarTitleText": "发布帖子", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } },
+		{ "path": "pages/forum/detail", "style": { "navigationBarTitleText": "帖子详情", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } },
+		{ "path": "pages/team/index", "style": { "navigationBarTitleText": "校园组队", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } },
+		{ "path": "pages/team/detail", "style": { "navigationBarTitleText": "组队详情", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } },
+		{ "path": "pages/team/create", "style": { "navigationBarTitleText": "发起组队", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } },
+		{ "path": "pages/login/index", "style": { "navigationBarTitleText": "登录", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } },
+		{ "path": "pages/job/index", "style": { "navigationBarTitleText": "兼职信息", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } },
+		{ "path": "pages/graduate/index", "style": { "navigationBarTitleText": "考研服务", "navigationBarBackgroundColor": "#38A169", "navigationBarTextStyle": "white" } },
+		{ "path": "pages/kefu/show", "style": { "navigationBarTitleText": "客服", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } }
 	],
 	"globalStyle": {
 		"navigationBarTextStyle": "white",
 		"navigationBarTitleText": "校园跑腿",
-		"navigationBarBackgroundColor": "#4A90D9",
-		"backgroundColor": "#F5F7FA"
+		"navigationBarBackgroundColor": "#2B6CB0",
+		"backgroundColor": "#F0F2F5"
+	},
+	"permission": {
+		"scope.userLocation": { "desc": "用于展示当前位置和骑手距离" }
 	},
 	"tabBar": {
-		"color": "#999999",
-		"selectedColor": "#4A90D9",
+		"color": "#A0AEC0",
+		"selectedColor": "#2B6CB0",
 		"borderStyle": "black",
 		"backgroundColor": "#ffffff",
 		"list": [
-			{
-				"pagePath": "pages/index/index",
-				"text": "首页",
-				"iconPath": "static/tab/run.png",
-				"selectedIconPath": "static/tab/run-active.png"
-			},
-			{
-				"pagePath": "pages/market/index",
-				"text": "二手",
-				"iconPath": "static/tab/market.png",
-				"selectedIconPath": "static/tab/market-active.png"
-			},
-			{
-				"pagePath": "pages/forum/index",
-				"text": "广场",
-				"iconPath": "static/tab/forum.png",
-				"selectedIconPath": "static/tab/forum-active.png"
-			},
-			{
-				"pagePath": "pages/mine/index",
-				"text": "我的",
-				"iconPath": "static/tab/mine.png",
-				"selectedIconPath": "static/tab/mine-active.png"
-			}
+			{ "pagePath": "pages/index/index", "text": "首页", "iconPath": "static/tab/run.png", "selectedIconPath": "static/tab/run-active.png" },
+			{ "pagePath": "pages/welfare/index", "text": "福利", "iconPath": "static/tab/market.png", "selectedIconPath": "static/tab/market-active.png" },
+			{ "pagePath": "pages/forum/index", "text": "广场", "iconPath": "static/tab/forum.png", "selectedIconPath": "static/tab/forum-active.png" },
+			{ "pagePath": "pages/team/index", "text": "组队", "iconPath": "static/tab/team.png", "selectedIconPath": "static/tab/team-active.png" },
+			{ "pagePath": "pages/mine/index", "text": "我的", "iconPath": "static/tab/mine.png", "selectedIconPath": "static/tab/mine-active.png" }
 		]
 	}
 }

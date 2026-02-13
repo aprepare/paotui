@@ -14,7 +14,17 @@
       "minified": true
     },
     "usingComponents": true,
-    "lazyCodeLoading": "requiredComponents"
+    "lazyCodeLoading": "requiredComponents",
+    "permission": {
+      "scope.userLocation": {
+        "desc": "用于展示当前位置和骑手距离"
+      }
+    }
+  },
+  "permission": {
+    "scope.userLocation": {
+      "desc": "用于展示当前位置和骑手距离"
+    }
   },
   "h5": {
     "title": "校园跑腿",
