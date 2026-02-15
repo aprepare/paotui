@@ -1,14 +1,10 @@
 <template>
-  <view class="service-fab" :style="'bottom:' + bottom + 'rpx'" @click="previewKefu">
+  <view class="service-fab" @click="previewKefu">
     <text class="service-text">客服</text>
   </view>
 </template>
 
 <script setup>
-const props = defineProps({
-  bottom: { type: Number, default: 160 }
-})
-
 const previewKefu = () => {
   uni.navigateTo({ url: '/pages/kefu/show?img=' + encodeURIComponent('/static/TeamWork.png') })
 }
@@ -18,6 +14,7 @@ const previewKefu = () => {
 .service-fab {
   position: fixed;
   right: 32rpx;
+  top: 25%;
   width: 88rpx;
   height: 88rpx;
   border-radius: 24rpx;

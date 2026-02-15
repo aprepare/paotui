@@ -54,16 +54,34 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
+import { onShow } from '@dcloudio/uni-app'
+import { callCloud } from '@/utils/cloud'
 
 const tab = ref(0)
 const tabNames = ['全部拼车','可加入','已满员']
-const carpoolList = ref([
-  { id: 1, from: '学校南门', to: '火车站', departTime: '2026-02-11 08:00', pickupLocation: '南门星巴克门口', deadline: '2026-02-10 22:00', maxPeople: 4, currentPeople: 2, publisher: '小王', avatar: '🧑', publishTime: '1小时前' },
-  { id: 2, from: '学校北门', to: '机场T2', departTime: '2026-02-12 06:30', pickupLocation: '北门公交站', deadline: '2026-02-11 20:00', maxPeople: 3, currentPeople: 1, publisher: '小陈', avatar: '👩', publishTime: '2小时前' },
-  { id: 3, from: '学校西门', to: '高铁站', departTime: '2026-02-11 14:00', pickupLocation: '西门快递站旁', deadline: '2026-02-11 12:00', maxPeople: 4, currentPeople: 4, publisher: '老张', avatar: '🧑‍🎓', publishTime: '3小时前' },
-  { id: 4, from: '市中心', to: '学校东门', departTime: '2026-02-13 18:00', pickupLocation: '万达广场正门', deadline: '2026-02-13 16:00', maxPeople: 3, currentPeople: 1, publisher: '小李', avatar: '👩‍🎓', publishTime: '5小时前' }
-])
+const carpoolList = ref([])
+
+const loadData = async () => {
+  const res = await callCloud('carpool', 'list', { filter: tab.value })
+  if (res.code === 0) {
+    carpoolList.value = res.data.map(c => ({
+      id: c._id,
+      from: c.from,
+      to: c.to,
+      departTime: c.departTime || '',
+      pickupLocation: c.pickupLocation || '',
+      maxPeople: c.maxPeople || 4,
+      currentPeople: c.currentPeople || 1,
+      publisher: c.publisher || '匿名',
+      avatar: '🧑',
+      publishTime: ''
+    }))
+  }
+}
+
+onShow(() => { loadData() })
+watch(tab, () => { loadData() })
 
 const filteredList = computed(() => {
   if (tab.value === 0) return carpoolList.value

@@ -22,7 +22,21 @@
       </view>
       <view class="form-item">
         <text class="form-label">活动时间</text>
-        <input class="form-input" v-model="form.time" placeholder="如：周六16:00" placeholder-style="color:#A0AEC0" />
+        <picker mode="date" :start="todayStr" @change="onDatePick">
+          <view class="form-picker">
+            <text :class="form.date ? '' : 'placeholder'">{{ form.date || '选择日期' }}</text>
+            <text class="picker-arrow">›</text>
+          </view>
+        </picker>
+      </view>
+      <view class="form-item">
+        <text class="form-label">具体时间</text>
+        <picker mode="time" @change="onTimePick">
+          <view class="form-picker">
+            <text :class="form.hour ? '' : 'placeholder'">{{ form.hour || '选择时间' }}</text>
+            <text class="picker-arrow">›</text>
+          </view>
+        </picker>
       </view>
       <view class="form-item">
         <text class="form-label">最大人数</text>
@@ -68,66 +82,57 @@
 
 <script setup>
 import { reactive } from 'vue'
+import { callCloud, uploadImages, checkLogin } from '@/utils/cloud.js'
 
-const typeOptions = ['校园开黑', '球类竞技', '校园陪跑', '撸铁健身']
+const typeOptions = ['校园开黑', '球类竞技', '校园陪跑', '撸铁健身', '户外骑行', '其他活动']
+
+var _now = new Date()
+var todayStr = _now.getFullYear() + '-' + String(_now.getMonth() + 1).padStart(2, '0') + '-' + String(_now.getDate()).padStart(2, '0')
 
 const form = reactive({
-  title: '',
-  type: '',
-  place: '',
-  time: '',
-  max: '',
-  desc: '',
-  images: []
+  title: '', type: '', place: '', date: '', hour: '', max: '', desc: '', images: []
 })
 
-const onTypePick = (e) => {
-  form.type = typeOptions[e.detail.value]
-}
+const onTypePick = (e) => { form.type = typeOptions[e.detail.value] }
+const onDatePick = (e) => { form.date = e.detail.value }
+const onTimePick = (e) => { form.hour = e.detail.value }
 
 const chooseImage = () => {
   const remain = 9 - form.images.length
   uni.chooseImage({
-    count: remain,
-    sizeType: ['compressed'],
-    sourceType: ['album', 'camera'],
-    success: (res) => {
-      form.images = form.images.concat(res.tempFilePaths)
-    }
+    count: remain, sizeType: ['compressed'], sourceType: ['album', 'camera'],
+    success: (res) => { form.images = form.images.concat(res.tempFilePaths) }
   })
 }
 
-const removeImg = (index) => {
-  form.images.splice(index, 1)
-}
+const removeImg = (index) => { form.images.splice(index, 1) }
+const previewImg = (index) => { uni.previewImage({ urls: form.images, current: form.images[index] }) }
 
-const previewImg = (index) => {
-  uni.previewImage({ urls: form.images, current: form.images[index] })
-}
+const onSubmit = async () => {
+  if (!checkLogin()) return
+  if (!form.title) return uni.showToast({ title: '请输入活动标题', icon: 'none' })
+  if (!form.type) return uni.showToast({ title: '请选择活动类型', icon: 'none' })
+  if (!form.place) return uni.showToast({ title: '请输入活动地点', icon: 'none' })
+  if (!form.date) return uni.showToast({ title: '请选择活动日期', icon: 'none' })
+  if (!form.hour) return uni.showToast({ title: '请选择活动时间', icon: 'none' })
+  if (!form.max || Number(form.max) < 2) return uni.showToast({ title: '人数至少2人', icon: 'none' })
 
-const onSubmit = () => {
-  if (!form.title) {
-    uni.showToast({ title: '请输入活动标题', icon: 'none' })
-    return
+  var activityTime = form.date + ' ' + form.hour
+
+  uni.showLoading({ title: '发布中...' })
+  let imageFileIDs = []
+  if (form.images.length > 0) {
+    imageFileIDs = await uploadImages(form.images, 'team-images')
   }
-  if (!form.type) {
-    uni.showToast({ title: '请选择活动类型', icon: 'none' })
-    return
+  const res = await callCloud('team', 'create', {
+    title: form.title, type: form.type, place: form.place,
+    time: activityTime, max: form.max, desc: form.desc, images: imageFileIDs
+  })
+  uni.hideLoading()
+  if (res.code === 0) {
+    uni.showToast({ title: '发布成功', icon: 'success' })
+    setTimeout(() => { uni.navigateBack() }, 1200)
   }
-  if (!form.place) {
-    uni.showToast({ title: '请输入活动地点', icon: 'none' })
-    return
-  }
-  if (!form.time) {
-    uni.showToast({ title: '请输入活动时间', icon: 'none' })
-    return
-  }
-  if (!form.max || Number(form.max) < 2) {
-    uni.showToast({ title: '人数至少2人', icon: 'none' })
-    return
-  }
-  uni.showToast({ title: '发布成功', icon: 'success' })
-  setTimeout(() => { uni.navigateBack() }, 1200)
 }
 </script>
 

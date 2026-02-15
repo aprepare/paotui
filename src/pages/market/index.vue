@@ -48,22 +48,36 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
+import { onShow } from '@dcloudio/uni-app'
+import { callCloud } from '@/utils/cloud'
 
 const keyword = ref('')
 const currentCat = ref(0)
 const categories = ref(['全部', '数码', '书籍', '服饰', '生活', '其他'])
+const colorPool = ['#E3F2FD', '#FFF3E0', '#F3E5F5', '#E8F5E9', '#FFEBEE', '#E0F7FA', '#FFF8E1', '#F1F8E9']
+const heightPool = [220, 240, 260, 280, 300]
 
-const goodsList = ref([
-  { id: 1, title: '九成新iPad Air 5 64G WiFi版', price: 2800, emoji: '📱', color: '#E3F2FD', imgH: 280, views: 23 },
-  { id: 2, title: '高等数学同济第七版 上下册', price: 15, emoji: '📚', color: '#FFF3E0', imgH: 220, views: 45 },
-  { id: 3, title: 'AirPods Pro 2 带保修', price: 980, emoji: '🎧', color: '#F3E5F5', imgH: 260, views: 18 },
-  { id: 4, title: '宜家台灯 护眼款', price: 35, emoji: '💡', color: '#E8F5E9', imgH: 200, views: 12 },
-  { id: 5, title: 'Nike Air Force 1 白色 42码', price: 199, emoji: '👟', color: '#FFEBEE', imgH: 240, views: 31 },
-  { id: 6, title: '小米显示器27寸2K', price: 650, emoji: '🖥️', color: '#E0F7FA', imgH: 300, views: 27 },
-  { id: 7, title: '考研政治全套资料', price: 25, emoji: '📖', color: '#FFF8E1', imgH: 210, views: 56 },
-  { id: 8, title: '罗技G304无线鼠标', price: 89, emoji: '🖱️', color: '#F1F8E9', imgH: 230, views: 14 }
-])
+const goodsList = ref([])
+
+const loadData = async () => {
+  const cat = categories.value[currentCat.value]
+  const res = await callCloud('market', 'list', { category: cat, keyword: keyword.value })
+  if (res.code === 0) {
+    goodsList.value = res.data.map((g, i) => ({
+      id: g._id,
+      title: g.title || '',
+      price: g.price || 0,
+      emoji: '🛒',
+      color: colorPool[i % colorPool.length],
+      imgH: heightPool[i % heightPool.length],
+      views: g.wants || 0
+    }))
+  }
+}
+
+onShow(() => { loadData() })
+watch(currentCat, () => { loadData() })
 
 const leftList = computed(() => goodsList.value.filter((_, i) => i % 2 === 0))
 const rightList = computed(() => goodsList.value.filter((_, i) => i % 2 === 1))

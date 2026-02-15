@@ -3,6 +3,28 @@ import { onLaunch, onShow, onHide } from '@dcloudio/uni-app'
 
 onLaunch(() => {
   console.log('App Launch')
+  // 初始化云开发
+  if (wx.cloud) {
+    wx.cloud.init({
+      env: 'cloudbase-3g5qd6t022a198cf',
+      traceUser: true
+    })
+  }
+  // 自动登录
+  wx.cloud.callFunction({
+    name: 'user',
+    data: { action: 'login' }
+  }).then(res => {
+    if (res.result && res.result.code === 0) {
+      const user = res.result.data
+      uni.setStorageSync('userInfo', user)
+      uni.setStorageSync('openid', user.openid || '')
+      uni.setStorageSync('isRider', user.isRider ? 1 : 0)
+      console.log('login success', user.openid)
+    }
+  }).catch(err => {
+    console.error('login error', err)
+  })
 })
 
 onShow(() => {

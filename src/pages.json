@@ -18,16 +18,22 @@
 		{ "path": "pages/carpool/detail", "style": { "navigationBarTitleText": "拼车详情", "navigationBarBackgroundColor": "#38A169", "navigationBarTextStyle": "white" } },
 		{ "path": "pages/order/create", "style": { "navigationBarTitleText": "发布跑腿", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } },
 		{ "path": "pages/order/detail", "style": { "navigationBarTitleText": "订单详情", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } },
-		{ "path": "pages/order/list", "style": { "navigationBarTitleText": "我的订单", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } },
+		{ "path": "pages/order/list", "style": { "navigationBarTitleText": "关于我的", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } },
 		{ "path": "pages/market/create", "style": { "navigationBarTitleText": "发布商品", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } },
 		{ "path": "pages/market/detail", "style": { "navigationBarTitleText": "商品详情", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } },
 		{ "path": "pages/forum/create", "style": { "navigationBarTitleText": "发布帖子", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } },
 		{ "path": "pages/forum/detail", "style": { "navigationBarTitleText": "帖子详情", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } },
+		{ "path": "pages/forum/my", "style": { "navigationBarTitleText": "我的帖子", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } },
 		{ "path": "pages/team/index", "style": { "navigationBarTitleText": "校园组队", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } },
 		{ "path": "pages/team/detail", "style": { "navigationBarTitleText": "组队详情", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } },
 		{ "path": "pages/team/create", "style": { "navigationBarTitleText": "发起组队", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } },
+		{ "path": "pages/team/list", "style": { "navigationBarTitleText": "组队列表", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white", "enablePullDownRefresh": true, "backgroundTextStyle": "dark" } },
+		{ "path": "pages/message/index", "style": { "navigationBarTitleText": "消息中心", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } },
 		{ "path": "pages/login/index", "style": { "navigationBarTitleText": "登录", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } },
-		{ "path": "pages/job/index", "style": { "navigationBarTitleText": "兼职信息", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } },
+		{ "path": "pages/market/my", "style": { "navigationBarTitleText": "我的商品", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } },
+		{ "path": "pages/mine/favorites", "style": { "navigationBarTitleText": "我的收藏", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } },
+		{ "path": "pages/mine/services", "style": { "navigationBarTitleText": "更多服务", "navigationBarBackgroundColor": "#1A4F8B", "navigationBarTextStyle": "white" } },
+		{ "path": "pages/job/index", "style": { "navigationBarTitleText": "校园兼职", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } },
 		{ "path": "pages/graduate/index", "style": { "navigationBarTitleText": "考研服务", "navigationBarBackgroundColor": "#38A169", "navigationBarTextStyle": "white" } },
 		{ "path": "pages/kefu/show", "style": { "navigationBarTitleText": "客服", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } }
 	],
@@ -47,9 +53,9 @@
 		"backgroundColor": "#ffffff",
 		"list": [
 			{ "pagePath": "pages/index/index", "text": "首页", "iconPath": "static/tab/run.png", "selectedIconPath": "static/tab/run-active.png" },
-			{ "pagePath": "pages/welfare/index", "text": "福利", "iconPath": "static/tab/market.png", "selectedIconPath": "static/tab/market-active.png" },
+			{ "pagePath": "pages/job/index", "text": "兼职", "iconPath": "static/tab/market.png", "selectedIconPath": "static/tab/market-active.png" },
 			{ "pagePath": "pages/forum/index", "text": "广场", "iconPath": "static/tab/forum.png", "selectedIconPath": "static/tab/forum-active.png" },
-			{ "pagePath": "pages/team/index", "text": "组队", "iconPath": "static/tab/team.png", "selectedIconPath": "static/tab/team-active.png" },
+			{ "pagePath": "pages/welfare/index", "text": "福利", "iconPath": "static/tab/team.png", "selectedIconPath": "static/tab/team-active.png" },
 			{ "pagePath": "pages/mine/index", "text": "我的", "iconPath": "static/tab/mine.png", "selectedIconPath": "static/tab/mine-active.png" }
 		]
 	}

@@ -19,7 +19,8 @@
       "scope.userLocation": {
         "desc": "用于展示当前位置和骑手距离"
       }
-    }
+    },
+    "requiredPrivateInfos": ["getLocation"]
   },
   "permission": {
     "scope.userLocation": {

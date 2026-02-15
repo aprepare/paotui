@@ -1,0 +1,13 @@
+{
+  "enabled": true,
+  "name": "始终用简体中文回复",
+  "description": "在每次提交 prompt 时，提醒 AI 使用简体中文进行回复。",
+  "version": "1",
+  "when": {
+    "type": "promptSubmit"
+  },
+  "then": {
+    "type": "runCommand",
+    "command": "echo \"请使用简体中文回复用户。\""
+  }
+}

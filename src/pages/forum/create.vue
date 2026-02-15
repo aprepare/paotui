@@ -6,11 +6,11 @@
     </view>
     <view class="img-section" v-if="images.length > 0 || true">
       <view class="img-grid">
-        <view v-for="(img, i) in images" :key="i" class="img-item">
-          <text class="img-emoji">{{ img }}</text>
-          <view class="img-del" @click="images.splice(i, 1)">×</view>
+        <view v-for="(img, i) in tempPaths" :key="i" class="img-item">
+          <image class="img-thumb" :src="img" mode="aspectFill" />
+          <view class="img-del" @click="removeImage(i)">×</view>
         </view>
-        <view v-if="images.length < 9" class="img-add" @click="addImage">
+        <view v-if="tempPaths.length < 9" class="img-add" @click="addImage">
           <text class="add-icon">📷</text>
           <text class="add-text">添加图片</text>
         </view>
@@ -35,22 +35,52 @@
 
 <script setup>
 import { ref } from 'vue'
+import { callCloud, uploadImages, checkLogin } from '@/utils/cloud'
 
 const content = ref('')
 const images = ref([])
+const tempPaths = ref([])
 
+const removeImage = (i) => {
+  images.value.splice(i, 1)
+  tempPaths.value.splice(i, 1)
+}
 const addImage = () => {
   if (images.value.length >= 9) return
-  const emojis = ['🌅', '🏫', '🍜', '📚', '🎮', '🏀', '🎸', '🐱', '🌸']
-  images.value.push(emojis[Math.floor(Math.random() * emojis.length)])
+  uni.chooseImage({
+    count: 9 - images.value.length,
+    success: (res) => {
+      res.tempFilePaths.forEach(p => {
+        images.value.push('🖼️')
+        tempPaths.value.push(p)
+      })
+    }
+  })
 }
-const submit = () => {
+const submitting = ref(false)
+const submit = async () => {
+  if (!checkLogin()) return
   if (!content.value.trim()) {
     uni.showToast({ title: '请输入内容', icon: 'none' })
     return
   }
-  uni.showToast({ title: '发布成功！', icon: 'success' })
-  setTimeout(() => uni.navigateBack(), 1500)
+  if (submitting.value) return
+  submitting.value = true
+  let imageIds = []
+  if (tempPaths.value.length > 0) {
+    uni.showLoading({ title: '上传图片中...' })
+    imageIds = await uploadImages(tempPaths.value, 'forum')
+    uni.hideLoading()
+  }
+  const res = await callCloud('forum', 'create', {
+    content: content.value,
+    images: imageIds
+  })
+  submitting.value = false
+  if (res.code === 0) {
+    uni.showToast({ title: '发布成功！', icon: 'success' })
+    setTimeout(() => uni.navigateBack(), 1500)
+  }
 }
 </script>
 
@@ -61,7 +91,8 @@ const submit = () => {
 .word-count { font-size: 22rpx; color: #999; text-align: right; display: block; margin-top: 8rpx; }
 .img-section { padding: 0 24rpx 24rpx; }
 .img-grid { display: flex; flex-wrap: wrap; gap: 16rpx; }
-.img-item { width: 180rpx; height: 180rpx; border-radius: 12rpx; background: #F5F7FA; display: flex; align-items: center; justify-content: center; position: relative; }
+.img-item { width: 180rpx; height: 180rpx; border-radius: 12rpx; background: #F5F7FA; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
+.img-thumb { width: 180rpx; height: 180rpx; }
 .img-emoji { font-size: 56rpx; }
 .img-del { position: absolute; top: -10rpx; right: -10rpx; width: 36rpx; height: 36rpx; background: #FF6B6B; border-radius: 50%; color: #fff; font-size: 24rpx; display: flex; align-items: center; justify-content: center; }
 .img-add { width: 180rpx; height: 180rpx; border-radius: 12rpx; border: 2rpx dashed #ccc; display: flex; flex-direction: column; align-items: center; justify-content: center; }

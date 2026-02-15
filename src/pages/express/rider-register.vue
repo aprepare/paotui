@@ -9,7 +9,7 @@
 
     <!-- 实名信息 -->
     <view class="form-section">
-      <text class="section-title">📋 实名认证</text>
+      <text class="section-title">📋 实名认证（手机号为必填项）</text>
       <view class="form-card">
         <view class="form-item">
           <text class="form-label">真实姓名</text>
@@ -18,7 +18,19 @@
         <view class="divider"></view>
         <view class="form-item">
           <text class="form-label">手机号码</text>
-          <input type="number" placeholder="请输入手机号" v-model="form.phone" />
+          <input type="number" placeholder="请输入手机号" v-model="form.phone" maxlength="11" />
+        </view>
+        <view class="divider"></view>
+        <view class="form-item sms-row">
+          <text class="form-label">验证码</text>
+          <input type="number" placeholder="请输入验证码" v-model="smsCode" maxlength="6" class="sms-input" />
+          <view class="sms-btn" :class="{disabled: !isPhoneValid || countdown > 0}" @click="sendCode">
+            <text>{{ countdown > 0 ? countdown + 's' : '获取验证码' }}</text>
+          </view>
+        </view>
+        <view class="phone-hint">
+          <text class="hint-icon">🔒</text>
+          <text class="hint-text">手机号严格保密，其他用户无法查看</text>
         </view>
       </view>
     </view>
@@ -89,9 +101,41 @@
 </template>
 
 <script setup>
-import { reactive } from 'vue'
+import { reactive, ref, computed } from 'vue'
+import { callCloud, uploadImage, checkLogin } from '@/utils/cloud'
 
 const buildingList = ['1号宿舍楼', '2号宿舍楼', '3号宿舍楼', '5号宿舍楼', '6号宿舍楼', '8号宿舍楼', '10号宿舍楼', '12号宿舍楼']
+
+const smsCode = ref('')
+const countdown = ref(0)
+const phoneVerified = ref(false)
+var countdownTimer = null
+
+const isPhoneValid = computed(() => {
+  return /^1[3-9]\d{9}$/.test(form.phone)
+})
+
+const sendCode = async () => {
+  if (countdown.value > 0) return
+  if (!isPhoneValid.value) {
+    uni.showToast({ title: '请先输入正确的11位手机号', icon: 'none' })
+    return
+  }
+  var res = await callCloud('user', 'sendSmsCode', { phone: form.phone })
+  if (res.code === 0) {
+    uni.showToast({ title: '验证码已发送', icon: 'success' })
+    countdown.value = 60
+    countdownTimer = setInterval(function() {
+      countdown.value--
+      if (countdown.value <= 0) {
+        clearInterval(countdownTimer)
+        countdownTimer = null
+      }
+    }, 1000)
+  } else {
+    uni.showToast({ title: res.msg || '发送失败', icon: 'none' })
+  }
+}
 
 const form = reactive({
   realName: '',
@@ -100,6 +144,7 @@ const form = reactive({
   studentId: '',
   building: '',
   studentCardUploaded: false,
+  studentCardFileID: '',
   agreed: false
 })
 const onStudentIdInput = (e) => {
@@ -115,36 +160,95 @@ const onBuildingChange = (e) => {
 const uploadStudentCard = () => {
   uni.chooseImage({
     count: 1,
-    success: () => {
+    success: async (res) => {
+      uni.showLoading({ title: '上传中...' })
+      const fileID = await uploadImage(res.tempFilePaths[0], 'rider')
+      uni.hideLoading()
       form.studentCardUploaded = true
+      form.studentCardFileID = fileID
       uni.showToast({ title: '上传成功', icon: 'success' })
     }
   })
 }
 
-const submit = () => {
+const submitting = ref(false)
+const submit = async () => {
   if (!form.agreed) {
     uni.showToast({ title: '请先同意服务协议', icon: 'none' })
     return
   }
-  if (!form.realName || !form.phone) {
-    uni.showToast({ title: '请填写真实姓名和手机号', icon: 'none' })
+  if (!checkLogin()) return
+  if (!form.realName.trim()) {
+    uni.showToast({ title: '请输入真实姓名', icon: 'none' })
     return
   }
-  if (!form.school || !form.studentId) {
-    uni.showToast({ title: '请填写学生信息', icon: 'none' })
+  if (form.realName.trim().length < 2 || form.realName.trim().length > 10) {
+    uni.showToast({ title: '姓名长度为2-10个字', icon: 'none' })
     return
   }
-  if (String(form.studentId).length !== 12) {
-    uni.showToast({ title: '学号必须为12位数字', icon: 'none' })
+  if (/[0-9]/.test(form.realName)) {
+    uni.showToast({ title: '姓名不能包含数字', icon: 'none' })
+    return
+  }
+  if (!form.phone) {
+    uni.showToast({ title: '请输入手机号', icon: 'none' })
+    return
+  }
+  if (!/^1[3-9]\d{9}$/.test(form.phone)) {
+    uni.showToast({ title: '请输入正确的11位手机号', icon: 'none' })
+    return
+  }
+  // 验证短信验证码
+  if (!phoneVerified.value) {
+    if (!smsCode.value || smsCode.value.length !== 6) {
+      uni.showToast({ title: '请输入6位验证码', icon: 'none' })
+      return
+    }
+    var verifyRes = await callCloud('user', 'verifySmsCode', { phone: form.phone, smsCode: smsCode.value })
+    if (verifyRes.code !== 0) {
+      uni.showToast({ title: verifyRes.msg || '验证码错误', icon: 'none' })
+      return
+    }
+    phoneVerified.value = true
+  }
+  if (!form.school.trim()) {
+    uni.showToast({ title: '请输入学校名称', icon: 'none' })
+    return
+  }
+  if (!form.studentId) {
+    uni.showToast({ title: '请输入学号', icon: 'none' })
+    return
+  }
+  if (!/^\d{8,12}$/.test(form.studentId)) {
+    uni.showToast({ title: '学号为8-12位数字', icon: 'none' })
+    return
+  }
+  if (!form.building) {
+    uni.showToast({ title: '请选择宿舍楼', icon: 'none' })
     return
   }
   if (!form.studentCardUploaded) {
     uni.showToast({ title: '请上传学生证照片', icon: 'none' })
     return
   }
-  uni.showToast({ title: '注册申请已提交！', icon: 'success' })
-  setTimeout(() => { uni.navigateBack() }, 1500)
+  if (submitting.value) return
+  submitting.value = true
+  const res = await callCloud('user', 'registerRider', {
+    realName: form.realName,
+    phone: form.phone,
+    studentId: form.studentId,
+    building: form.building
+  })
+  submitting.value = false
+  if (res.code === 0) {
+    uni.setStorageSync('isRider', true)
+    const userInfo = uni.getStorageSync('userInfo') || {}
+    userInfo.isRider = true
+    userInfo.riderId = res.riderId
+    uni.setStorageSync('userInfo', userInfo)
+    uni.showToast({ title: '注册成功！', icon: 'success' })
+    setTimeout(() => { uni.navigateBack() }, 1500)
+  }
 }
 </script>
 
@@ -163,6 +267,9 @@ const submit = () => {
 .form-label { font-size: 28rpx; color: #333; width: 160rpx; flex-shrink: 0; }
 .form-item input { flex: 1; font-size: 28rpx; }
 .divider { height: 1rpx; background: #f0f0f0; }
+.phone-hint { display: flex; align-items: center; padding: 0 0 20rpx; }
+.hint-icon { font-size: 22rpx; margin-right: 8rpx; }
+.hint-text { font-size: 22rpx; color: #38A169; font-weight: 500; }
 .picker-value { flex: 1; display: flex; justify-content: space-between; align-items: center; font-size: 28rpx; color: #333; }
 .picker-arrow { font-size: 32rpx; color: #ccc; }
 
@@ -186,4 +293,10 @@ const submit = () => {
 .submit-btn { position: fixed; bottom: 40rpx; left: 24rpx; right: 24rpx; background: linear-gradient(135deg, #FF9800, #F57C00); border-radius: 48rpx; padding: 28rpx; text-align: center; box-shadow: 0 8rpx 24rpx rgba(255,152,0,0.4); }
 .submit-btn.disabled { opacity: 0.5; }
 .submit-btn text { color: #fff; font-size: 32rpx; font-weight: bold; }
+
+.sms-row { display: flex; align-items: center; padding: 28rpx 0; }
+.sms-input { flex: 1; font-size: 28rpx; }
+.sms-btn { padding: 12rpx 24rpx; background: linear-gradient(135deg, #FF9800, #F57C00); border-radius: 28rpx; flex-shrink: 0; margin-left: 12rpx; }
+.sms-btn text { color: #fff; font-size: 24rpx; font-weight: 600; white-space: nowrap; }
+.sms-btn.disabled { opacity: 0.5; }
 </style>

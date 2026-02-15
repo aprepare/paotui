@@ -10,7 +10,8 @@
     <view class="post-list">
       <view v-for="post in filteredPosts" :key="post.id" class="post-card" @click="goDetail(post.id)">
         <view class="post-header">
-          <view class="avatar">{{ post.avatar }}</view>
+          <view class="avatar">          <image v-if="isUrl(post.avatar)" :src="post.avatar" class="avatar-img" mode="aspectFill" />
+          <text v-else class="avatar-text">{{ post.avatar }}</text></view>
           <view class="user-info">
             <text class="nickname">{{ post.nickname }}</text>
             <text class="time">{{ post.time }}</text>
@@ -18,9 +19,7 @@
         </view>
         <text class="post-content">{{ post.content }}</text>
         <view v-if="post.images.length" class="post-images">
-          <view v-for="(img, i) in post.images" :key="i" class="img-placeholder" :style="{background: img.bg}">
-            <text>{{ img.emoji }}</text>
-          </view>
+          <image v-for="(img, i) in post.images" :key="i" class="img-placeholder" :src="img.url" mode="aspectFill" @error="onImgError" />
         </view>
         <view class="post-actions">
           <view class="action-item" @click.stop="toggleLike(post)">
@@ -31,10 +30,10 @@
             <text>💬</text>
             <text class="action-num">{{ post.comments }}</text>
           </view>
-          <view class="action-item">
+          <button class="action-item share-btn" open-type="share" @click.stop="setSharePost(post)">
             <text>🔗</text>
             <text class="action-num">分享</text>
-          </view>
+          </button>
         </view>
       </view>
     </view>
@@ -42,23 +41,58 @@
       <text>✏️</text>
     </view>
 
-    <ServiceFab :bottom="320" />
+    <MsgNotify />
   </view>
 </template>
 
 <script setup>
 import { ref, computed } from 'vue'
-import ServiceFab from '@/components/ServiceFab.vue'
+import { onShow, onShareAppMessage } from '@dcloudio/uni-app'
+import { callCloud, checkLogin } from '@/utils/cloud'
+import MsgNotify from '@/components/MsgNotify.vue'
 
 const keyword = ref('')
+const posts = ref([])
+const shareData = ref(null)
 
-const posts = ref([
-  { id: 1, avatar: '🧑‍🎓', nickname: '学霸小王', time: '5分钟前', content: '图书馆三楼靠窗的位置真的绝了，安静又有阳光，考研党冲！有一起自习的小伙伴吗？', images: [{ emoji: '📚', bg: '#E3F2FD' }], likes: 32, comments: 8, liked: false },
-  { id: 2, avatar: '👩‍💻', nickname: '代码少女', time: '30分钟前', content: '食堂二楼新出的麻辣香锅也太好吃了吧！！强烈推荐加芝士年糕和午餐肉，绝绝子🤤', images: [{ emoji: '🍲', bg: '#FFF3E0' }, { emoji: '😋', bg: '#FFEBEE' }], likes: 89, comments: 23, liked: true },
-  { id: 3, avatar: '🏃‍♂️', nickname: '跑步达人', time: '1小时前', content: '有没有人一起晨跑啊？每天早上6:30操场集合，已经坚持30天了，欢迎加入！', images: [], likes: 45, comments: 12, liked: false },
-  { id: 4, avatar: '🎸', nickname: '吉他社社长', time: '2小时前', content: '校园歌手大赛报名开始啦！不管你是唱歌还是乐器都可以来，奖品丰厚，详情看图👇', images: [{ emoji: '🎤', bg: '#F3E5F5' }, { emoji: '🎵', bg: '#E8F5E9' }, { emoji: '🏆', bg: '#FFF8E1' }], likes: 128, comments: 34, liked: false },
-  { id: 5, avatar: '📸', nickname: '摄影爱好者', time: '3小时前', content: '今天的晚霞太美了！在教学楼天台拍的，分享给大家~', images: [{ emoji: '🌅', bg: '#FFE0B2' }], likes: 256, comments: 41, liked: true }
-])
+const loadData = async () => {
+  const res = await callCloud('forum', 'list', { keyword: keyword.value })
+  if (res.code === 0) {
+    posts.value = res.data.map(p => ({
+      id: p._id,
+      avatar: p.avatar || '🧑',
+      nickname: p.nickname || '匿名',
+      time: formatTime(p.createTime),
+      content: p.content || '',
+      images: (p.images || []).filter(function(img) { return img && typeof img === 'string' && (img.indexOf('cloud://') === 0 || img.indexOf('https://') === 0 || img.indexOf('http://') === 0 || img.indexOf('wxfile://') === 0) }).map(function(img) { return { url: img } }),
+      likes: p.likes || 0,
+      comments: p.comments || 0,
+      liked: (p.likedBy || []).indexOf(uni.getStorageSync('openid') || '') !== -1
+    }))
+  }
+}
+
+var formatTime = (t) => {
+  if (!t) return ''
+  var d = new Date(t)
+  if (isNaN(d.getTime())) return ''
+  var now = new Date()
+  var diff = now.getTime() - d.getTime()
+  if (diff < 60000) return '刚刚'
+  if (diff < 3600000) return Math.floor(diff / 60000) + '分钟前'
+  if (diff < 86400000) return Math.floor(diff / 3600000) + '小时前'
+  var y = d.getFullYear()
+  var m = d.getMonth() + 1
+  var day = d.getDate()
+  var hh = d.getHours()
+  var mm = d.getMinutes()
+  if (y === now.getFullYear()) {
+    return (m < 10 ? '0' + m : m) + '-' + (day < 10 ? '0' + day : day) + ' ' + (hh < 10 ? '0' + hh : hh) + ':' + (mm < 10 ? '0' + mm : mm)
+  }
+  return y + '-' + (m < 10 ? '0' + m : m) + '-' + (day < 10 ? '0' + day : day)
+}
+
+onShow(() => { loadData() })
 
 const filteredPosts = computed(() => {
   const key = keyword.value.trim()
@@ -66,16 +100,46 @@ const filteredPosts = computed(() => {
   return posts.value.filter(p => p.content.includes(key) || p.nickname.includes(key))
 })
 
-const toggleLike = (post) => {
-  post.liked = !post.liked
-  post.likes += post.liked ? 1 : -1
+const toggleLike = async (post) => {
+  if (!checkLogin()) return
+  const res = await callCloud('forum', 'like', { postId: post.id })
+  if (res.code === 0) {
+    post.liked = res.liked
+    post.likes += res.liked ? 1 : -1
+  }
 }
 const goDetail = (id) => {
   uni.navigateTo({ url: '/pages/forum/detail?id=' + id })
 }
 const goCreate = () => {
+  if (!checkLogin()) return
   uni.navigateTo({ url: '/pages/forum/create' })
 }
+const isUrl = (str) => {
+  if (!str || typeof str !== 'string') return false
+  return str.indexOf('cloud://') === 0 || str.indexOf('https://') === 0 || str.indexOf('http://') === 0
+}
+const onImgError = (e) => {
+  if (e && e.target) e.target.style = 'display:none'
+}
+const setSharePost = (post) => {
+  shareData.value = post
+}
+
+onShareAppMessage(() => {
+  if (shareData.value) {
+    var title = shareData.value.nickname + '：' + shareData.value.content
+    if (title.length > 40) title = title.substring(0, 40) + '...'
+    return {
+      title: title,
+      path: '/pages/forum/detail?id=' + shareData.value.id
+    }
+  }
+  return {
+    title: '校园广场 - 一起来看看同学们在聊什么',
+    path: '/pages/forum/index'
+  }
+})
 </script>
 
 <style scoped>
@@ -89,16 +153,20 @@ const goCreate = () => {
 .post-list { padding: 8rpx 24rpx 20rpx; }
 .post-card { background: #fff; border-radius: 16rpx; padding: 28rpx; margin-bottom: 20rpx; box-shadow: 0 4rpx 12rpx rgba(0,0,0,0.08); }
 .post-header { display: flex; align-items: center; margin-bottom: 16rpx; }
-.avatar { width: 72rpx; height: 72rpx; border-radius: 50%; background: #E3F2FD; display: flex; align-items: center; justify-content: center; font-size: 36rpx; margin-right: 16rpx; }
+.avatar { width: 72rpx; height: 72rpx; border-radius: 50%; background: #E3F2FD; display: flex; align-items: center; justify-content: center; font-size: 36rpx; margin-right: 16rpx; overflow: hidden; }
+.avatar-img { width: 72rpx; height: 72rpx; border-radius: 50%; }
+.avatar-text { font-size: 36rpx; }
 .user-info { display: flex; flex-direction: column; }
 .nickname { font-size: 28rpx; font-weight: bold; color: #333; }
 .time { font-size: 22rpx; color: #999; margin-top: 4rpx; }
 .post-content { font-size: 28rpx; color: #333; line-height: 1.6; margin-bottom: 16rpx; }
 .post-images { display: flex; gap: 12rpx; margin-bottom: 16rpx; flex-wrap: wrap; }
-.img-placeholder { width: 200rpx; height: 200rpx; border-radius: 12rpx; display: flex; align-items: center; justify-content: center; font-size: 60rpx; }
+.img-placeholder { width: 200rpx; height: 200rpx; border-radius: 12rpx; background: #E3F2FD; }
 .post-actions { display: flex; border-top: 1rpx solid #f0f0f0; padding-top: 16rpx; }
 .action-item { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8rpx; }
 .action-num { font-size: 24rpx; color: #999; }
+.share-btn { background: none; border: none; padding: 0; margin: 0; line-height: normal; font-size: inherit; color: inherit; }
+.share-btn::after { border: none; }
 .fab-btn { position: fixed; right: 40rpx; bottom: 200rpx; width: 100rpx; height: 100rpx; background: linear-gradient(135deg, #4A90D9, #357ABD); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 8rpx 24rpx rgba(74,144,217,0.4); }
 .fab-btn text { font-size: 40rpx; }
 </style>

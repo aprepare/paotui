@@ -3,7 +3,7 @@
     <view class="info-card">
       <view class="card-header">
         <text class="card-title">{{ team.title }}</text>
-        <view class="card-tag" :class="team.status === 'ended' ? 'ended' : team.tag === '热门' ? 'hot' : ''">
+        <view class="card-tag" :class="(team.status === 'ended' || team.status === 'expired') ? 'ended' : team.tag === '热门' ? 'hot' : ''">
           <text>{{ team.tag }}</text>
         </view>
       </view>
@@ -47,8 +47,22 @@
     </view>
 
     <!-- 底部操作 -->
-    <view class="bottom-bar" v-if="team.status !== 'ended' && team.current < team.max">
-      <view class="join-btn" @click="onJoin"><text>加入组队</text></view>
+    <view class="bottom-bar" v-if="team.status !== 'ended' && team.status !== 'expired'">
+      <view v-if="team.isOwner" class="bottom-actions">
+        <view class="end-btn" @click="onEndActivity"><text>结束活动</text></view>
+      </view>
+      <view v-else-if="isJoined" class="bottom-actions">
+        <view class="leave-btn" @click="onLeave"><text>退出组队</text></view>
+      </view>
+      <view v-else-if="team.current < team.max">
+        <view class="join-btn" @click="onJoin"><text>加入组队</text></view>
+      </view>
+      <view v-else>
+        <view class="join-btn disabled"><text>已满员</text></view>
+      </view>
+    </view>
+    <view class="bottom-bar" v-else>
+      <view class="join-btn disabled"><text>{{ team.status === 'expired' ? '活动已过期' : '活动已结束' }}</text></view>
     </view>
   </view>
 </template>
@@ -56,33 +70,53 @@
 <script setup>
 import { ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
+import { callCloud } from '@/utils/cloud.js'
 
 const team = ref({
-  id: 1, title: '加载中...', owner: '', place: '', time: '', current: 0, max: 0, tag: '', status: 'active', photos: [], desc: '', images: []
+  title: '加载中...', owner: '', place: '', time: '', current: 0, max: 0, tag: '', status: 'active', photos: [], desc: '', images: [], isOwner: false
 })
 
-const members = ref([
-  { name: '小杰', avatar: '🧑' },
-  { name: '阿洛', avatar: '👩' },
-  { name: '小明', avatar: '🧑‍🎓' }
-])
+const members = ref([])
+const isJoined = ref(false)
+const isExpired = ref(false)
 
-// mock 数据
-const allTeams = [
-  { id: 1, title: '王者荣耀五排缺2', owner: '小杰', place: '宿舍楼B区', time: '今晚20:00', current: 3, max: 5, tag: '热门', status: 'active', photos: [], desc: '冲王者段位，需要会玩辅助和打野的，最好有语音。段位钻石以上优先，来了直接开打！', images: [] },
-  { id: 2, title: '原神深渊冲榜组队', owner: '阿洛', place: '线上语音', time: '周六14:00', current: 4, max: 4, tag: '已结束', status: 'ended', photos: ['/static/logo.png', '/static/TeamWork.png'], desc: '深渊12层满星挑战，需要有雷神、万叶等主流角色的大佬。', images: ['/static/TeamWork.png'] },
-  { id: 3, title: '周末篮球友谊赛', owner: '篮球社', place: '南区篮球场', time: '周六16:00', current: 10, max: 10, tag: '已结束', status: 'ended', photos: ['/static/TeamWork.png', '/static/logo.png'], desc: '篮球社周末友谊赛，5v5全场，自备球鞋和水。赛后聚餐AA，欢迎各院系同学参加！', images: ['/static/TeamWork.png', '/static/logo.png'] },
-  { id: 4, title: '羽毛球双打搭子', owner: '小雨', place: '体育馆2号场', time: '明天19:30', current: 2, max: 4, tag: '热门', status: 'active', photos: [], desc: '找两个羽毛球搭子打双打，水平不限，主要是锻炼身体开心就好。球拍我有多余的可以借。', images: [] },
-  { id: 5, title: '晨跑打卡7天挑战', owner: '跑团', place: '操场北门', time: '每天06:30', current: 20, max: 20, tag: '已结束', status: 'ended', photos: ['/static/logo.png'], desc: '连续7天晨跑3公里打卡挑战，坚持完成的同学有小礼品。每天早上6:30操场北门集合。', images: ['/static/logo.png'] },
-  { id: 6, title: '5km配速训练', owner: '阿飞', place: '田径场', time: '周三18:40', current: 4, max: 6, tag: '招募中', status: 'active', photos: [], desc: '目标配速5分30秒/公里，适合有一定跑步基础的同学。训练完一起拉伸放松。', images: [] },
-  { id: 7, title: '新手力量训练小组', owner: '健身社', place: '健身房A区', time: '周二/四19:00', current: 8, max: 8, tag: '已结束', status: 'ended', photos: ['/static/TeamWork.png'], desc: '针对健身新手的力量训练课程，有教练带练，包含深蹲、硬拉、卧推三大项基础动作教学。', images: ['/static/TeamWork.png'] },
-  { id: 8, title: '卧推进阶训练', owner: '阿森', place: '力量区3号台', time: '周五20:30', current: 3, max: 5, tag: '招募中', status: 'active', photos: [], desc: '卧推进阶训练，目标突破体重倍数。需要有半年以上训练基础，互相保护互相进步。', images: [] }
-]
-
-onLoad((query) => {
-  const id = Number(query.id)
-  const found = allTeams.find(t => t.id === id)
-  if (found) team.value = found
+onLoad(async (query) => {
+  const id = query.id
+  if (!id) return
+  const res = await callCloud('team', 'detail', { id })
+  if (res.code === 0) {
+    var d = res.data
+    d.photos = (d.photos || []).filter(function(p) { return p && typeof p === 'string' && p.indexOf('cloud://') === 0 })
+    d.images = (d.images || []).filter(function(p) { return p && typeof p === 'string' && p.indexOf('cloud://') === 0 })
+    // 检查是否过期
+    if (d.time) {
+      var dt = new Date(d.time.replace(/-/g, '/'))
+      if (!isNaN(dt.getTime()) && dt.getTime() < Date.now()) {
+        isExpired.value = true
+        if (d.status !== 'ended') {
+          d.status = 'expired'
+          d.tag = '已过期'
+        }
+      }
+    }
+    team.value = d
+    members.value = (d.members || []).map(m => ({
+      name: m.name || '匿名',
+      avatar: '🧑'
+    }))
+    // 检查当前用户是否已加入
+    var userInfo = uni.getStorageSync('userInfo')
+    var myOpenid = ''
+    if (userInfo && userInfo.openid) myOpenid = userInfo.openid
+    if (myOpenid && d.members) {
+      for (var i = 0; i < d.members.length; i++) {
+        if (d.members[i].openid === myOpenid) {
+          isJoined.value = true
+          break
+        }
+      }
+    }
+  }
 })
 
 const previewImages = (index) => {
@@ -93,8 +127,51 @@ const previewPhoto = (index) => {
   uni.previewImage({ urls: team.value.photos, current: team.value.photos[index] })
 }
 
-const onJoin = () => {
-  uni.showToast({ title: '已申请加入', icon: 'success' })
+const onJoin = async () => {
+  const res = await callCloud('team', 'join', { activityId: team.value._id })
+  if (res.code === 0) {
+    uni.showToast({ title: '加入成功', icon: 'success' })
+    team.value.current++
+    isJoined.value = true
+  } else {
+    uni.showToast({ title: res.msg || '加入失败', icon: 'none' })
+  }
+}
+
+const onLeave = () => {
+  uni.showModal({
+    title: '确认退出',
+    content: '确定要退出该组队吗？',
+    success: async (modalRes) => {
+      if (modalRes.confirm) {
+        var res = await callCloud('team', 'leave', { activityId: team.value._id })
+        if (res.code === 0) {
+          isJoined.value = false
+          team.value.current--
+          uni.showToast({ title: '已退出', icon: 'success' })
+        } else {
+          uni.showToast({ title: res.msg || '退出失败', icon: 'none' })
+        }
+      }
+    }
+  })
+}
+
+const onEndActivity = () => {
+  uni.showModal({
+    title: '结束活动',
+    content: '确定要结束该活动吗？结束后无法再加入新成员。',
+    success: async (modalRes) => {
+      if (modalRes.confirm) {
+        var res = await callCloud('team', 'endActivity', { activityId: team.value._id })
+        if (res.code === 0) {
+          team.value.status = 'ended'
+          team.value.tag = '已结束'
+          uni.showToast({ title: '活动已结束', icon: 'success' })
+        }
+      }
+    }
+  })
 }
 </script>
 
@@ -134,4 +211,11 @@ const onJoin = () => {
 .join-btn { background: linear-gradient(135deg, #4299E1, #2B6CB0); border-radius: 48rpx; padding: 28rpx; text-align: center; box-shadow: 0 8rpx 24rpx rgba(43,108,176,0.3); transition: transform 0.15s ease; }
 .join-btn:active { transform: scale(0.96); }
 .join-btn text { color: #fff; font-size: 30rpx; font-weight: 700; }
+.join-btn.disabled { background: #E2E8F0; box-shadow: none; }
+.join-btn.disabled text { color: #A0AEC0; }
+.bottom-actions { display: flex; gap: 16rpx; }
+.end-btn { flex: 1; background: linear-gradient(135deg, #FC8181, #E53E3E); border-radius: 48rpx; padding: 28rpx; text-align: center; box-shadow: 0 8rpx 24rpx rgba(229,62,62,0.3); }
+.end-btn text { color: #fff; font-size: 30rpx; font-weight: 700; }
+.leave-btn { flex: 1; border: 2rpx solid #E53E3E; border-radius: 48rpx; padding: 28rpx; text-align: center; }
+.leave-btn text { color: #E53E3E; font-size: 30rpx; font-weight: 700; }
 </style>

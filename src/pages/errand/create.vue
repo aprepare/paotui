@@ -82,6 +82,7 @@
 
 <script setup>
 import { ref, reactive } from 'vue'
+import { callCloud, checkLogin } from '@/utils/cloud'
 
 const suggestPrices = [5, 8, 10, 15, 20, 30]
 const timeOptions = ['不着急', '1小时内', '30分钟内', '立即需要']
@@ -97,7 +98,9 @@ const form = reactive({
   remark: ''
 })
 
-const submit = () => {
+const submitting = ref(false)
+const submit = async () => {
+  if (!checkLogin()) return
   if (!form.title) {
     uni.showToast({ title: '请填写任务标题', icon: 'none' })
     return
@@ -114,8 +117,22 @@ const submit = () => {
     uni.showToast({ title: '请填写联系电话', icon: 'none' })
     return
   }
-  uni.showToast({ title: '任务发布成功！', icon: 'success' })
-  setTimeout(() => { uni.navigateBack() }, 1500)
+  if (submitting.value) return
+  submitting.value = true
+  const res = await callCloud('errand', 'create', {
+    title: form.title,
+    desc: form.desc,
+    fromAddr: form.taskLocation,
+    toAddr: form.deliverLocation,
+    price: Number(form.price),
+    tip: 0,
+    phone: form.phone
+  })
+  submitting.value = false
+  if (res.code === 0) {
+    uni.showToast({ title: '任务发布成功！', icon: 'success' })
+    setTimeout(() => { uni.navigateBack() }, 1500)
+  }
 }
 </script>
 

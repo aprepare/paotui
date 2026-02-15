@@ -53,12 +53,12 @@
           <text class="runner-name">{{ order.runner.name }}</text>
           <text class="runner-phone">{{ order.runner.phone }}</text>
         </view>
-        <view class="call-btn">
+        <view class="call-btn" @click="callRunner">
           <text>📞 联系</text>
         </view>
       </view>
     </view>
-    <view class="action-bar" v-if="order.status < 3">
+    <view class="action-bar" v-if="showAction">
       <view class="action-btn" @click="nextStep">
         <text>{{ actionText }}</text>
       </view>
@@ -68,15 +68,82 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { onLoad } from '@dcloudio/uni-app'
+import { callCloud } from '@/utils/cloud'
 
 const steps = ['待接单', '已接单', '配送中', '已完成']
+const orderId = ref('')
+const orderType = ref('')
+const isOwner = ref(false)
+const isRider = ref(false)
+
+const expressStatusTextMap = { 0: '待接单', 1: '已接单', 2: '配送中', 3: '已完成', 4: '已取消' }
+const errandStatusTextMap = { 0: '待接单', 1: '进行中', 2: '已完成', 3: '已取消' }
+
 const order = ref({
-  id: 1, type: '代取快递', desc: '一个中号快递，顺丰', price: 5,
-  fromAddr: '菜鸟驿站3号架', toAddr: '6号宿舍楼302',
-  status: 1, statusText: '已接单',
-  runner: { avatar: '🧑‍🎓', name: '张三', phone: '188****1234' },
-  time: '2026-02-10 14:30'
+  id: '', type: '加载中...', desc: '', price: 0,
+  fromAddr: '', toAddr: '',
+  status: 0, statusText: '加载中...',
+  runner: null,
+  time: ''
 })
+
+onLoad((opts) => {
+  if (opts && opts.id) {
+    orderId.value = opts.id
+    loadDetail(opts.id)
+  }
+  var userInfo = uni.getStorageSync('userInfo')
+  if (userInfo && userInfo.isRider) isRider.value = true
+})
+
+const loadDetail = async (id) => {
+  // Try express first
+  let res = await callCloud('express', 'detail', { id: id })
+  if (res.code === 0 && res.data) {
+    const d = res.data
+    orderType.value = 'express'
+    var userInfo = uni.getStorageSync('userInfo')
+    var myOpenid = ''
+    if (userInfo && userInfo.openid) myOpenid = userInfo.openid
+    isOwner.value = (d.openid && myOpenid && d.openid === myOpenid)
+    order.value = {
+      id: d._id,
+      type: '代取快递',
+      desc: d.remark || d.pickupCode || '',
+      price: (d.price || 0) + (d.tip || 0),
+      fromAddr: d.pickupPoint || '',
+      toAddr: (d.building || '') + (d.room || ''),
+      status: d.status || 0,
+      statusText: expressStatusTextMap[d.status] || '待接单',
+      runner: d.riderId ? { avatar: '🧑‍🎓', name: '骑手', phone: '' } : null,
+      time: ''
+    }
+    return
+  }
+  // Try errand
+  res = await callCloud('errand', 'detail', { id: id })
+  if (res.code === 0 && res.data) {
+    const d = res.data
+    orderType.value = 'errand'
+    var userInfo2 = uni.getStorageSync('userInfo')
+    var myOpenid2 = ''
+    if (userInfo2 && userInfo2.openid) myOpenid2 = userInfo2.openid
+    isOwner.value = (d.openid && myOpenid2 && d.openid === myOpenid2)
+    order.value = {
+      id: d._id,
+      type: '万能跑腿',
+      desc: d.title || d.desc || '',
+      price: d.price || 0,
+      fromAddr: d.fromAddr || '',
+      toAddr: d.toAddr || '',
+      status: d.status || 0,
+      statusText: errandStatusTextMap[d.status] || '待接单',
+      runner: d.riderId ? { avatar: '🧑‍🎓', name: '跑腿员', phone: '' } : null,
+      time: ''
+    }
+  }
+}
 
 const statusColor = computed(() => {
   const colors = ['linear-gradient(135deg,#FF9800,#F57C00)', 'linear-gradient(135deg,#4A90D9,#357ABD)', 'linear-gradient(135deg,#66BB6A,#43A047)', 'linear-gradient(135deg,#9E9E9E,#757575)']
@@ -84,14 +151,70 @@ const statusColor = computed(() => {
 })
 const statusEmoji = computed(() => ['⏳', '✅', '🚀', '🎉'][order.value.status])
 const statusDesc = computed(() => ['等待跑腿员接单...', '跑腿员已接单，即将出发', '跑腿员正在配送中', '订单已完成'][order.value.status])
-const actionText = computed(() => ['取消订单', '确认取件', '确认送达', ''][order.value.status])
+const actionText = computed(() => {
+  var s = order.value.status
+  if (isOwner.value && s === 0) return '取消订单'
+  if (isOwner.value && s === 2) return '确认收货'
+  if (!isOwner.value && isRider.value && s === 0) return '接受订单'
+  if (isRider.value && s === 1) return '确认取件'
+  if (isRider.value && s === 2) return '确认送达'
+  return ''
+})
 
-const nextStep = () => {
-  if (order.value.status < 3) {
-    order.value.status++
-    order.value.statusText = steps[order.value.status]
+const showAction = computed(() => {
+  return actionText.value !== ''
+})
+
+const nextStep = async () => {
+  if (order.value.status >= 3) return
+  // 发布者取消订单
+  if (isOwner.value && order.value.status === 0 && !isRider.value) {
+    uni.showModal({
+      title: '确认取消',
+      content: '确定要取消该订单吗？',
+      success: async (modalRes) => {
+        if (modalRes.confirm) {
+          var cloudName = orderType.value === 'express' ? 'express' : 'errand'
+          var idKey = orderType.value === 'express' ? 'orderId' : 'taskId'
+          var res = await callCloud(cloudName, 'cancel', { [idKey]: orderId.value })
+          if (res.code === 0) {
+            uni.showToast({ title: '订单已取消', icon: 'success' })
+            setTimeout(function() { uni.navigateBack() }, 1000)
+          }
+        }
+      }
+    })
+    return
+  }
+  // 发布者确认收货
+  if (isOwner.value && order.value.status === 2 && !isRider.value) {
+    var nextStatus2 = 3
+    var cloudName2 = orderType.value === 'express' ? 'express' : 'errand'
+    var idKey2 = orderType.value === 'express' ? 'orderId' : 'taskId'
+    var res2 = await callCloud(cloudName2, 'updateStatus', { [idKey2]: orderId.value, status: nextStatus2 })
+    if (res2.code === 0) {
+      order.value.status = nextStatus2
+      var stMap2 = orderType.value === 'express' ? expressStatusTextMap : errandStatusTextMap
+      order.value.statusText = stMap2[nextStatus2] || '已完成'
+      uni.showToast({ title: '已确认收货', icon: 'success' })
+    }
+    return
+  }
+  // 骑手操作
+  var nextStatus = order.value.status + 1
+  var cloudName = orderType.value === 'express' ? 'express' : 'errand'
+  var idKey = orderType.value === 'express' ? 'orderId' : 'taskId'
+  var res = await callCloud(cloudName, 'updateStatus', { [idKey]: orderId.value, status: nextStatus })
+  if (res.code === 0) {
+    order.value.status = nextStatus
+    var stMap = orderType.value === 'express' ? expressStatusTextMap : errandStatusTextMap
+    order.value.statusText = stMap[nextStatus] || '已完成'
     uni.showToast({ title: '操作成功', icon: 'success' })
   }
+}
+
+const callRunner = () => {
+  uni.showToast({ title: '联系功能开发中', icon: 'none' })
 }
 </script>
 

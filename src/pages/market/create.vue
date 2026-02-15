@@ -5,7 +5,7 @@
       <view class="img-grid">
         <view v-for="(img, i) in images" :key="i" class="img-item">
           <text class="img-placeholder">{{ img }}</text>
-          <view class="img-del" @click="images.splice(i, 1)">×</view>
+          <view class="img-del" @click="removeImage(i)">×</view>
         </view>
         <view v-if="images.length < 9" class="img-add" @click="addImage">
           <text class="add-icon">+</text>
@@ -34,6 +34,18 @@
             <text class="picker-text">{{ form.category || '请选择分类' }}</text>
           </picker>
         </view>
+        <view class="divider"></view>
+        <view class="form-item">
+          <text class="form-label">配送方式</text>
+          <view class="delivery-options">
+            <view class="delivery-opt" :class="{active: form.deliveryType === 0}" @click="form.deliveryType = 0">
+              <text>自提</text>
+            </view>
+            <view class="delivery-opt" :class="{active: form.deliveryType === 1}" @click="form.deliveryType = 1">
+              <text>包配送</text>
+            </view>
+          </view>
+        </view>
       </view>
     </view>
     <view class="form-section">
@@ -50,6 +62,19 @@
           <text class="form-label">微信号</text>
           <input placeholder="方便买家联系你" v-model="form.contact" />
         </view>
+        <view class="divider"></view>
+        <view class="form-item">
+          <text class="form-label">公开微信</text>
+          <view class="visibility-options">
+            <view class="vis-opt" :class="{active: form.contactPublic === 1}" @click="form.contactPublic = 1">
+              <text>公开</text>
+            </view>
+            <view class="vis-opt" :class="{active: form.contactPublic === 0}" @click="form.contactPublic = 0">
+              <text>隐藏</text>
+            </view>
+          </view>
+          <text class="vis-hint">{{ form.contactPublic === 1 ? '所有人可见' : '仅点击联系后可见' }}</text>
+        </view>
       </view>
     </view>
     <view class="submit-btn" @click="submit">
@@ -60,22 +85,58 @@
 
 <script setup>
 import { ref, reactive } from 'vue'
+import { callCloud, uploadImages, checkLogin } from '@/utils/cloud'
 
-const images = ref(['📱', '📦'])
+const images = ref([])
+const tempPaths = ref([])
 const categories = ['数码', '书籍', '服饰', '生活', '运动', '其他']
-const form = reactive({ title: '', price: '', category: '', desc: '', contact: '' })
+const form = reactive({ title: '', price: '', category: '', desc: '', contact: '', deliveryType: 0, contactPublic: 1 })
 
-const addImage = () => {
-  const emojis = ['📷', '🖼️', '📸', '🎨', '🏷️', '📦', '🎁']
-  images.value.push(emojis[Math.floor(Math.random() * emojis.length)])
+const removeImage = (i) => {
+  images.value.splice(i, 1)
+  tempPaths.value.splice(i, 1)
 }
-const submit = () => {
+const addImage = () => {
+  uni.chooseImage({
+    count: 9 - images.value.length,
+    success: (res) => {
+      res.tempFilePaths.forEach(p => {
+        images.value.push('🖼️')
+        tempPaths.value.push(p)
+      })
+    }
+  })
+}
+const submitting = ref(false)
+const submit = async () => {
+  if (!checkLogin()) return
   if (!form.title || !form.price) {
     uni.showToast({ title: '请填写标题和价格', icon: 'none' })
     return
   }
-  uni.showToast({ title: '发布成功！', icon: 'success' })
-  setTimeout(() => uni.navigateBack(), 1500)
+  if (submitting.value) return
+  submitting.value = true
+  let imageIds = []
+  if (tempPaths.value.length > 0) {
+    uni.showLoading({ title: '上传图片中...' })
+    imageIds = await uploadImages(tempPaths.value, 'market')
+    uni.hideLoading()
+  }
+  const res = await callCloud('market', 'create', {
+    title: form.title,
+    price: form.price,
+    category: form.category || '其他',
+    desc: form.desc,
+    images: imageIds,
+    deliveryType: form.deliveryType,
+    contact: form.contact,
+    contactPublic: form.contactPublic
+  })
+  submitting.value = false
+  if (res.code === 0) {
+    uni.showToast({ title: '发布成功！', icon: 'success' })
+    setTimeout(() => uni.navigateBack(), 1500)
+  }
 }
 </script>
 
@@ -98,6 +159,17 @@ const submit = () => {
 .price-input { flex: 1; display: flex; align-items: center; }
 .yen { font-size: 32rpx; color: #FF6B6B; font-weight: bold; margin-right: 8rpx; }
 .picker-text { font-size: 28rpx; color: #999; }
+.delivery-options { flex: 1; display: flex; gap: 16rpx; }
+.delivery-opt { padding: 12rpx 32rpx; border-radius: 28rpx; background: #F0F2F5; border: 2rpx solid #E2E8F0; transition: all 0.2s ease; }
+.delivery-opt.active { background: #EBF4FF; border-color: #2B6CB0; }
+.delivery-opt text { font-size: 26rpx; color: #718096; font-weight: 500; }
+.delivery-opt.active text { color: #2B6CB0; font-weight: 600; }
+.visibility-options { display: flex; gap: 16rpx; }
+.vis-opt { padding: 12rpx 32rpx; border-radius: 28rpx; background: #F0F2F5; border: 2rpx solid #E2E8F0; transition: all 0.2s ease; }
+.vis-opt.active { background: #EBF4FF; border-color: #2B6CB0; }
+.vis-opt text { font-size: 26rpx; color: #718096; font-weight: 500; }
+.vis-opt.active text { color: #2B6CB0; font-weight: 600; }
+.vis-hint { font-size: 22rpx; color: #A0AEC0; margin-left: 12rpx; }
 .textarea-card { background: #fff; border-radius: 16rpx; padding: 24rpx; box-shadow: 0 4rpx 12rpx rgba(0,0,0,0.08); }
 .textarea-card textarea { width: 100%; height: 200rpx; font-size: 28rpx; }
 .word-count { font-size: 22rpx; color: #999; text-align: right; display: block; margin-top: 8rpx; }

@@ -78,7 +78,23 @@
     </view>
 
     <!-- 底部操作 -->
-    <view class="action-bar" v-if="carpool.currentPeople < carpool.maxPeople">
+    <view class="action-bar" v-if="isOwner">
+      <view class="action-btn-secondary" @click="cancelCarpool">
+        <text>取消拼车</text>
+      </view>
+      <view class="action-btn-primary" @click="copyContact">
+        <text>复制联系方式</text>
+      </view>
+    </view>
+    <view class="action-bar" v-else-if="isJoined">
+      <view class="action-btn-secondary" @click="leaveCarpool">
+        <text>退出拼车</text>
+      </view>
+      <view class="action-btn-primary" @click="copyContact">
+        <text>复制联系方式</text>
+      </view>
+    </view>
+    <view class="action-bar" v-else-if="carpool.currentPeople < carpool.maxPeople">
       <view class="action-btn-secondary" @click="copyContact">
         <text>复制联系方式</text>
       </view>
@@ -96,18 +112,58 @@
 
 <script setup>
 import { ref } from 'vue'
+import { onLoad } from '@dcloudio/uni-app'
+import { callCloud } from '@/utils/cloud'
 
+const carpoolId = ref('')
+const isOwner = ref(false)
+const isJoined = ref(false)
 const carpool = ref({
-  id: 1, from: '学校南门', to: '火车站',
-  departTime: '2026-02-11 08:00', pickupLocation: '南门星巴克门口',
-  deadline: '2026-02-10 22:00', maxPeople: 4, currentPeople: 2,
-  publisher: '小王', avatar: '🧑', contact: '微信号: wang123',
-  remark: '费用AA，预计打车费80元左右，每人20元。可以提前加我微信，出发前会建群通知。',
-  members: [
-    { avatar: '🧑', name: '小王（发起人）', joinTime: '1小时前' },
-    { avatar: '👩', name: '小丽', joinTime: '30分钟前' }
-  ]
+  id: '', from: '', to: '',
+  departTime: '', pickupLocation: '',
+  deadline: '', maxPeople: 4, currentPeople: 0,
+  publisher: '', avatar: '🧑', contact: '',
+  remark: '',
+  members: []
 })
+
+onLoad((opts) => {
+  if (opts && opts.id) {
+    carpoolId.value = opts.id
+    loadDetail(opts.id)
+  }
+})
+
+const loadDetail = async (id) => {
+  const res = await callCloud('carpool', 'detail', { id: id })
+  if (res.code === 0) {
+    const d = res.data
+    var userInfo = uni.getStorageSync('userInfo')
+    var myOpenid = ''
+    if (userInfo && userInfo.openid) myOpenid = userInfo.openid
+    isOwner.value = (d.openid && myOpenid && d.openid === myOpenid)
+    isJoined.value = (d.members && myOpenid && d.members.indexOf(myOpenid) !== -1)
+    carpool.value = {
+      id: d._id,
+      from: d.from || '',
+      to: d.to || '',
+      departTime: d.departTime || '',
+      pickupLocation: d.pickupLocation || '',
+      deadline: d.deadline || '',
+      maxPeople: d.maxPeople || 4,
+      currentPeople: d.currentPeople || 1,
+      publisher: d.publisher || '匿名',
+      avatar: '🧑',
+      contact: d.contact || '',
+      remark: d.remark || '',
+      members: (d.members || []).map((m, i) => ({
+        avatar: '🧑',
+        name: i === 0 ? (d.publisher || '发起人') : ('成员' + i),
+        joinTime: ''
+      }))
+    }
+  }
+}
 
 const copyContact = () => {
   uni.setClipboardData({
@@ -118,12 +174,53 @@ const copyContact = () => {
   })
 }
 
-const joinCarpool = () => {
-  carpool.value.currentPeople++
-  carpool.value.members.push({
-    avatar: '🧑‍🎓', name: '我', joinTime: '刚刚'
+const joinCarpool = async () => {
+  const res = await callCloud('carpool', 'join', { carpoolId: carpoolId.value })
+  if (res.code === 0) {
+    carpool.value.currentPeople++
+    isJoined.value = true
+    carpool.value.members.push({
+      avatar: '🧑‍🎓', name: '我', joinTime: '刚刚'
+    })
+    uni.showToast({ title: '加入成功！请联系发起人进群', icon: 'success' })
+  } else {
+    uni.showToast({ title: res.msg || '加入失败', icon: 'none' })
+  }
+}
+
+const leaveCarpool = () => {
+  uni.showModal({
+    title: '确认退出',
+    content: '确定要退出该拼车吗？',
+    success: async (modalRes) => {
+      if (modalRes.confirm) {
+        var res = await callCloud('carpool', 'leave', { carpoolId: carpoolId.value })
+        if (res.code === 0) {
+          isJoined.value = false
+          carpool.value.currentPeople--
+          uni.showToast({ title: '已退出', icon: 'success' })
+        } else {
+          uni.showToast({ title: res.msg || '退出失败', icon: 'none' })
+        }
+      }
+    }
   })
-  uni.showToast({ title: '加入成功！请联系发起人进群', icon: 'success' })
+}
+
+const cancelCarpool = () => {
+  uni.showModal({
+    title: '确认取消',
+    content: '取消后所有成员将被移除，确定吗？',
+    success: async (modalRes) => {
+      if (modalRes.confirm) {
+        var res = await callCloud('carpool', 'cancel', { carpoolId: carpoolId.value })
+        if (res.code === 0) {
+          uni.showToast({ title: '拼车已取消', icon: 'success' })
+          setTimeout(function() { uni.navigateBack() }, 1000)
+        }
+      }
+    }
+  })
 }
 </script>
 

@@ -1,54 +1,86 @@
 <template>
   <view class="express-page">
-    <!-- 顶部Tab -->
-    <view class="tab-bar">
-      <view class="tab-item" :class="{active: tab === i}" v-for="(name, i) in tabNames" :key="i" @click="tab = i">
-        <text>{{ name }}</text>
-        <view v-if="tab === i" class="tab-line"></view>
+    <!-- 楼栋卡片视图（默认） -->
+    <view v-if="!selectedBuilding" class="building-view">
+      <view class="page-header">
+        <text class="page-title">📦 最新快递订单</text>
+        <text class="page-desc">选择楼栋查看对应订单</text>
       </view>
-    </view>
-
-    <!-- 楼栋筛选 -->
-    <view class="filter-bar">
-      <scroll-view scroll-x class="filter-scroll">
-        <view class="filter-tags">
-          <view v-for="b in buildings" :key="b.name" class="filter-tag" :class="{active: selectedBuilding === b.name}" @click="selectedBuilding = b.name">
-            <text class="tag-name">{{ b.name }}</text>
-            <view class="tag-badge"><text>{{ b.count }}</text></view>
+      <view class="building-list">
+        <view v-for="(b, i) in buildings" :key="i" class="building-card" @click="selectBuilding(b.name)">
+          <view class="building-left">
+            <text class="building-icon">🏠</text>
+            <view class="building-info">
+              <text class="building-name">{{ b.name }}</text>
+              <text class="building-detail">待接单 {{ b.pending }} 单 · 配送中 {{ b.delivering }} 单</text>
+            </view>
           </view>
-        </view>
-      </scroll-view>
-    </view>
-
-    <!-- 订单列表 -->
-    <view class="order-list">
-      <view v-for="order in filteredOrders" :key="order.id" class="order-card" @click="goDetail(order.id)">
-        <view class="card-top">
-          <view class="size-tag" :class="order.sizeClass">{{ order.sizeText }}</view>
-          <text class="status-text" :style="{color: order.statusColor}">{{ order.statusText }}</text>
-        </view>
-        <view class="card-route">
-          <view class="route-point">
-            <view class="dot from"></view>
-            <text class="route-text">{{ order.pickupPoint }}</text>
-          </view>
-          <view class="route-connector"><view class="connector-line"></view></view>
-          <view class="route-point">
-            <view class="dot to"></view>
-            <text class="route-text">{{ order.building }}{{ order.room }}</text>
-          </view>
-        </view>
-        <view class="card-bottom">
-          <text class="card-time">{{ order.time }}</text>
-          <view class="price-area">
-            <text class="card-price">¥{{ order.price }}</text>
-            <text v-if="order.tip > 0" class="card-tip">+{{ order.tip }}小费</text>
+          <view class="building-right">
+            <view class="order-count-badge" :class="b.level">
+              <text class="count-num">{{ b.total }}</text>
+              <text class="count-label">待处理</text>
+            </view>
           </view>
         </view>
       </view>
-      <view v-if="filteredOrders.length === 0" class="empty">
-        <text class="empty-emoji">📭</text>
-        <text class="empty-text">暂无订单</text>
+      <!-- 今日数据 -->
+      <view class="stats-card">
+        <text class="stats-title">📊 今日数据</text>
+        <view class="stats-grid">
+          <view class="stat-item">
+            <text class="stat-num" style="color:#DD6B20">{{ totalPending }}</text>
+            <text class="stat-label">待接单</text>
+          </view>
+          <view class="stat-item">
+            <text class="stat-num" style="color:#2B6CB0">{{ totalDelivering }}</text>
+            <text class="stat-label">配送中</text>
+          </view>
+          <view class="stat-item">
+            <text class="stat-num" style="color:#38A169">{{ totalCompleted }}</text>
+            <text class="stat-label">已完成</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 订单列表视图（选中楼栋后） -->
+    <view v-if="selectedBuilding" class="order-view">
+      <view class="back-bar" @click="selectedBuilding = ''">
+        <text class="back-arrow">‹</text>
+        <text class="back-text">{{ selectedBuilding }} 的订单</text>
+      </view>
+      <!-- Tab筛选 -->
+      <view class="tab-bar">
+        <view class="tab-item" :class="{active: tab === i}" v-for="(name, i) in tabNames" :key="i" @click="tab = i">
+          <text>{{ name }}</text>
+          <view v-if="tab === i" class="tab-line"></view>
+        </view>
+      </view>
+      <view class="order-list">
+        <view v-for="order in orders" :key="order.id" class="order-card" @click="goDetail(order.id, order.orderType)">
+          <view class="card-top">
+            <text class="order-type">{{ order.orderType === 'errand' ? '🏃 万能跑腿' : '📦 代取快递' }}</text>
+            <text class="status-text" :style="{color: order.statusColor}">{{ order.statusText }}</text>
+          </view>
+          <view class="card-body">
+            <view class="addr-row">
+              <text class="addr-icon">📍</text>
+              <text class="addr-text">{{ order.pickupPoint || '未知' }} → {{ order.building }}{{ order.room }}</text>
+            </view>
+            <text class="order-desc" v-if="order.remark">{{ order.remark }}</text>
+          </view>
+          <view class="card-bottom">
+            <text class="card-time">{{ order.time }}</text>
+            <view class="price-area">
+              <text class="card-price">¥{{ (order.price || 0) + (order.tip || 0) }}</text>
+              <text v-if="order.tip > 0" class="card-tip">+{{ order.tip }}小费</text>
+            </view>
+          </view>
+        </view>
+        <view v-if="orders.length === 0" class="empty">
+          <text class="empty-emoji">📭</text>
+          <text class="empty-text">暂无订单</text>
+        </view>
       </view>
     </view>
 
@@ -57,92 +89,250 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
-import { onPullDownRefresh } from '@dcloudio/uni-app'
+import { ref, watch } from 'vue'
+import { onLoad, onShow } from '@dcloudio/uni-app'
+import { callCloud } from '@/utils/cloud'
 
-const tab = ref(0)
-const tabNames = ['全部订单','待接单','进行中','已完成']
-const selectedBuilding = ref('全部')
+var tab = ref(0)
+var tabNames = ['全部', '待接单', '配送中', '已完成']
+var selectedBuilding = ref('')
+var buildings = ref([])
+var orders = ref([])
+var totalPending = ref(0)
+var totalDelivering = ref(0)
+var totalCompleted = ref(0)
+var queryBuilding = ''
 
-const buildings = ref([
-  { name: '全部', count: 15 }, { name: '1号楼', count: 3 }, { name: '2号楼', count: 2 },
-  { name: '3号楼', count: 4 }, { name: '5号楼', count: 1 }, { name: '6号楼', count: 3 }, { name: '8号楼', count: 2 }
-])
+var statusMap = { 0: -1, 1: 0, 2: 1, 3: 3 }
 
-const orders = ref([
-  { id: 1, pickupPoint: '菜鸟驿站A区', building: '6号楼', room: '302', sizeText: '小件', sizeClass: 'small', price: 2, tip: 0, time: '10分钟前', statusText: '待接单', statusColor: '#DD6B20', status: 0 },
-  { id: 2, pickupPoint: '京东快递柜', building: '3号楼', room: '501', sizeText: '大件', sizeClass: 'large', price: 5, tip: 2, time: '20分钟前', statusText: '配送中', statusColor: '#38A169', status: 2 },
-  { id: 3, pickupPoint: '顺丰快递站', building: '1号楼', room: '108', sizeText: '超大件', sizeClass: 'xlarge', price: 20, tip: 5, time: '30分钟前', statusText: '待接单', statusColor: '#DD6B20', status: 0 },
-  { id: 4, pickupPoint: '菜鸟驿站B区', building: '3号楼', room: '215', sizeText: '小件', sizeClass: 'small', price: 2, tip: 1, time: '1小时前', statusText: '已接单', statusColor: '#2B6CB0', status: 1 },
-  { id: 5, pickupPoint: '中通快递站', building: '8号楼', room: '601', sizeText: '大件', sizeClass: 'large', price: 5, tip: 0, time: '2小时前', statusText: '已完成', statusColor: '#A0AEC0', status: 3 },
-  { id: 6, pickupPoint: '韵达快递柜', building: '2号楼', room: '403', sizeText: '小件', sizeClass: 'small', price: 2, tip: 0, time: '3小时前', statusText: '已完成', statusColor: '#A0AEC0', status: 3 }
-])
+var loadBuildings = async function() {
+  var res = await callCloud('express', 'buildingStats')
+  if (res.code === 0 && res.data) {
+    var pAll = 0, dAll = 0, cAll = 0
+    var list = []
+    for (var i = 0; i < res.data.length; i++) {
+      var b = res.data[i]
+      if (b.name === '全部') continue
+      var p = b.pending || 0
+      var d = b.delivering || 0
+      var c = b.completed || 0
+      pAll += p
+      dAll += d
+      cAll += c
+      var active = p + d
+      list.push({
+        name: b.name,
+        pending: p,
+        delivering: d,
+        total: active,
+        level: active >= 4 ? 'high' : (active >= 2 ? 'mid' : 'low')
+      })
+    }
+    list.sort(function(a, b) { return b.total - a.total })
+    buildings.value = list
+    totalPending.value = pAll
+    totalDelivering.value = dAll
+    totalCompleted.value = cAll
+  }
+}
 
-const filteredOrders = computed(() => {
-  let list = orders.value
-  if (tab.value === 1) list = list.filter(o => o.status === 0)
-  else if (tab.value === 2) list = list.filter(o => o.status === 1 || o.status === 2)
-  else if (tab.value === 3) list = list.filter(o => o.status === 3)
-  if (selectedBuilding.value !== '全部') list = list.filter(o => o.building === selectedBuilding.value)
-  return list
+var loadOrders = async function() {
+  var s = statusMap[tab.value]
+  var params = { building: selectedBuilding.value, page: 1, pageSize: 50 }
+  if (s !== undefined && s !== -1) params.status = s
+  // 对于"配送中"tab，需要包含status 1和2
+  if (tab.value === 2) {
+    params.status = undefined
+  }
+  var res = await callCloud('express', 'list', params)
+  // 同时查跑腿任务（用toAddr匹配楼栋）
+  var errandParams = { page: 1, pageSize: 50 }
+  // 跑腿状态映射：tab 0=全部(-1), 1=待接单(0), 2=进行中(1), 3=已完成(2)
+  var errandStatusMap = { 0: -1, 1: 0, 2: 1, 3: 2 }
+  var es = errandStatusMap[tab.value]
+  if (es !== undefined && es !== -1) errandParams.status = es
+  if (tab.value === 2) errandParams.status = undefined
+  var errandRes = await callCloud('errand', 'list', errandParams)
+
+  var list = []
+  // 处理快递订单
+  if (res.code === 0) {
+    var eList = res.data || []
+    if (tab.value === 2) {
+      var filtered = []
+      for (var i = 0; i < eList.length; i++) {
+        if (eList[i].status === 1 || eList[i].status === 2) filtered.push(eList[i])
+      }
+      eList = filtered
+    }
+    for (var j = 0; j < eList.length; j++) {
+      var o = eList[j]
+      o.id = o._id
+      o.orderType = 'express'
+      o.time = formatTime(o.createTime)
+      list.push(o)
+    }
+  }
+  // 处理跑腿任务（按楼栋过滤）
+  if (errandRes.code === 0) {
+    var rList = errandRes.data || []
+    if (tab.value === 2) {
+      var filtered2 = []
+      for (var k = 0; k < rList.length; k++) {
+        if (rList[k].status === 1) filtered2.push(rList[k])
+      }
+      rList = filtered2
+    }
+    for (var m = 0; m < rList.length; m++) {
+      var r = rList[m]
+      // 跑腿用toAddr匹配楼栋
+      if (selectedBuilding.value && (r.toAddr || '') !== selectedBuilding.value) continue
+      r.id = r._id
+      r.orderType = 'errand'
+      r.pickupPoint = r.title || r.fromAddr || '跑腿任务'
+      r.building = r.toAddr || ''
+      r.room = ''
+      r.sizeText = '跑腿'
+      r.sizeClass = 'errand'
+      r.statusText = r.statusText || '待接单'
+      r.statusColor = r.statusColor || '#DD6B20'
+      r.time = formatTime(r.createTime)
+      list.push(r)
+    }
+  }
+  // 排序：待接单 > 配送中/进行中 > 已接单 > 已完成 > 已取消，同状态按小费降序
+  // 快递：0=待接单, 1=已接单, 2=配送中, 3=已完成, 4=已取消
+  // 跑腿：0=待接单, 1=进行中, 2=已完成, 3=已取消
+  var expressPriority = { 0: 0, 2: 1, 1: 2, 3: 3, 4: 4 }
+  var errandPriority = { 0: 0, 1: 1, 2: 3, 3: 4 }
+  list.sort(function(a, b) {
+    var pm = a.orderType === 'errand' ? errandPriority : expressPriority
+    var pm2 = b.orderType === 'errand' ? errandPriority : expressPriority
+    var ap = pm[a.status] !== undefined ? pm[a.status] : 5
+    var bp = pm2[b.status] !== undefined ? pm2[b.status] : 5
+    if (ap !== bp) return ap - bp
+    return (b.tip || 0) - (a.tip || 0)
+  })
+  orders.value = list
+}
+
+var selectBuilding = function(name) {
+  selectedBuilding.value = name
+  tab.value = 0
+  loadOrders()
+}
+
+var formatTime = function(t) {
+  if (!t) return ''
+  var d = new Date(t)
+  var m = d.getMonth() + 1
+  var day = d.getDate()
+  var h = d.getHours()
+  var min = d.getMinutes()
+  return m + '-' + day + ' ' + (h < 10 ? '0' + h : h) + ':' + (min < 10 ? '0' + min : min)
+}
+
+var goDetail = function(id, orderType) {
+  if (orderType === 'errand') {
+    uni.navigateTo({ url: '/pages/errand/detail?id=' + id })
+  } else {
+    uni.navigateTo({ url: '/pages/express/detail?id=' + id })
+  }
+}
+
+var goCreate = function() {
+  uni.navigateTo({ url: '/pages/express/create' })
+}
+
+watch(tab, function() {
+  if (selectedBuilding.value) loadOrders()
 })
 
-const goDetail = (id) => { uni.navigateTo({ url: '/pages/express/detail?id=' + id }) }
-const goCreate = () => { uni.navigateTo({ url: '/pages/express/create' }) }
-onPullDownRefresh(() => {
-  setTimeout(() => { uni.stopPullDownRefresh() }, 800)
+onLoad(function(options) {
+  if (options && options.building) {
+    queryBuilding = options.building
+  }
+})
+
+onShow(function() {
+  if (queryBuilding) {
+    selectedBuilding.value = queryBuilding
+    queryBuilding = ''
+    loadOrders()
+  } else if (selectedBuilding.value) {
+    loadOrders()
+  }
+  loadBuildings()
 })
 </script>
 
+
 <style scoped>
-.express-page { background: #F0F2F5; min-height: 100vh; padding-bottom: 160rpx; }
+.express-page { background: #F0F2F5; min-height: 100vh; padding-bottom: 120rpx; }
 
-.tab-bar { display: flex; background: #fff; padding: 0; box-shadow: 0 1rpx 0 #E2E8F0; }
-.tab-item { flex: 1; text-align: center; padding: 28rpx 0 24rpx; font-size: 26rpx; color: #A0AEC0; font-weight: 500; position: relative; }
-.tab-item.active { color: #2B6CB0; font-weight: 700; }
-.tab-line { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 48rpx; height: 6rpx; border-radius: 3rpx; background: linear-gradient(90deg, #4299E1, #2B6CB0); }
+.page-header { padding: 32rpx 28rpx; background: linear-gradient(135deg, #4A90D9, #2B6CB0); }
+.page-title { font-size: 36rpx; font-weight: 800; color: #fff; display: block; }
+.page-desc { font-size: 24rpx; color: rgba(255,255,255,0.8); display: block; margin-top: 8rpx; }
 
-.filter-bar { padding: 16rpx 28rpx; }
-.filter-scroll { white-space: nowrap; }
-.filter-tags { display: flex; gap: 14rpx; }
-.filter-tag { display: inline-flex; align-items: center; gap: 8rpx; padding: 14rpx 22rpx; background: #fff; border-radius: 28rpx; border: 1rpx solid #E2E8F0; flex-shrink: 0; transition: all 0.2s ease; }
-.filter-tag:active { transform: scale(0.95); }
-.filter-tag.active { border-color: #2B6CB0; background: #EBF4FF; }
-.tag-name { font-size: 24rpx; color: #4A5568; font-weight: 500; }
-.filter-tag.active .tag-name { color: #2B6CB0; font-weight: 700; }
-.tag-badge { background: #E53E3E; padding: 2rpx 12rpx; border-radius: 16rpx; }
-.tag-badge text { color: #fff; font-size: 20rpx; font-weight: 700; }
+.building-list { padding: 20rpx 28rpx; }
+.building-card { display: flex; justify-content: space-between; align-items: center; background: #fff; border-radius: 20rpx; padding: 28rpx 24rpx; margin-bottom: 16rpx; box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.04); }
+.building-card:active { transform: scale(0.98); }
+.building-left { display: flex; align-items: center; flex: 1; }
+.building-icon { font-size: 40rpx; margin-right: 16rpx; }
+.building-info { flex: 1; }
+.building-name { font-size: 30rpx; font-weight: 700; color: #1A1A2E; display: block; }
+.building-detail { font-size: 22rpx; color: #A0AEC0; display: block; margin-top: 6rpx; }
 
-.order-list { padding: 0 28rpx; }
-.order-card { background: #fff; border-radius: 20rpx; padding: 28rpx; margin-bottom: 16rpx; box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.04); transition: transform 0.2s ease, box-shadow 0.2s ease; }
-.order-card:active { transform: scale(0.98); box-shadow: 0 1rpx 4rpx rgba(0,0,0,0.08); }
-.card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20rpx; }
-.size-tag { padding: 8rpx 20rpx; border-radius: 10rpx; font-size: 22rpx; font-weight: 700; color: #fff; letter-spacing: 1rpx; }
-.size-tag.small { background: linear-gradient(135deg, #4299E1, #2B6CB0); }
-.size-tag.large { background: linear-gradient(135deg, #ED8936, #DD6B20); }
-.size-tag.xlarge { background: linear-gradient(135deg, #FC8181, #E53E3E); }
-.status-text { font-size: 24rpx; font-weight: 700; }
+.building-right { margin-left: 16rpx; }
+.order-count-badge { width: 100rpx; height: 100rpx; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.order-count-badge.high { background: #FFEBEE; }
+.order-count-badge.mid { background: #FFF3E0; }
+.order-count-badge.low { background: #E8F5E9; }
+.count-num { font-size: 36rpx; font-weight: 800; }
+.order-count-badge.high .count-num { color: #E53E3E; }
+.order-count-badge.mid .count-num { color: #DD6B20; }
+.order-count-badge.low .count-num { color: #38A169; }
+.count-label { font-size: 18rpx; color: #A0AEC0; }
 
-.card-route { margin-bottom: 20rpx; }
-.route-point { display: flex; align-items: center; }
-.dot { width: 14rpx; height: 14rpx; border-radius: 50%; margin-right: 14rpx; flex-shrink: 0; }
-.dot.from { background: #4299E1; box-shadow: 0 0 0 4rpx rgba(66,153,225,0.2); }
-.dot.to { background: #E53E3E; box-shadow: 0 0 0 4rpx rgba(229,62,62,0.2); }
-.route-text { font-size: 26rpx; color: #2D3748; font-weight: 500; }
-.route-connector { padding-left: 6rpx; }
-.connector-line { width: 2rpx; height: 20rpx; background: #E2E8F0; margin-left: 0; }
+.stats-card { margin: 0 28rpx; background: #fff; border-radius: 20rpx; padding: 28rpx; box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.04); }
+.stats-title { font-size: 28rpx; font-weight: 700; color: #1A1A2E; display: block; margin-bottom: 20rpx; }
+.stats-grid { display: flex; }
+.stat-item { flex: 1; display: flex; flex-direction: column; align-items: center; }
+.stat-num { font-size: 36rpx; font-weight: 800; }
+.stat-label { font-size: 22rpx; color: #A0AEC0; margin-top: 8rpx; }
 
-.card-bottom { display: flex; justify-content: space-between; align-items: center; padding-top: 20rpx; border-top: 1rpx solid #F7FAFC; }
+.back-bar { display: flex; align-items: center; padding: 24rpx 28rpx; background: #fff; border-bottom: 1rpx solid #EDF2F7; }
+.back-arrow { font-size: 40rpx; color: #4A90D9; margin-right: 12rpx; }
+.back-text { font-size: 30rpx; font-weight: 700; color: #1A1A2E; }
+
+.tab-bar { display: flex; background: #fff; padding: 0 28rpx; }
+.tab-item { flex: 1; text-align: center; padding: 20rpx 0; font-size: 26rpx; color: #A0AEC0; position: relative; }
+.tab-item.active { color: #4A90D9; font-weight: 700; }
+.tab-line { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 48rpx; height: 6rpx; background: #4A90D9; border-radius: 3rpx; }
+
+.order-list { padding: 20rpx 28rpx; }
+.order-card { background: #fff; border-radius: 20rpx; padding: 24rpx; margin-bottom: 16rpx; box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.04); }
+.order-card:active { transform: scale(0.98); }
+.card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16rpx; }
+.order-type { font-size: 28rpx; font-weight: 700; color: #1A1A2E; }
+.status-text { font-size: 24rpx; font-weight: 600; }
+
+.card-body { margin-bottom: 16rpx; }
+.addr-row { display: flex; align-items: center; margin-bottom: 8rpx; }
+.addr-icon { font-size: 24rpx; margin-right: 8rpx; }
+.addr-text { font-size: 26rpx; color: #4A5568; flex: 1; }
+.order-desc { font-size: 24rpx; color: #A0AEC0; margin-top: 8rpx; display: block; }
+
+.card-bottom { display: flex; justify-content: space-between; align-items: center; }
 .card-time { font-size: 22rpx; color: #A0AEC0; }
-.price-area { display: flex; align-items: center; gap: 10rpx; }
-.card-price { font-size: 34rpx; color: #E53E3E; font-weight: 800; }
-.card-tip { font-size: 20rpx; color: #DD6B20; background: #FFFAF0; padding: 4rpx 14rpx; border-radius: 8rpx; font-weight: 600; }
+.price-area { display: flex; align-items: center; }
+.card-price { font-size: 30rpx; font-weight: 800; color: #E53E3E; }
+.card-tip { font-size: 22rpx; color: #DD6B20; margin-left: 8rpx; }
 
-.empty { display: flex; flex-direction: column; align-items: center; padding: 120rpx 0; }
-.empty-emoji { font-size: 80rpx; margin-bottom: 16rpx; }
-.empty-text { font-size: 28rpx; color: #A0AEC0; }
+.empty { display: flex; flex-direction: column; align-items: center; padding: 80rpx 0; }
+.empty-emoji { font-size: 80rpx; }
+.empty-text { font-size: 28rpx; color: #A0AEC0; margin-top: 20rpx; }
 
-.fab-btn { position: fixed; bottom: 48rpx; left: 28rpx; right: 28rpx; background: linear-gradient(135deg, #4299E1, #2B6CB0); border-radius: 52rpx; padding: 30rpx; text-align: center; box-shadow: 0 12rpx 32rpx rgba(43,108,176,0.35); transition: transform 0.15s ease, box-shadow 0.15s ease; }
-.fab-btn:active { transform: scale(0.96); box-shadow: 0 6rpx 16rpx rgba(43,108,176,0.4); }
-.fab-btn text { color: #fff; font-size: 30rpx; font-weight: 700; letter-spacing: 2rpx; }
+.fab-btn { position: fixed; bottom: 60rpx; right: 40rpx; background: linear-gradient(135deg, #4A90D9, #2B6CB0); color: #fff; padding: 20rpx 36rpx; border-radius: 40rpx; font-size: 28rpx; font-weight: 700; box-shadow: 0 8rpx 24rpx rgba(43,108,176,0.3); z-index: 99; }
+.fab-btn:active { transform: scale(0.95); }
 </style>

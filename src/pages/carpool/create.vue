@@ -51,7 +51,7 @@
     <view class="form-section">
       <text class="section-title">👥 拼车人数</text>
       <view class="people-selector">
-        <view v-for="n in [2, 3, 4, 5]" :key="n" class="people-item" :class="{active: form.maxPeople === n}" @click="form.maxPeople = n">
+        <view v-for="n in peopleOptions" :key="n" class="people-item" :class="{active: form.maxPeople === n}" @click="form.maxPeople = n">
           <text class="people-num">{{ n }}</text>
           <text class="people-label">人</text>
         </view>
@@ -88,7 +88,8 @@
 </template>
 
 <script setup>
-import { reactive } from 'vue'
+import { ref, reactive } from 'vue'
+import { callCloud, checkLogin } from '@/utils/cloud'
 
 const days = []
 for (let i = 0; i < 7; i++) {
@@ -120,7 +121,10 @@ const onDeadlineChange = (e) => {
   form.deadline = `${days[vals[0]]} ${hours[vals[1]].replace('时',':')}${minutes[vals[2]].replace('分','')}`
 }
 
-const submit = () => {
+const peopleOptions = [2, 3, 4, 5]
+const submitting = ref(false)
+const submit = async () => {
+  if (!checkLogin()) return
   if (!form.from || !form.to) {
     uni.showToast({ title: '请填写出发地和目的地', icon: 'none' })
     return
@@ -137,8 +141,23 @@ const submit = () => {
     uni.showToast({ title: '请填写联系方式', icon: 'none' })
     return
   }
-  uni.showToast({ title: '发布成功！', icon: 'success' })
-  setTimeout(() => { uni.navigateBack() }, 1500)
+  if (submitting.value) return
+  submitting.value = true
+  const res = await callCloud('carpool', 'create', {
+    from: form.from,
+    to: form.to,
+    departTime: form.departTime,
+    pickupLocation: form.pickupLocation,
+    maxPeople: form.maxPeople,
+    deadline: form.deadline,
+    contact: form.contact,
+    remark: form.remark
+  })
+  submitting.value = false
+  if (res.code === 0) {
+    uni.showToast({ title: '发布成功！', icon: 'success' })
+    setTimeout(() => { uni.navigateBack() }, 1500)
+  }
 }
 </script>
 

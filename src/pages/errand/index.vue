@@ -36,31 +36,57 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
-import { onPullDownRefresh } from '@dcloudio/uni-app'
+import { ref, computed, watch } from 'vue'
+import { onShow, onPullDownRefresh } from '@dcloudio/uni-app'
+import { callCloud } from '@/utils/cloud.js'
 
 const tab = ref(0)
 const tabNames = ['全部任务','待接单','进行中','已完成']
-const tasks = ref([
-  { id: 1, title: '帮我去图书馆还书', desc: '3本书，在6号楼门口取，还到图书馆2楼还书处', userName: '小明', userAvatar: '🧑', price: 8, time: '15分钟前', statusText: '待接单', statusColor: '#DD6B20', status: 0 },
-  { id: 2, title: '食堂带饭', desc: '二食堂，一份黄焖鸡+一杯豆浆，送到3号楼502', userName: '小红', userAvatar: '👩', price: 5, time: '30分钟前', statusText: '进行中', statusColor: '#38A169', status: 1 },
-  { id: 3, title: '打印资料', desc: '一份PPT 30页彩印，打印店取，送到教学楼A301', userName: '学霸', userAvatar: '🧑‍🎓', price: 10, time: '1小时前', statusText: '待接单', statusColor: '#DD6B20', status: 0 },
-  { id: 4, title: '帮忙排队取号', desc: '校医院一楼挂号处，帮我排队取号，大概需要30分钟', userName: '小李', userAvatar: '🧑', price: 15, time: '2小时前', statusText: '已完成', statusColor: '#A0AEC0', status: 2 },
-  { id: 5, title: '代买咖啡', desc: '瑞幸咖啡，一杯生椰拿铁 大杯少冰，送到图书馆3楼', userName: '小张', userAvatar: '👩‍🎓', price: 3, time: '3小时前', statusText: '已完成', statusColor: '#A0AEC0', status: 2 }
-])
+const tasks = ref([])
 
-const filteredTasks = computed(() => {
-  if (tab.value === 0) return tasks.value
-  if (tab.value === 1) return tasks.value.filter(t => t.status === 0)
-  if (tab.value === 2) return tasks.value.filter(t => t.status === 1)
-  return tasks.value.filter(t => t.status === 2)
+const statusMap = { 0: undefined, 1: 0, 2: 1, 3: 2 }
+
+const errandStatusTextMap = { 0: '待接单', 1: '进行中', 2: '已完成', 3: '已取消' }
+const errandStatusColorMap = { 0: '#DD6B20', 1: '#38A169', 2: '#A0AEC0', 3: '#E53E3E' }
+
+const loadTasks = async () => {
+  const res = await callCloud('errand', 'list', {
+    status: statusMap[tab.value],
+    page: 1, pageSize: 20
+  })
+  if (res.code === 0) {
+    tasks.value = res.data.map(t => ({
+      ...t, id: t._id,
+      userName: t.userName || '匿名',
+      userAvatar: t.userAvatar || '🧑',
+      statusText: errandStatusTextMap[t.status] || '待接单',
+      statusColor: errandStatusColorMap[t.status] || '#DD6B20',
+      time: formatTime(t.createTime)
+    }))
+  }
+}
+
+const formatTime = (t) => {
+  if (!t) return ''
+  const d = new Date(t)
+  const diff = Math.floor((new Date() - d) / 60000)
+  if (diff < 1) return '刚刚'
+  if (diff < 60) return diff + '分钟前'
+  if (diff < 1440) return Math.floor(diff / 60) + '小时前'
+  return Math.floor(diff / 1440) + '天前'
+}
+
+const filteredTasks = computed(() => tasks.value)
+
+watch(tab, () => { loadTasks() })
+onShow(() => { loadTasks() })
+onPullDownRefresh(async () => {
+  await loadTasks()
+  uni.stopPullDownRefresh()
 })
 
 const goDetail = (id) => { uni.navigateTo({ url: '/pages/errand/detail?id=' + id }) }
 const goCreate = () => { uni.navigateTo({ url: '/pages/errand/create' }) }
-onPullDownRefresh(() => {
-  setTimeout(() => { uni.stopPullDownRefresh() }, 800)
-})
 </script>
 
 <style scoped>
