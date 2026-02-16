@@ -80,6 +80,14 @@ const jobList = ref([
 ])
 
 const onCatTap = (cat) => {
+  if (cat.title === '家教信息') {
+    uni.navigateTo({ url: '/pages/job/tutor' })
+    return
+  }
+  if (cat.title === '校内兼职') {
+    uni.navigateTo({ url: '/pages/job/campus' })
+    return
+  }
   uni.showModal({
     title: cat.title,
     content: cat.title + '分类下的岗位正在收录中，敬请期待',

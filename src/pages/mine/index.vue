@@ -68,9 +68,14 @@
           <text class="menu-text">我的接单</text>
           <text class="menu-arrow">›</text>
         </view>
-        <view class="menu-item last" @click="goPage('/pages/forum/my')">
+        <view class="menu-item" @click="goPage('/pages/forum/my')">
           <view class="menu-icon-bg" style="background: linear-gradient(135deg, #4FD1C5, #319795);"><text class="mi">💬</text></view>
           <text class="menu-text">我的帖子</text>
+          <text class="menu-arrow">›</text>
+        </view>
+        <view class="menu-item last" @click="goPage('/pages/mine/favorites')">
+          <view class="menu-icon-bg" style="background: linear-gradient(135deg, #F6E05E, #D69E2E);"><text class="mi">⭐</text></view>
+          <text class="menu-text">我的收藏</text>
           <text class="menu-arrow">›</text>
         </view>
       </view>
@@ -100,13 +105,12 @@
       </view>
     </view>
 
-    <!-- 更多服务入口 -->
+    <!-- 其他 -->
     <view class="menu-group">
       <view class="menu-card">
-        <view class="menu-item last" @click="goPage('/pages/mine/services')">
-          <view class="menu-icon-bg" style="background: linear-gradient(135deg, #A0AEC0, #718096);"><text class="mi">📂</text></view>
-          <text class="menu-text">更多服务</text>
-          <text class="menu-sub">收藏·设置·帮助</text>
+        <view class="menu-item last" @click="showFeedback">
+          <view class="menu-icon-bg" style="background: linear-gradient(135deg, #4FD1C5, #319795);"><text class="mi">❓</text></view>
+          <text class="menu-text">帮助与反馈</text>
           <text class="menu-arrow">›</text>
         </view>
       </view>
@@ -208,6 +212,9 @@ const showWallet = () => {
     content: '累计收入 ¥' + (stats.income || 0) + '\n提现功能即将上线',
     showCancel: false
   })
+}
+const showFeedback = () => {
+  uni.navigateTo({ url: '/pages/kefu/show?img=' + encodeURIComponent('/static/TeamWork.png') })
 }
 const handleLogout = () => {
   uni.showModal({

@@ -53,10 +53,10 @@ const services = ref([
   { icon: '\u{1F91D}', text: '\u6821\u56ED\u642D\u5B50', desc: '\u627E\u642D\u5B50\u4E00\u8D77', url: '/pages/team/index', gradient: 'linear-gradient(135deg, #63B3ED, #2B6CB0)' },
   { icon: '\u{1F9FC}', text: '\u840C\u9A6C\u6D17\u62A4', desc: '\u6D17\u62A4\u670D\u52A1', url: '/pages/market/index', gradient: 'linear-gradient(135deg, #F6AD55, #DD6B20)' },
   { icon: '\u{1F697}', text: '\u6821\u56ED\u62FC\u8F66', desc: '\u62FC\u8F66\u7701\u94B1', url: '/pages/carpool/index', gradient: 'linear-gradient(135deg, #68D391, #38A169)' },
-  { icon: '\u{1F68C}', text: '\u5C0F\u5C9B\u5DF4\u58EB', desc: '\u6821\u56ED\u51FA\u884C', url: '/pages/carpool/index', gradient: 'linear-gradient(135deg, #B794F4, #805AD5)' },
+  { icon: '\u{1F3AF}', text: '技能出租', desc: '技能变现', url: '/pages/skill/index', gradient: 'linear-gradient(135deg, #F687B3, #D53F8C)' },
   { icon: '\u{1F4DA}', text: '\u8003\u7814\u670D\u52A1', desc: '\u8003\u7814\u52A0\u6CB9', url: '/pages/graduate/index', gradient: 'linear-gradient(135deg, #4FD1C5, #319795)' },
   { icon: '\u{1F6D2}', text: '\u4E8C\u624B\u5E02\u573A', desc: '\u95F2\u7F6E\u6362\u94B1', url: '/pages/market/index', gradient: 'linear-gradient(135deg, #FC8181, #E53E3E)' },
-  { icon: '\u{1F3AF}', text: '技能出租', desc: '技能变现', url: '/pages/errand/create', gradient: 'linear-gradient(135deg, #F687B3, #D53F8C)' },
+  { icon: '\u{1F68C}', text: '\u5C0F\u5C9B\u5DF4\u58EB', desc: '\u6821\u56ED\u51FA\u884C', url: '/pages/carpool/index', gradient: 'linear-gradient(135deg, #B794F4, #805AD5)' },
   { icon: '\u{1F355}', text: '福利外卖', desc: '优惠点餐', url: '/pages/market/index', gradient: 'linear-gradient(135deg, #FBD38D, #DD6B20)' }
 ])
 

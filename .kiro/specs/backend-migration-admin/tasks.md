@@ -1,0 +1,231 @@
+# Implementation Plan: Backend Migration & Admin Panel
+
+## Overview
+
+将校园跑腿小程序后端从微信云开发迁移到自建阿里云服务器（Express.js + MongoDB + 七牛云），并构建 Vue 3 后台管理系统。任务按依赖顺序排列：先搭建基础设施，再迁移核心 API，然后适配前端，最后构建管理面板。
+
+## Tasks
+
+- [x] 1. 初始化后端项目与基础设施
+  - [x] 1.1 创建 `server/` 目录，初始化 package.json，安装核心依赖（express, mongoose, jsonwebtoken, bcryptjs, cors, dotenv, multer, qiniu, axios）
+    - 创建 `server/app.js` Express 入口文件，配置 CORS、JSON body parser、静态文件托管
+    - 创建 `server/.env.example` 环境变量模板（MONGO_URI, JWT_SECRET, WX_APPID, WX_SECRET, QINIU_AK, QINIU_SK, QINIU_BUCKET, QINIU_DOMAIN）
+    - 创建 `server/config/index.js` 从环境变量加载配置
+    - _Requirements: 1.1, 1.4, 1.5_
+  - [x] 1.2 创建 MongoDB 连接和所有 Mongoose 模型
+    - 创建 `server/models/` 下所有 16 个模型文件（User, ExpressOrder, ErrandTask, Carpool, ForumPost, ForumComment, MarketGoods, TeamActivity, TeamMember, Message, UserFavorite, SmsCode, Stat, Skill, AdminUser, PageConfig）
+    - 按设计文档定义 Schema 和索引
+    - _Requirements: 3.1_
+  - [x] 1.3 实现 JWT 鉴权中间件
+    - 创建 `server/middleware/auth.js`（小程序用户鉴权，从 Bearer token 提取 openid）
+    - 创建 `server/middleware/adminAuth.js`（管理员鉴权，验证 role=admin）
+    - _Requirements: 2.3, 2.4, 6.3, 6.4_
+  - [ ]* 1.4 编写 JWT 鉴权属性测试
+    - **Property 2: JWT Round-Trip**
+    - **Property 3: Invalid Token Rejection**
+    - **Validates: Requirements 2.2, 2.3, 2.4**
+  - [x] 1.5 实现七牛云上传服务
+    - 创建 `server/services/qiniu.js`（getUploadToken, uploadFile, getPublicUrl, deleteFile）
+    - 创建 `server/routes/upload.js`（POST /api/upload/image, POST /api/upload/images）
+    - 使用 multer 处理 multipart 文件上传
+    - _Requirements: 4.1, 4.2, 4.3, 4.4_
+  - [x] 1.6 实现微信 code2session 服务
+    - 创建 `server/services/wechat.js`（code2session 调用微信 API）
+    - _Requirements: 2.1_
+
+- [x] 2. 迁移用户模块 API
+  - [x] 2.1 实现用户路由 `server/routes/user.js`
+    - POST /api/user/login（wx.login code → code2session → 查找/创建用户 → 签发 JWT）
+    - GET /api/user/profile（获取当前用户信息）
+    - PUT /api/user/profile（更新昵称、头像、手机号）
+    - POST /api/user/register-rider（骑手注册）
+    - GET /api/user/stats（获取用户统计：发布数、接单数、收入）
+    - POST /api/user/favorite（收藏/取消收藏）
+    - GET /api/user/favorite/check（检查是否已收藏）
+    - GET /api/user/favorites（我的收藏列表）
+    - POST /api/user/sms/send（发送验证码）
+    - POST /api/user/sms/verify（校验验证码）
+    - _Requirements: 2.1, 2.2, 2.5_
+  - [ ]* 2.2 编写用户登录属性测试
+    - **Property 4: Auto-Create User on New Openid**
+    - **Validates: Requirements 2.5**
+  - [ ]* 2.3 编写管理员密码哈希属性测试
+    - **Property 10: Admin Password Hashing Round-Trip**
+    - **Validates: Requirements 6.2**
+
+- [x] 3. 迁移快递和跑腿模块 API
+  - [x] 3.1 实现快递路由 `server/routes/express.js`
+    - 完整实现 list, detail（含24小时自动确认）, create, accept, updateStatus, uploadPhoto, cancel, updateLocation, buildingStats
+    - _Requirements: 1.1, 3.2, 3.3, 3.4, 3.5_
+  - [x] 3.2 实现跑腿路由 `server/routes/errand.js`
+    - 完整实现 list, detail（含24小时自动确认）, create, accept, updateStatus, cancel, uploadPhoto
+    - _Requirements: 1.1, 3.2, 3.5_
+  - [x] 3.3 实现订单聚合路由 `server/routes/order.js`
+    - myPublished, myAccepted, myCarpool（含排序逻辑）
+    - _Requirements: 1.1, 3.2_
+  - [ ]* 3.4 编写分页和原子操作属性测试
+    - **Property 5: Pagination Consistency**
+    - **Property 6: Atomic Operations Correctness**
+    - **Validates: Requirements 3.2, 3.3**
+
+- [x] 4. Checkpoint - 核心 API 验证
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [x] 5. 迁移社交和市场模块 API
+  - [x] 5.1 实现论坛路由 `server/routes/forum.js`
+    - list, detail（含评论）, create, like（含消息通知）, comment（含消息通知）, myPosts, deletePost, deleteComment
+    - _Requirements: 1.1, 3.2_
+  - [x] 5.2 实现二手市场路由 `server/routes/market.js`
+    - list（含分类和关键词搜索）, detail（含浏览量递增）, create, want, myGoods, delete
+    - _Requirements: 1.1, 3.2, 3.3_
+  - [x] 5.3 实现拼车路由 `server/routes/carpool.js`
+    - list（含筛选）, detail, create, join, leave
+    - _Requirements: 1.1, 3.2, 3.3_
+  - [x] 5.4 实现组队路由 `server/routes/team.js`
+    - list, detail（含成员）, create（含自动加入）, join, leave, uploadPhoto, end
+    - _Requirements: 1.1, 3.2, 3.3_
+  - [x] 5.5 实现技能路由 `server/routes/skill.js`
+    - list（含分类和正则搜索）, create, detail
+    - _Requirements: 1.1, 3.2_
+  - [x] 5.6 实现消息路由 `server/routes/message.js`
+    - list, unreadCount, markRead, markAllRead, send
+    - _Requirements: 1.1, 3.2_
+  - [x] 5.7 实现首页路由 `server/routes/home.js`
+    - getLiveData, getLatestOrders（含楼栋筛选和排序）
+    - _Requirements: 1.1, 3.2_
+
+- [x] 6. 迁移小程序前端调用层
+  - [x] 6.1 改造 `src/utils/cloud.js`
+    - 实现 `buildUrl(name, action, data)` URL 映射函数
+    - 实现 `getMethod(action)` HTTP 方法映射函数
+    - 将 `callCloud` 从 `wx.cloud.callFunction` 改为 `uni.request` HTTP 调用
+    - 将 `uploadImage` 从 `wx.cloud.uploadFile` 改为 `uni.uploadFile` 到 API Server
+    - _Requirements: 5.1, 5.2, 5.3_
+  - [x] 6.2 改造 `src/App.vue` 登录流程
+    - 移除 `wx.cloud.init()` 调用
+    - 登录改为：`wx.login()` → POST /api/user/login → 存储 JWT token
+    - 添加 token 过期自动重新登录逻辑
+    - _Requirements: 5.4, 5.5_
+  - [ ]* 6.3 编写 URL 映射属性测试
+    - **Property 9: URL Mapping Consistency**
+    - **Validates: Requirements 5.1**
+
+- [x] 7. Checkpoint - 前端适配验证
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [x] 8. 构建管理后台 - 基础框架
+  - [x] 8.1 初始化管理后台项目 `admin/`
+    - 创建 Vue 3 + Vite 项目，安装 Element Plus, Vue Router, Pinia, axios, vuedraggable
+    - 创建 `admin/src/api/index.js` axios 封装（带 admin JWT 拦截器）
+    - 创建 `admin/src/stores/auth.js` Pinia 认证状态管理
+    - 创建 `admin/src/router/index.js` 路由配置（含登录守卫）
+    - _Requirements: 13.1, 13.2_
+  - [x] 8.2 实现管理员登录
+    - 创建 `server/routes/admin.js` 管理员路由
+    - 实现 POST /api/admin/login（用户名密码 → bcrypt 验证 → 签发 admin JWT）
+    - 创建 `admin/src/views/Login.vue` 登录页面
+    - 创建初始管理员账号的 seed 脚本
+    - _Requirements: 6.1, 6.2, 6.3_
+  - [x] 8.3 实现管理后台布局
+    - 创建 `admin/src/layouts/AdminLayout.vue`（侧边栏 + 顶栏 + 内容区）
+    - 侧边栏菜单：仪表盘、用户管理、快递订单、跑腿任务、拼车、二手市场、论坛、组队、技能、消息、首页配置、统计
+    - _Requirements: 13.2_
+  - [ ]* 8.4 编写管理员鉴权属性测试
+    - **Property 11: Admin JWT Role Claim**
+    - **Property 12: Non-Admin Access Rejection**
+    - **Validates: Requirements 6.3, 6.4**
+
+- [x] 9. 构建管理后台 - 数据管理页面
+  - [x] 9.1 实现仪表盘页面 `admin/src/views/Dashboard.vue`
+    - 显示总用户数、总订单数、今日送达、总收入
+    - 实现 GET /api/admin/dashboard 聚合统计接口
+    - _Requirements: 12.1, 12.2_
+  - [x] 9.2 实现用户管理页面 `admin/src/views/Users.vue`
+    - 分页表格、搜索（姓名/手机/openid/骑手状态）
+    - 行内编辑用户信息、删除用户（级联删除收藏和消息）
+    - 实现 GET/PUT/DELETE /api/admin/users 接口
+    - _Requirements: 7.1, 7.2, 7.3, 7.4_
+  - [x] 9.3 实现快递订单管理页面 `admin/src/views/ExpressOrders.vue`
+    - 分页表格、状态筛选、查看详情
+    - 编辑订单（状态、价格、小费）、创建虚拟订单、删除订单
+    - 实现 GET/POST/PUT/DELETE /api/admin/express-orders 接口
+    - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5_
+  - [x] 9.4 实现跑腿任务管理页面 `admin/src/views/ErrandTasks.vue`
+    - 分页表格、状态筛选、编辑、删除
+    - 实现 GET/PUT/DELETE /api/admin/errand-tasks 接口
+    - _Requirements: 8.1, 8.3, 8.5_
+  - [ ]* 9.5 编写管理 CRUD 属性测试
+    - **Property 13: Admin CRUD Round-Trip**
+    - **Validates: Requirements 7.2, 8.3, 8.4, 9.3, 10.2**
+
+- [x] 10. 构建管理后台 - 内容管理页面
+  - [x] 10.1 实现论坛管理页面 `admin/src/views/ForumPosts.vue`
+    - 帖子列表、编辑文字/图片、删除帖子（级联删除评论）
+    - 实现 GET/PUT/DELETE /api/admin/forum-posts 接口
+    - _Requirements: 9.1, 9.2, 9.3_
+  - [x] 10.2 实现二手市场管理页面 `admin/src/views/MarketGoods.vue`
+    - 商品列表、编辑、图片替换、删除
+    - 实现 GET/PUT/DELETE /api/admin/market-goods 接口
+    - _Requirements: 9.1, 9.2, 9.3, 9.4_
+  - [x] 10.3 实现拼车管理页面 `admin/src/views/Carpool.vue`
+    - 拼车列表、编辑、删除
+    - 实现 GET/PUT/DELETE /api/admin/carpool 接口
+    - _Requirements: 9.1, 9.2, 9.3_
+  - [x] 10.4 实现组队管理页面 `admin/src/views/TeamActivities.vue`
+    - 组队列表、编辑、删除（级联删除成员）
+    - 实现 GET/PUT/DELETE /api/admin/team-activities 接口
+    - _Requirements: 9.1, 9.2, 9.3_
+  - [x] 10.5 实现技能管理页面 `admin/src/views/Skills.vue`
+    - 技能列表、编辑、删除
+    - 实现 GET/PUT/DELETE /api/admin/skills 接口
+    - _Requirements: 9.1, 9.2, 9.3_
+  - [x] 10.6 实现消息管理页面 `admin/src/views/Messages.vue`
+    - 消息列表、发送系统消息、删除消息
+    - 实现 GET/POST/DELETE /api/admin/messages 接口
+    - _Requirements: 11.1, 11.2, 11.3_
+  - [ ]* 10.7 编写级联删除属性测试
+    - **Property 14: User Deletion Cascade**
+    - **Property 16: Content Deletion Cascade**
+    - **Validates: Requirements 7.3, 9.2**
+
+- [x] 11. 构建管理后台 - 首页配置与统计
+  - [x] 11.1 实现首页配置页面 `admin/src/views/PageConfig.vue`
+    - 可视化编辑首页各区块（轮播图、快捷操作、文字）
+    - 拖拽排序区块和区块内项目（vuedraggable）
+    - 图片上传替换
+    - 实现 GET/PUT /api/admin/page-config 接口
+    - _Requirements: 10.1, 10.2, 10.3, 10.4_
+  - [x] 11.2 改造小程序首页读取动态配置
+    - 修改 `src/pages/index/index.vue`，从 API 获取 page_config 渲染轮播图和快捷操作
+    - _Requirements: 10.5_
+  - [x] 11.3 实现统计管理页面 `admin/src/views/Stats.vue`
+    - 显示和手动编辑 stats 数据
+    - 实现 GET/PUT /api/admin/stats 接口
+    - _Requirements: 12.1, 12.2, 12.3_
+  - [ ]* 11.4 编写页面配置持久化属性测试
+    - **Property 17: Page Config Persistence**
+    - **Validates: Requirements 10.3, 10.5**
+
+- [x] 12. 集成与部署配置
+  - [x] 12.1 配置 Express 托管管理后台静态资源
+    - `admin/` 项目 build 后输出到 `server/public/admin/`
+    - Express 配置 `express.static` 托管管理面板
+    - 配置 API 路由和静态资源路由不冲突
+    - _Requirements: 13.1_
+  - [x] 12.2 创建数据迁移种子脚本
+    - 创建 `server/scripts/seed.js`，复用原 `cloudfunctions/seed/` 的逻辑，向 MongoDB 写入测试数据
+    - 创建 `server/scripts/create-admin.js`，创建初始管理员账号
+    - _Requirements: 1.1_
+
+- [x] 13. Final Checkpoint - 全面验证
+  - Ensure all tests pass, ask the user if questions arise.
+
+## Notes
+
+- Tasks marked with `*` are optional and can be skipped for faster MVP
+- Each task references specific requirements for traceability
+- Checkpoints ensure incremental validation
+- Property tests validate universal correctness properties
+- Unit tests validate specific examples and edge cases
+- 前端页面代码（各 .vue 文件）除了 `callCloud` 调用方式变化外，业务逻辑基本不需要改动
+- 管理后台 build 产物由 Express 静态托管，无需单独部署

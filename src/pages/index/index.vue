@@ -22,23 +22,11 @@
     <view class="section">
       <text class="section-label">快捷操作</text>
       <view class="action-row">
-        <view class="action-card" @click="goPage('/pages/express/create')">
-          <view class="action-icon-bg" style="background: linear-gradient(135deg, #4299E1, #2B6CB0);">
-            <text class="action-icon">📦</text>
+        <view class="action-card" v-for="act in actions" :key="act.text" @click="goPage(act.link)">
+          <view class="action-icon-bg" :style="{ background: act.bg }">
+            <text class="action-icon">{{ act.emoji }}</text>
           </view>
-          <text class="action-name">代取快递</text>
-        </view>
-        <view class="action-card" @click="goPage('/pages/errand/create')">
-          <view class="action-icon-bg" style="background: linear-gradient(135deg, #ED8936, #DD6B20);">
-            <text class="action-icon">🏃</text>
-          </view>
-          <text class="action-name">万能跑腿</text>
-        </view>
-        <view class="action-card" @click="goPage('/pages/express/rider-register')">
-          <view class="action-icon-bg" style="background: linear-gradient(135deg, #48BB78, #38A169);">
-            <text class="action-icon">🏅</text>
-          </view>
-          <text class="action-name">骑手注册</text>
+          <text class="action-name">{{ act.text }}</text>
         </view>
       </view>
     </view>
@@ -47,7 +35,7 @@
     <view class="section">
       <view class="section-head">
         <text class="section-label">最新订单</text>
-        <text class="section-link" @click="goPage('/pages/express/index')">查看全部 ›</text>
+        <text class="section-link" @click="goPage('/pages/order/all')">查看全部 ›</text>
       </view>
       <scroll-view scroll-x class="building-filter">
         <view class="filter-inner">
@@ -81,32 +69,19 @@
       </view>
     </view>
 
-    <!-- 配送时间说明 -->
+    <!-- 轮播图 -->
     <view class="section">
-      <view class="notice-card">
-        <view class="notice-header">
-          <text class="notice-icon">⏰</text>
-          <text class="notice-title">配送时间说明</text>
-        </view>
-        <view class="notice-body">
-          <view class="notice-row">
-            <view class="notice-dot"></view>
-            <text class="notice-text">工作日配送时间：8:00-22:00</text>
+      <swiper class="banner-swiper" :indicator-dots="true" :autoplay="true" :interval="3000" :duration="500" :circular="true" indicator-color="rgba(255,255,255,0.4)" indicator-active-color="#fff">
+        <swiper-item v-for="item in banners" :key="item.id">
+          <view class="banner-item" :style="{ background: item.bg }">
+            <text class="banner-emoji">{{ item.emoji }}</text>
+            <view class="banner-text-area">
+              <text class="banner-title">{{ item.title }}</text>
+              <text class="banner-desc">{{ item.desc }}</text>
+            </view>
           </view>
-          <view class="notice-row">
-            <view class="notice-dot"></view>
-            <text class="notice-text">周末/节假日：9:00-21:00</text>
-          </view>
-          <view class="notice-row">
-            <view class="notice-dot"></view>
-            <text class="notice-text">恶劣天气可能影响配送时效</text>
-          </view>
-          <view class="notice-row">
-            <view class="notice-dot"></view>
-            <text class="notice-text">大件/超大件请提前与骑手沟通</text>
-          </view>
-        </view>
-      </view>
+        </swiper-item>
+      </swiper>
     </view>
 
     <MsgNotify />
@@ -120,6 +95,41 @@ import { onLoad, onUnload, onShow, onPullDownRefresh } from '@dcloudio/uni-app'
 import { callCloud, checkLogin } from '@/utils/cloud.js'
 import ServiceFab from '@/components/ServiceFab.vue'
 import MsgNotify from '@/components/MsgNotify.vue'
+
+const defaultBanners = [
+  { id: 1, emoji: '📦', title: '快递代取 极速送达', desc: '下单后最快30分钟送到宿舍', bg: 'linear-gradient(135deg, #4299E1, #2B6CB0)' },
+  { id: 2, emoji: '🏃', title: '万能跑腿 有求必应', desc: '买饭、打印、取件 一键搞定', bg: 'linear-gradient(135deg, #ED8936, #DD6B20)' },
+  { id: 3, emoji: '🎉', title: '新用户首单立减', desc: '注册即享优惠 快来体验吧', bg: 'linear-gradient(135deg, #48BB78, #38A169)' }
+]
+const banners = ref(defaultBanners)
+
+const defaultActions = [
+  { emoji: '📦', text: '代取快递', link: '/pages/express/create', bg: 'linear-gradient(135deg, #4299E1, #2B6CB0)' },
+  { emoji: '🏃', text: '万能跑腿', link: '/pages/errand/create', bg: 'linear-gradient(135deg, #ED8936, #DD6B20)' },
+  { emoji: '🏅', text: '骑手注册', link: '/pages/express/rider-register', bg: 'linear-gradient(135deg, #48BB78, #38A169)' }
+]
+const actions = ref(defaultActions)
+
+const loadPageConfig = async () => {
+  try {
+    const res = await callCloud('home', 'getPageConfig')
+    if (res.code === 0 && res.data && res.data.sections) {
+      const sections = res.data.sections.filter(s => s.visible !== false)
+      const bannerSec = sections.find(s => s.key === 'banners')
+      if (bannerSec && bannerSec.items && bannerSec.items.length > 0) {
+        banners.value = bannerSec.items.map((it, i) => ({
+          id: i + 1, emoji: it.emoji || '', title: it.text || '', desc: it.link || '', bg: it.bg || 'linear-gradient(135deg, #4299E1, #2B6CB0)'
+        }))
+      }
+      const actionSec = sections.find(s => s.key === 'actions')
+      if (actionSec && actionSec.items && actionSec.items.length > 0) {
+        actions.value = actionSec.items.map(it => ({
+          emoji: it.emoji || '', text: it.text || '', link: it.link || '', bg: it.bg || 'linear-gradient(135deg, #4299E1, #2B6CB0)'
+        }))
+      }
+    }
+  } catch (e) { /* 使用默认配置 */ }
+}
 
 const live = reactive({ updatedAt: '加载中', todayDelivered: 0 })
 
@@ -139,8 +149,8 @@ let liveTimer = null
 
 const statusTextMap = { 0: '待接单', 1: '已接单', 2: '配送中', 3: '已完成', 4: '已取消' }
 const statusColorMap = { 0: '#DD6B20', 1: '#2B6CB0', 2: '#38A169', 3: '#A0AEC0', 4: '#E53E3E' }
-const errandStatusTextMap = { 0: '待接单', 1: '进行中', 2: '已完成', 3: '已取消' }
-const errandStatusColorMap = { 0: '#DD6B20', 1: '#38A169', 2: '#A0AEC0', 3: '#E53E3E' }
+const errandStatusTextMap = { 0: '待接单', 1: '进行中', 2: '已完成', 3: '已取消', 4: '待确认' }
+const errandStatusColorMap = { 0: '#DD6B20', 1: '#38A169', 2: '#A0AEC0', 3: '#E53E3E', 4: '#2B6CB0' }
 
 const latestOrders = ref([])
 
@@ -179,7 +189,7 @@ const formatTime = (t) => {
 // 快递状态：0=待接单, 1=已接单, 2=配送中, 3=已完成, 4=已取消
 // 跑腿状态：0=待接单, 1=进行中, 2=已完成, 3=已取消
 var expressPriority = { 0: 0, 2: 1, 1: 2, 3: 3, 4: 4 }
-var errandPriority = { 0: 0, 1: 1, 2: 3, 3: 4 }
+var errandPriority = { 0: 0, 1: 1, 4: 2, 2: 3, 3: 4 }
 const sortedOrders = computed(() => [...latestOrders.value].sort((a, b) => {
   var pm = a.orderType === 'errand' ? errandPriority : expressPriority
   var pm2 = b.orderType === 'errand' ? errandPriority : expressPriority
@@ -191,14 +201,20 @@ const sortedOrders = computed(() => [...latestOrders.value].sort((a, b) => {
 
 const selectedBuilding = ref('全部')
 
+// 只保留待接单和配送中/进行中的订单
+const activeOrders = computed(() => sortedOrders.value.filter(o => {
+  if (o.orderType === 'errand') return o.status === 0 || o.status === 1
+  return o.status === 0 || o.status === 2
+}))
+
 const buildingTabs = computed(() => {
   var map = {}
-  sortedOrders.value.forEach(function(o) {
+  activeOrders.value.forEach(function(o) {
     var name = o.buildingName || '未知'
     if (!map[name]) map[name] = 0
     map[name]++
   })
-  var tabs = [{ name: '全部', count: sortedOrders.value.length }]
+  var tabs = [{ name: '全部', count: activeOrders.value.length }]
   Object.keys(map).forEach(function(k) {
     tabs.push({ name: k, count: map[k] })
   })
@@ -206,7 +222,7 @@ const buildingTabs = computed(() => {
 })
 
 const filteredOrders = computed(() => {
-  var list = sortedOrders.value
+  var list = activeOrders.value
   if (selectedBuilding.value !== '全部') {
     list = list.filter(function(o) { return o.buildingName === selectedBuilding.value })
   }
@@ -216,6 +232,7 @@ const filteredOrders = computed(() => {
 onLoad(() => {
   refreshLive()
   loadOrders()
+  loadPageConfig()
   liveTimer = setInterval(refreshLive, 30000)
 })
 onShow(() => { loadOrders() })
@@ -299,17 +316,15 @@ const goDetail = (id, orderType) => {
 .order-end { text-align: right; min-width: 120rpx; }
 .order-price { font-size: 34rpx; color: #E53E3E; font-weight: 800; display: block; }
 .order-tip-row { display: flex; align-items: baseline; justify-content: flex-end; margin-top: 4rpx; }
-.order-tip-label { font-size: 20rpx; color: #DD6B20; font-weight: 500; margin-right: 4rpx; }
-.order-tip-num { font-size: 60rpx; color: #DD6B20; font-weight: 800; line-height: 1; }
+.order-tip-label { font-size: 20rpx; color: #2B6CB0; font-weight: 500; margin-right: 4rpx; }
+.order-tip-num { font-size: 50rpx; color: #2B6CB0; font-weight: 800; line-height: 1; }
 .order-state { font-size: 22rpx; display: block; margin-top: 6rpx; font-weight: 600; }
 
-/* 通知卡片 */
-.notice-card { background: #fff; border-radius: 20rpx; padding: 28rpx; box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.04); }
-.notice-header { display: flex; align-items: center; margin-bottom: 20rpx; }
-.notice-icon { font-size: 28rpx; margin-right: 10rpx; }
-.notice-title { font-size: 28rpx; font-weight: 700; color: #1A1A2E; }
-.notice-body { background: #F7FAFC; border-radius: 14rpx; padding: 20rpx 24rpx; }
-.notice-row { display: flex; align-items: center; padding: 8rpx 0; }
-.notice-dot { width: 8rpx; height: 8rpx; border-radius: 50%; background: #4299E1; margin-right: 14rpx; flex-shrink: 0; }
-.notice-text { font-size: 24rpx; color: #4A5568; line-height: 1.6; }
+/* 轮播图 */
+.banner-swiper { height: 240rpx; border-radius: 20rpx; overflow: hidden; }
+.banner-item { width: 100%; height: 240rpx; display: flex; align-items: center; padding: 0 40rpx; box-sizing: border-box; }
+.banner-emoji { font-size: 80rpx; margin-right: 28rpx; }
+.banner-text-area { display: flex; flex-direction: column; }
+.banner-title { font-size: 32rpx; font-weight: 800; color: #fff; margin-bottom: 10rpx; }
+.banner-desc { font-size: 24rpx; color: rgba(255,255,255,0.85); }
 </style>

@@ -23,7 +23,45 @@ exports.main = async (event, context) => {
 
     case 'detail': {
       const res = await db.collection('errand_tasks').doc(data.id).get()
-      return { code: 0, data: res.data }
+      var detailData = res.data
+      // 24小时自动确认：待确认状态超过24小时自动完成
+      if (detailData.status === 4 && detailData.submitTime) {
+        var submitTs = new Date(detailData.submitTime).getTime()
+        if (Date.now() - submitTs >= 24 * 60 * 60 * 1000) {
+          await db.collection('errand_tasks').doc(data.id).update({
+            data: { status: 2, statusText: '已完成', statusColor: '#A0AEC0', completeTime: db.serverDate(), autoConfirmed: true }
+          })
+          detailData.status = 2
+          detailData.statusText = '已完成'
+          detailData.autoConfirmed = true
+        }
+      }
+      // 查询接单人信息
+      if (detailData.riderId) {
+        var riderUser = await db.collection('users').where({ openid: detailData.riderId }).get()
+        if (riderUser.data.length > 0) {
+          detailData.riderName = riderUser.data[0].name || '接单人'
+          detailData.riderPhone = riderUser.data[0].phone || ''
+        }
+      }
+      // 将云存储fileID转为临时URL
+      var fileIDs = []
+      if (detailData.pickupPhoto) fileIDs.push(detailData.pickupPhoto)
+      if (detailData.deliverPhoto) fileIDs.push(detailData.deliverPhoto)
+      if (fileIDs.length > 0) {
+        try {
+          var tempRes = await cloud.getTempFileURL({ fileList: fileIDs })
+          if (tempRes.fileList && tempRes.fileList.length > 0) {
+            tempRes.fileList.forEach(function(f) {
+              if (f.status === 0 && f.tempFileURL) {
+                if (f.fileID === detailData.pickupPhoto) detailData.pickupPhoto = f.tempFileURL
+                if (f.fileID === detailData.deliverPhoto) detailData.deliverPhoto = f.tempFileURL
+              }
+            })
+          }
+        } catch(e) {}
+      }
+      return { code: 0, data: detailData }
     }
 
     case 'create': {
@@ -53,6 +91,7 @@ exports.main = async (event, context) => {
     case 'accept': {
       const task = await db.collection('errand_tasks').doc(data.taskId).get()
       if (task.data.status !== 0) return { code: -1, msg: '任务已被接' }
+      if (task.data.openid === openid) return { code: -1, msg: '不能接自己发布的单' }
       var errandAcceptUser = await db.collection('users').where({ openid }).get()
       var errandAcceptName = errandAcceptUser.data.length > 0 ? errandAcceptUser.data[0].name : '骑手'
       await db.collection('errand_tasks').doc(data.taskId).update({
@@ -84,12 +123,14 @@ exports.main = async (event, context) => {
         0: { text: '待接单', color: '#DD6B20' },
         1: { text: '进行中', color: '#38A169' },
         2: { text: '已完成', color: '#A0AEC0' },
-        3: { text: '已取消', color: '#E53E3E' }
+        3: { text: '已取消', color: '#E53E3E' },
+        4: { text: '待确认', color: '#2B6CB0' }
       }
       const s = statusMap[status] || statusMap[0]
-      await db.collection('errand_tasks').doc(taskId).update({
-        data: { status, statusText: s.text, statusColor: s.color }
-      })
+      var errandUpdateData = { status, statusText: s.text, statusColor: s.color }
+      if (status === 4) errandUpdateData.submitTime = db.serverDate()
+      if (status === 2) errandUpdateData.completeTime = db.serverDate()
+      await db.collection('errand_tasks').doc(taskId).update({ data: errandUpdateData })
       // 通知相关方
       var errandTask = await db.collection('errand_tasks').doc(taskId).get()
       var errandStatusUser = await db.collection('users').where({ openid }).get()
@@ -116,7 +157,14 @@ exports.main = async (event, context) => {
 
     case 'cancel': {
       const task = await db.collection('errand_tasks').doc(data.taskId).get()
-      if (task.data.openid !== openid) return { code: -1, msg: '仅发布者可取消' }
+      // 进行中（status=1）不允许发布者取消
+      if (task.data.status === 1 && task.data.openid === openid) {
+        return { code: -1, msg: '接单人正在执行任务，无法取消' }
+      }
+      // 只有发布者或接单人可以取消
+      if (task.data.openid !== openid && task.data.riderId !== openid) {
+        return { code: -1, msg: '无权取消该任务' }
+      }
       await db.collection('errand_tasks').doc(data.taskId).update({
         data: { status: 3, statusText: '已取消', statusColor: '#E53E3E' }
       })
@@ -139,6 +187,21 @@ exports.main = async (event, context) => {
           }
         })
       }
+      return { code: 0 }
+    }
+
+    case 'uploadPhoto': {
+      const { taskId, type, fileID } = data
+      if (!taskId || !type || !fileID) return { code: -1, msg: 'missing fields' }
+      var photoUpdate = {}
+      if (type === 'pickup') {
+        photoUpdate.pickupPhoto = fileID
+        photoUpdate.pickupPhotoTime = db.serverDate()
+      } else if (type === 'deliver') {
+        photoUpdate.deliverPhoto = fileID
+        photoUpdate.deliverPhotoTime = db.serverDate()
+      }
+      await db.collection('errand_tasks').doc(taskId).update({ data: photoUpdate })
       return { code: 0 }
     }
 

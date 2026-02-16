@@ -16,6 +16,12 @@
       </view>
     </view>
 
+    <!-- 自动确认倒计时 -->
+    <view class="auto-confirm-bar" v-if="order.status === 2 && order.deliverPhoto && autoConfirmText">
+      <text class="auto-confirm-icon">⏰</text>
+      <text class="auto-confirm-text">{{ autoConfirmText }}</text>
+    </view>
+
     <!-- 实时地图 -->
     <view class="info-card" v-if="order.status >= 1 && order.status <= 2 && mapReady">
       <text class="card-title">🗺️ 实时位置</text>
@@ -39,9 +45,13 @@
           <text class="legend-text">收货地址</text>
         </view>
       </view>
+      <view class="distance-info" v-if="distanceText || durationText">
+        <text class="distance-text" v-if="distanceText">📏 距离: {{ distanceText }}</text>
+        <text class="duration-text" v-if="durationText">⏱️ 预计: {{ durationText }}</text>
+      </view>
       <view class="map-actions">
-        <view class="map-btn" @click="refreshRiderLocation">
-          <text>🔄 刷新位置</text>
+        <view class="map-btn" :class="{disabled: refreshCooling}" @click="refreshRiderLocation">
+          <text>🔄 {{ refreshCooling ? cooldownText : '刷新位置' }}</text>
         </view>
         <text class="map-time" v-if="riderLocationTime">{{ riderLocationTime }} 更新</text>
       </view>
@@ -213,6 +223,15 @@ var locationTimer = null
 var mapCenter = reactive({ lat: 0, lng: 0 })
 var markers = ref([])
 var polyline = ref([])
+var refreshCooling = ref(false)
+var cooldownText = ref('3s')
+var lastRefreshTime = ref(0)
+var cooldownTimer = null
+var distanceText = ref('')
+var durationText = ref('')
+
+var autoConfirmText = ref('')
+var autoConfirmTimer = null
 
 var order = ref({
   id: '', sizeText: '', sizeClass: '',
@@ -238,6 +257,8 @@ onLoad(function(opts) {
 
 onUnload(function() {
   if (locationTimer) { clearInterval(locationTimer); locationTimer = null }
+  if (cooldownTimer) { clearInterval(cooldownTimer); cooldownTimer = null }
+  if (autoConfirmTimer) { clearInterval(autoConfirmTimer); autoConfirmTimer = null }
 })
 
 var goRiderRegister = function() {
@@ -269,6 +290,7 @@ var loadDetail = async function(id) {
     var userInfo = uni.getStorageSync('userInfo')
     var myOpenid = ''
     if (userInfo && userInfo.openid) myOpenid = userInfo.openid
+    if (!myOpenid) myOpenid = uni.getStorageSync('openid') || ''
     isOwner.value = !!(d.openid && myOpenid && d.openid === myOpenid)
 
     order.value = {
@@ -288,6 +310,7 @@ var loadDetail = async function(id) {
       pickupPhotoTime: d.pickupPhotoTime ? formatPhotoTime(d.pickupPhotoTime) : '',
       deliverPhoto: d.deliverPhoto || '',
       deliverPhotoTime: d.deliverPhotoTime ? formatPhotoTime(d.deliverPhotoTime) : '',
+      deliverPhotoRawTime: d.deliverPhotoTime || null,
       acceptTimeText: d.acceptTime ? formatPhotoTime(d.acceptTime) : '',
       runner: d.riderId ? { avatar: '🧑‍🎓', name: d.riderName || '骑手', phone: d.riderPhone || '' } : null,
       time: '',
@@ -310,7 +333,34 @@ var loadDetail = async function(id) {
         locationTimer = setInterval(function() { refreshRiderLocation() }, 10000)
       }
     }
+
+    // 启动自动确认倒计时
+    startAutoConfirmCountdown()
   }
+}
+
+var startAutoConfirmCountdown = function() {
+  if (autoConfirmTimer) { clearInterval(autoConfirmTimer); autoConfirmTimer = null }
+  var updateCountdown = function() {
+    var o = order.value
+    if (o.status !== 2 || !o.deliverPhoto || !o.deliverPhotoRawTime) {
+      autoConfirmText.value = ''
+      return
+    }
+    var submitTs = new Date(o.deliverPhotoRawTime).getTime()
+    var deadline = submitTs + 24 * 60 * 60 * 1000
+    var remaining = deadline - Date.now()
+    if (remaining <= 0) {
+      autoConfirmText.value = '已自动确认收货'
+      if (autoConfirmTimer) { clearInterval(autoConfirmTimer); autoConfirmTimer = null }
+      return
+    }
+    var hours = Math.floor(remaining / 3600000)
+    var mins = Math.floor((remaining % 3600000) / 60000)
+    autoConfirmText.value = hours + '小时' + mins + '分钟后自动确认收货'
+  }
+  updateCountdown()
+  autoConfirmTimer = setInterval(updateCountdown, 60000)
 }
 
 // 骑手上报自己的位置
@@ -330,14 +380,46 @@ var reportMyLocation = function() {
   })
 }
 
-// 用户刷新骑手位置
+// 用户刷新骑手位置（3秒冷却）
 var refreshRiderLocation = async function() {
+  var now = Date.now()
+  if (now - lastRefreshTime.value < 3000) {
+    uni.showToast({ title: '请稍后再刷新', icon: 'none' })
+    return
+  }
+  lastRefreshTime.value = now
+  refreshCooling.value = true
+  var remaining = 3
+  cooldownText.value = remaining + 's'
+  if (cooldownTimer) clearInterval(cooldownTimer)
+  cooldownTimer = setInterval(function() {
+    remaining--
+    if (remaining <= 0) {
+      clearInterval(cooldownTimer)
+      cooldownTimer = null
+      refreshCooling.value = false
+    } else {
+      cooldownText.value = remaining + 's'
+    }
+  }, 1000)
+
   var res = await callCloud('express', 'getRiderLocation', { orderId: orderId.value })
   if (res.code === 0 && res.data.riderLat) {
     order.value.riderLat = res.data.riderLat
     order.value.riderLng = res.data.riderLng
     if (res.data.riderLocationTime) {
       riderLocationTime.value = formatPhotoTime(res.data.riderLocationTime)
+    }
+    // 更新距离和预计时间
+    if (res.data.distance) {
+      distanceText.value = res.data.distance >= 1000
+        ? (res.data.distance / 1000).toFixed(1) + 'km'
+        : res.data.distance + 'm'
+    }
+    if (res.data.duration) {
+      durationText.value = res.data.duration < 60
+        ? '不到1分钟'
+        : Math.ceil(res.data.duration / 60) + '分钟'
     }
     updateMarkers()
   }
@@ -440,15 +522,23 @@ var showAction = computed(function() {
   if (s >= 3) return false
   if (s === 4) return false
   if (isRider.value) return true
-  if (s === 0 && isOwner.value) return true
-  // 用户只有在骑手上传了送达照片后才能确认收货
+  if (isOwner.value && s === 0) return true
+  // 已接单时用户可以取消
+  if (isOwner.value && s === 1) return true
+  // 配送中用户不能取消，但能确认收货
   if (s === 2 && isOwner.value && order.value.deliverPhoto) return true
   return false
 })
 var actionText = computed(function() {
   var s = order.value.status
-  if (isRider.value) return ['接单', '已取件，开始配送', '已送达，完成订单', ''][s]
+  if (isRider.value) {
+    if (s === 0) return '接单'
+    if (s === 1) return '已取件，开始配送'
+    if (s === 2) return '已送达，完成订单'
+    return ''
+  }
   if (isOwner.value && s === 0) return '取消订单'
+  if (isOwner.value && s === 1) return '取消订单'
   if (isOwner.value && s === 2 && order.value.deliverPhoto) return '确认收货'
   return ''
 })
@@ -477,7 +567,8 @@ var handleAction = async function() {
       return
     }
   }
-  if (!isRider.value && isOwner.value && order.value.status === 0) {
+  // 用户取消订单（待接单或已接单状态）
+  if (!isRider.value && isOwner.value && (order.value.status === 0 || order.value.status === 1)) {
     uni.showModal({
       title: '确认取消',
       content: '确定要取消该订单吗？',
@@ -618,11 +709,22 @@ var previewPhoto = function(src) {
 .legend-text { font-size: 22rpx; color: #718096; }
 .map-actions { display: flex; align-items: center; justify-content: space-between; margin-top: 12rpx; }
 .map-btn { padding: 12rpx 24rpx; background: #EBF4FF; border-radius: 24rpx; }
+.map-btn.disabled { background: #F0F0F0; opacity: 0.6; }
 .map-btn:active { background: #BEE3F8; }
+.map-btn.disabled:active { background: #F0F0F0; }
 .map-btn text { font-size: 24rpx; color: #2B6CB0; font-weight: 600; }
+.map-btn.disabled text { color: #999; }
 .map-time { font-size: 22rpx; color: #A0AEC0; }
+.distance-info { display: flex; gap: 24rpx; margin-top: 12rpx; padding: 12rpx 16rpx; background: #F0FFF4; border-radius: 12rpx; }
+.distance-text { font-size: 24rpx; color: #2D8A56; font-weight: 600; }
+.duration-text { font-size: 24rpx; color: #2B6CB0; font-weight: 600; }
 
 .action-bar { position: fixed; bottom: 0; left: 0; right: 0; padding: 20rpx 24rpx 40rpx; background: #fff; }
+
+/* 自动确认倒计时 */
+.auto-confirm-bar { margin: 0 24rpx 20rpx; background: linear-gradient(135deg, #FFF8E1, #FFECB3); border-radius: 12rpx; padding: 18rpx 24rpx; display: flex; align-items: center; }
+.auto-confirm-icon { font-size: 28rpx; margin-right: 12rpx; }
+.auto-confirm-text { font-size: 24rpx; color: #E65100; font-weight: 600; }
 .action-btn { background: linear-gradient(135deg, #4A90D9, #357ABD); border-radius: 48rpx; padding: 28rpx; text-align: center; }
 .action-btn text { color: #fff; font-size: 32rpx; font-weight: bold; }
 .rider-register-bar { position: fixed; bottom: 0; left: 0; right: 0; padding: 20rpx 24rpx 40rpx; background: #fff; box-shadow: 0 -4rpx 12rpx rgba(0,0,0,0.06); display: flex; align-items: center; }

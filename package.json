@@ -33,7 +33,9 @@
     "build:mp-xhs": "uni build -p mp-xhs",
     "build:quickapp-webview": "uni build -p quickapp-webview",
     "build:quickapp-webview-huawei": "uni build -p quickapp-webview-huawei",
-    "build:quickapp-webview-union": "uni build -p quickapp-webview-union"
+    "build:quickapp-webview-union": "uni build -p quickapp-webview-union",
+    "test": "vitest --run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@dcloudio/uni-app": "3.0.0-4080720251210001",
@@ -62,6 +64,8 @@
     "@dcloudio/uni-stacktracey": "3.0.0-4080720251210001",
     "@dcloudio/vite-plugin-uni": "3.0.0-4080720251210001",
     "@vue/runtime-core": "^3.4.21",
-    "vite": "5.2.8"
+    "fast-check": "^4.5.3",
+    "vite": "5.2.8",
+    "vitest": "^4.0.18"
   }
 }

@@ -6,7 +6,7 @@
     </view>
 
     <view class="service-grid">
-      <view class="service-card" v-for="item in services" :key="item.id">
+      <view class="service-card" v-for="item in services" :key="item.id" @click="onServiceTap(item)">
         <text class="service-emoji">{{ item.emoji }}</text>
         <text class="service-title">{{ item.title }}</text>
         <text class="service-desc">{{ item.desc }}</text>
@@ -27,10 +27,10 @@
 import { ref } from 'vue'
 
 const services = ref([
-  { id: 1, title: '资料包', desc: '真题+笔记合集', emoji: '📘' },
-  { id: 2, title: '课程表', desc: '名师课程安排', emoji: '🎯' },
-  { id: 3, title: '自习室', desc: '空位预约提醒', emoji: '🏫' },
-  { id: 4, title: '经验帖', desc: '上岸学长学姐分享', emoji: '🧑‍🎓' }
+  { id: 1, title: '资料包', desc: '真题+笔记合集', emoji: '📘', url: '/pages/graduate/resources' },
+  { id: 2, title: '课程表', desc: '我的课程安排', emoji: '🎯', url: '/pages/graduate/schedule' },
+  { id: 3, title: '打卡', desc: '每日学习打卡', emoji: '✅', url: '/pages/graduate/checkin' },
+  { id: 4, title: '经验帖', desc: '上岸学长学姐分享', emoji: '🧑‍🎓', url: '/pages/graduate/experience' }
 ])
 
 const plans = ref([
@@ -40,21 +40,23 @@ const plans = ref([
   { id: 4, day: '周四', task: '政治主观题+专业课二' },
   { id: 5, day: '周五', task: '英语真题精练' }
 ])
+
+const onServiceTap = (item) => {
+  uni.navigateTo({ url: item.url })
+}
 </script>
 
 <style scoped>
 .graduate-page { background: #F5F7FA; min-height: 100vh; padding-bottom: 40rpx; }
-
 .hero { margin: 20rpx 24rpx; padding: 28rpx 24rpx; border-radius: 16rpx; background: linear-gradient(135deg, #43A047, #2E7D32); color: #fff; box-shadow: 0 6rpx 16rpx rgba(67,160,71,0.35); }
 .hero-title { font-size: 34rpx; font-weight: bold; display: block; }
 .hero-sub { font-size: 24rpx; margin-top: 8rpx; display: block; opacity: 0.85; }
-
 .service-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16rpx; padding: 8rpx 24rpx 20rpx; }
 .service-card { background: #fff; border-radius: 16rpx; padding: 24rpx; box-shadow: 0 4rpx 12rpx rgba(0,0,0,0.08); }
+.service-card:active { transform: scale(0.96); }
 .service-emoji { font-size: 40rpx; display: block; }
 .service-title { font-size: 28rpx; font-weight: bold; color: #333; display: block; margin-top: 12rpx; }
 .service-desc { font-size: 22rpx; color: #666; display: block; margin-top: 6rpx; }
-
 .plan-card { margin: 0 24rpx 24rpx; background: #fff; border-radius: 16rpx; padding: 24rpx; box-shadow: 0 4rpx 12rpx rgba(0,0,0,0.08); }
 .plan-title { font-size: 28rpx; font-weight: bold; color: #333; display: block; margin-bottom: 12rpx; }
 .plan-item { display: flex; justify-content: space-between; padding: 10rpx 0; border-bottom: 1rpx solid #f0f0f0; }

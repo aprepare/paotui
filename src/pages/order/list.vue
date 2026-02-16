@@ -18,14 +18,29 @@
           <text class="menu-text">我的拼车</text>
           <text class="menu-arrow">›</text>
         </view>
-        <view class="menu-item" @click="goSub('/pages/order/list?tab=13')">
-          <view class="menu-icon-bg" style="background: linear-gradient(135deg, #FC8181, #E53E3E);"><text class="mi">🛒</text></view>
-          <text class="menu-text">我的商品</text>
-          <text class="menu-arrow">›</text>
-        </view>
-        <view class="menu-item last" @click="goSub('/pages/order/list?tab=14')">
+        <view class="menu-item" @click="goSub('/pages/order/list?tab=14')">
           <view class="menu-icon-bg" style="background: linear-gradient(135deg, #B794F4, #805AD5);"><text class="mi">🏕️</text></view>
           <text class="menu-text">我的组队</text>
+          <text class="menu-arrow">›</text>
+        </view>
+        <view class="menu-item" @click="goSub('/pages/order/list?tab=17')">
+          <view class="menu-icon-bg" style="background: linear-gradient(135deg, #F687B3, #D53F8C);"><text class="mi">🎯</text></view>
+          <text class="menu-text">我的技能</text>
+          <text class="menu-arrow">›</text>
+        </view>
+        <view class="menu-item" @click="goSub('/pages/order/list?tab=15')">
+          <view class="menu-icon-bg" style="background: linear-gradient(135deg, #667eea, #764ba2);"><text class="mi">📚</text></view>
+          <text class="menu-text">我的家教</text>
+          <text class="menu-arrow">›</text>
+        </view>
+        <view class="menu-item" @click="goSub('/pages/order/list?tab=16')">
+          <view class="menu-icon-bg" style="background: linear-gradient(135deg, #4facfe, #00f2fe);"><text class="mi">💼</text></view>
+          <text class="menu-text">我的兼职</text>
+          <text class="menu-arrow">›</text>
+        </view>
+        <view class="menu-item last" @click="goSub('/pages/order/list?tab=13')">
+          <view class="menu-icon-bg" style="background: linear-gradient(135deg, #FC8181, #E53E3E);"><text class="mi">🛒</text></view>
+          <text class="menu-text">我的商品</text>
           <text class="menu-arrow">›</text>
         </view>
       </view>
@@ -87,11 +102,12 @@ var errandList = ref([])
 var carpoolList = ref([])
 var goodsList = ref([])
 var teamList = ref([])
+var skillList = ref([])
 
 var expressStatusMap = { 0: '待接单', 1: '已接单', 2: '配送中', 3: '已完成', 4: '已取消' }
 var expressColorMap = { 0: '#DD6B20', 1: '#2B6CB0', 2: '#38A169', 3: '#A0AEC0', 4: '#E53E3E' }
-var errandStatusMap = { 0: '待接单', 1: '进行中', 2: '已完成', 3: '已取消' }
-var errandColorMap = { 0: '#DD6B20', 1: '#38A169', 2: '#A0AEC0', 3: '#E53E3E' }
+var errandStatusMap = { 0: '待接单', 1: '进行中', 2: '已完成', 3: '已取消', 4: '待确认' }
+var errandColorMap = { 0: '#DD6B20', 1: '#38A169', 2: '#A0AEC0', 3: '#E53E3E', 4: '#2B6CB0' }
 var carpoolStatusMap = { 0: '招募中', 1: '已满员', 2: '已出发', 3: '已结束' }
 var carpoolColorMap = { 0: '#DD6B20', 1: '#2B6CB0', 2: '#38A169', 3: '#A0AEC0' }
 var goodsStatusMap = { 0: '在售', 1: '已售出', 2: '已下架' }
@@ -193,6 +209,19 @@ var loadData = async function() {
     teamList.value = tArr2
   }
 
+  var r6 = await callCloud('skill', 'my')
+  if (r6.code === 0) {
+    var sArr = []
+    for (var p = 0; p < r6.data.length; p++) {
+      var sk = r6.data[p]
+      sArr.push({ id: sk._id, type: '技能', typeEmoji: '🎯', _raw: 'skill',
+        fromAddr: sk.title || '', toAddr: '',
+        desc: sk.category || '', price: sk.price || 0, time: fmtTime(sk.createTime),
+        statusText: sk.status === 0 ? '上架中' : '已下架', statusColor: sk.status === 0 ? '#38A169' : '#A0AEC0' })
+    }
+    skillList.value = sArr
+  }
+
   loading.value = false
 }
 
@@ -203,6 +232,9 @@ var currentList = computed(function() {
   if (tab.value === 12) return carpoolList.value
   if (tab.value === 13) return goodsList.value
   if (tab.value === 14) return teamList.value
+  if (tab.value === 15) return []
+  if (tab.value === 16) return []
+  if (tab.value === 17) return skillList.value
   return []
 })
 
@@ -212,6 +244,7 @@ var goDetail = function(order) {
   else if (order._raw === 'carpool') uni.navigateTo({ url: '/pages/carpool/detail?id=' + order.id })
   else if (order._raw === 'team') uni.navigateTo({ url: '/pages/team/detail?id=' + order.id })
   else if (order._raw === 'goods') uni.navigateTo({ url: '/pages/market/detail?id=' + order.id })
+  else if (order._raw === 'skill') uni.navigateTo({ url: '/pages/skill/detail?id=' + order.id })
   else uni.navigateTo({ url: '/pages/express/detail?id=' + order.id })
 }
 var goRegister = function() { uni.navigateTo({ url: '/pages/express/rider-register' }) }
@@ -219,7 +252,7 @@ var goRegister = function() { uni.navigateTo({ url: '/pages/express/rider-regist
 onLoad(function(opts) {
   if (opts && opts.tab) {
     tab.value = Number(opts.tab)
-    var titleMap = { 1: '我的接单', 10: '我的快递单', 11: '我的跑腿任务', 12: '我的拼车', 13: '我的商品', 14: '我的组队' }
+    var titleMap = { 1: '我的接单', 10: '我的快递单', 11: '我的跑腿任务', 12: '我的拼车', 13: '我的商品', 14: '我的组队', 15: '我的家教', 16: '我的兼职', 17: '我的技能' }
     var t = titleMap[tab.value]
     if (t) uni.setNavigationBarTitle({ title: t })
   }
