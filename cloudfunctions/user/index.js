@@ -199,6 +199,146 @@ exports.main = async (event, context) => {
       return { code: 0, msg: '验证通过' }
     }
 
+    // 获取钱包信息
+    case 'getWallet': {
+      // 计算收入：已完成的接单
+      var walletIncome = 0
+      try {
+        var cExpress = await db.collection('express_orders').where({ riderId: openid, status: 3 }).get()
+        cExpress.data.forEach(function(o) { walletIncome += (o.price || 0) + (o.tip || 0) })
+      } catch (e) {}
+      var cErrand = { data: [] }
+      try {
+        cErrand = await db.collection('errand_tasks').where({ riderId: openid, status: 2 }).get()
+        cErrand.data.forEach(function(o) { walletIncome += (o.price || 0) })
+      } catch (e) {}
+
+      // 查提现记录
+      var totalWithdraw = 0
+      var pendingWithdraw = 0
+      var withdrawRecords = []
+      try {
+        var withdrawRes = await db.collection('wallet_withdrawals').where({ openid }).orderBy('createTime', 'desc').limit(50).get()
+        withdrawRes.data.forEach(function(w) {
+          if (w.status === 1) totalWithdraw += (w.amount || 0)
+          if (w.status === 0) pendingWithdraw += (w.amount || 0)
+          withdrawRecords.push({
+            _id: w._id, type: 'withdraw', amount: w.amount || 0,
+            status: w.status,
+            statusText: w.status === 0 ? '审核中' : w.status === 1 ? '已到账' : '已拒绝',
+            title: '提现到微信零钱', createTime: w.createTime
+          })
+        })
+      } catch (e) {}
+
+      // 收入明细（最近完成的订单）
+      var incomeRecords = []
+      try { cExpress = cExpress || { data: [] } } catch (e) {}
+      ;(cExpress && cExpress.data || []).forEach(function(o) {
+        incomeRecords.push({
+          _id: o._id, type: 'income', amount: (o.price || 0) + (o.tip || 0),
+          status: 1, statusText: '已到账',
+          title: '快递代取 - ' + (o.building || ''),
+          createTime: o.completeTime || o.createTime
+        })
+      })
+      ;(cErrand && cErrand.data || []).forEach(function(o) {
+        incomeRecords.push({
+          _id: o._id, type: 'income', amount: o.price || 0,
+          status: 1, statusText: '已到账',
+          title: '跑腿任务 - ' + (o.title || '').substring(0, 10),
+          createTime: o.completeTime || o.createTime
+        })
+      })
+
+      // 合并并按时间排序
+      var allRecords = incomeRecords.concat(withdrawRecords)
+
+      // 技能解锁支出
+      var unlockSpent = 0
+      try {
+        var unlockRes = await db.collection('skill_unlocks').where({ openid }).orderBy('createTime', 'desc').limit(50).get()
+        unlockRes.data.forEach(function(u) {
+          unlockSpent += (u.amount || 0)
+          allRecords.push({
+            _id: u._id, type: 'expense', amount: u.amount || 0,
+            status: 1, statusText: '已扣费',
+            title: '查看联系方式 - ' + (u.skillTitle || '').substring(0, 10),
+            createTime: u.createTime
+          })
+        })
+      } catch (e) {}
+
+      allRecords.sort(function(a, b) {
+        var ta = a.createTime ? new Date(a.createTime).getTime() : 0
+        var tb = b.createTime ? new Date(b.createTime).getTime() : 0
+        return tb - ta
+      })
+
+      var balance = walletIncome - totalWithdraw - pendingWithdraw - unlockSpent
+      if (balance < 0) balance = 0
+
+      return {
+        code: 0,
+        data: {
+          balance: balance,
+          totalIncome: walletIncome,
+          totalWithdraw: totalWithdraw,
+          pendingWithdraw: pendingWithdraw,
+          records: allRecords.slice(0, 50)
+        }
+      }
+    }
+
+    // 申请提现
+    case 'applyWithdraw': {
+      var wAmount = parseFloat(data.amount)
+      if (!wAmount || wAmount < 1) return { code: -1, msg: '最低提现1元' }
+
+      // 计算可用余额
+      var wIncome = 0
+      try {
+        var wExpress = await db.collection('express_orders').where({ riderId: openid, status: 3 }).get()
+        wExpress.data.forEach(function(o) { wIncome += (o.price || 0) + (o.tip || 0) })
+      } catch (e) {}
+      try {
+        var wErrand = await db.collection('errand_tasks').where({ riderId: openid, status: 2 }).get()
+        wErrand.data.forEach(function(o) { wIncome += (o.price || 0) })
+      } catch (e) {}
+
+      var wUsed = 0
+      try {
+        var wWithdrawn = await db.collection('wallet_withdrawals').where({ openid }).get()
+        wWithdrawn.data.forEach(function(w) {
+          if (w.status === 0 || w.status === 1) wUsed += (w.amount || 0)
+        })
+      } catch (e) {}
+
+      var wBalance = wIncome - wUsed
+      // 减去技能解锁支出
+      try {
+        var wUnlocks = await db.collection('skill_unlocks').where({ openid }).get()
+        wUnlocks.data.forEach(function(u) { wBalance -= (u.amount || 0) })
+      } catch (e) {}
+      if (wAmount > wBalance) return { code: -1, msg: '余额不足' }
+
+      // 获取用户信息
+      var wUser = await db.collection('users').where({ openid }).get()
+      var userName = (wUser.data[0] && wUser.data[0].name) || '未知'
+
+      await db.collection('wallet_withdrawals').add({
+        data: {
+          openid: openid,
+          userName: userName,
+          amount: wAmount,
+          status: 0, // 0=审核中 1=已到账 2=已拒绝
+          createTime: db.serverDate()
+        }
+      })
+
+      return { code: 0, msg: '提现申请已提交' }
+    }
+
     default:
       return { code: -1, msg: 'unknown action: ' + action }
   }

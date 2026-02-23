@@ -22,7 +22,13 @@ exports.main = async (event, context) => {
     }
 
     case 'detail': {
-      const res = await db.collection('errand_tasks').doc(data.id).get()
+      if (!data.id) return { code: -1, msg: '缺少任务ID' }
+      let res
+      try {
+        res = await db.collection('errand_tasks').doc(data.id).get()
+      } catch (e) {
+        return { code: -1, msg: '任务不存在' }
+      }
       var detailData = res.data
       // 24小时自动确认：待确认状态超过24小时自动完成
       if (detailData.status === 4 && detailData.submitTime) {
@@ -65,7 +71,7 @@ exports.main = async (event, context) => {
     }
 
     case 'create': {
-      const { title, desc, fromAddr, toAddr, price, tip, phone } = data
+      const { title, desc, fromAddr, toAddr, price, tip, phone, destLat, destLng } = data
       if (!title || !desc) return { code: -1, msg: 'missing fields' }
       const user = await db.collection('users').where({ openid }).get()
       const userName = user.data.length > 0 ? user.data[0].name : '匿名'
@@ -82,6 +88,11 @@ exports.main = async (event, context) => {
           statusText: '待接单',
           statusColor: '#DD6B20',
           riderId: null,
+          destLat: destLat || 0,
+          destLng: destLng || 0,
+          riderLat: 0,
+          riderLng: 0,
+          riderLocationTime: null,
           createTime: db.serverDate()
         }
       })
@@ -203,6 +214,32 @@ exports.main = async (event, context) => {
       }
       await db.collection('errand_tasks').doc(taskId).update({ data: photoUpdate })
       return { code: 0 }
+    }
+
+    case 'reportLocation': {
+      const { taskId, latitude, longitude } = data
+      if (!taskId) return { code: -1, msg: 'missing taskId' }
+      var locTask = await db.collection('errand_tasks').doc(taskId).get()
+      if (locTask.data.riderId !== openid) return { code: -1, msg: '非接单人' }
+      await db.collection('errand_tasks').doc(taskId).update({
+        data: { riderLat: latitude, riderLng: longitude, riderLocationTime: db.serverDate() }
+      })
+      return { code: 0 }
+    }
+
+    case 'getRiderLocation': {
+      const { taskId } = data
+      if (!taskId) return { code: -1, msg: 'missing taskId' }
+      var rlocTask = await db.collection('errand_tasks').doc(taskId).get()
+      var rd = rlocTask.data
+      return {
+        code: 0,
+        data: {
+          riderLat: rd.riderLat || 0,
+          riderLng: rd.riderLng || 0,
+          riderLocationTime: rd.riderLocationTime || null
+        }
+      }
     }
 
     default:

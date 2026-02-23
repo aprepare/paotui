@@ -13,6 +13,37 @@
       <text class="auto-confirm-text">{{ autoConfirmText }}</text>
     </view>
 
+    <!-- 实时地图 -->
+    <view class="info-card" v-if="task.status === 1 && mapReady">
+      <text class="card-title">🗺️ 实时位置</text>
+      <view class="map-wrap">
+        <map class="rider-map"
+          :latitude="mapCenter.lat"
+          :longitude="mapCenter.lng"
+          :markers="markers"
+          :polyline="polyline"
+          :scale="mapScale"
+          show-location
+        ></map>
+      </view>
+      <view class="map-legend">
+        <view class="legend-item">
+          <view class="legend-dot rider-dot"></view>
+          <text class="legend-text">接单人位置</text>
+        </view>
+        <view class="legend-item">
+          <view class="legend-dot dest-dot"></view>
+          <text class="legend-text">送达地点</text>
+        </view>
+      </view>
+      <view class="map-actions">
+        <view class="map-btn" :class="{disabled: refreshCooling}" @click="refreshRiderLocation">
+          <text>🔄 {{ refreshCooling ? cooldownText : '刷新位置' }}</text>
+        </view>
+        <text class="map-time" v-if="riderLocationTime">{{ riderLocationTime }} 更新</text>
+      </view>
+    </view>
+
     <!-- 任务信息 -->
     <view class="info-card">
       <text class="card-title">📝 任务信息</text>
@@ -55,7 +86,7 @@
         <text class="user-avatar">{{ task.userAvatar }}</text>
         <view class="user-detail">
           <text class="user-name">{{ task.userName }}</text>
-          <text class="user-phone">{{ task.phone }}</text>
+          <text class="user-phone">{{ maskPhone(task.phone) }}</text>
         </view>
         <view class="call-btn" @click="callUser">
           <text>📞 联系</text>
@@ -70,7 +101,7 @@
         <text class="user-avatar">{{ task.runner.avatar }}</text>
         <view class="user-detail">
           <text class="user-name">{{ task.runner.name }}</text>
-          <text class="user-phone">{{ task.runner.phone }}</text>
+          <text class="user-phone">{{ maskPhone(task.runner.phone) }}</text>
         </view>
         <view class="call-btn" @click="callRunner">
           <text>📞 联系</text>
@@ -113,6 +144,36 @@
       </view>
     </view>
 
+    <!-- 企业微信拉群（发布者或接单人可见，已接单后） -->
+    <view class="info-card" v-if="task.status >= 1 && task.status <= 2 && (isOwner || isRider)">
+      <text class="card-title">💬 沟通群聊</text>
+      <view class="wechat-card" @click="showQrcode = true">
+        <view class="wechat-icon-wrap">
+          <text class="wechat-icon">🏢</text>
+        </view>
+        <view class="wechat-info">
+          <text class="wechat-title">添加企业微信，拉你进沟通群</text>
+          <text class="wechat-desc">点击查看二维码 · 扫码添加后自动邀请入群</text>
+        </view>
+        <text class="wechat-arrow">›</text>
+      </view>
+    </view>
+
+    <!-- 企业微信二维码弹窗 -->
+    <view class="qr-mask" v-if="showQrcode" @click="showQrcode = false">
+      <view class="qr-popup" @click.stop>
+        <view class="qr-close" @click="showQrcode = false"><text>✕</text></view>
+        <text class="qr-title">扫码添加企业微信</text>
+        <text class="qr-subtitle">添加后将自动邀请您进入任务沟通群</text>
+        <image class="qr-image" src="/static/qrcode-work-wechat.png" mode="aspectFit" />
+        <view class="qr-copy-row">
+          <text class="qr-wechat-id">企业微信号：{{ workWechatId }}</text>
+          <view class="qr-copy-btn" @click="copyWechatId"><text>复制</text></view>
+        </view>
+        <text class="qr-tip">长按二维码可保存到相册</text>
+      </view>
+    </view>
+
     <!-- 非骑手提示注册 -->
     <view class="rider-register-bar" v-if="!isRider && !isOwner && task.status === 0">
       <view class="register-hint">
@@ -127,12 +188,15 @@
     <!-- 操作按钮 -->
     <view class="action-bar" v-if="showAction">
       <view v-if="task.status === 4 && isOwner" class="action-row-btns">
-        <view class="action-btn reject-btn" @click="handleReject">
-          <text>有问题，退回修改</text>
+        <view class="action-btn reject-btn" @click="goKefu">
+          <text>有问题联系客服</text>
         </view>
         <view class="action-btn confirm-btn" @click="handleAction">
           <text>确认完成，支付报酬</text>
         </view>
+      </view>
+      <view v-if="task.status === 4 && isOwner" class="auto-confirm-tip">
+        <text>如无问题，24小时后将自动确认完成</text>
       </view>
       <view v-else class="action-btn" @click="handleAction">
         <text>{{ actionText }}</text>
@@ -142,7 +206,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import { onLoad, onUnload } from '@dcloudio/uni-app'
 import { callCloud, uploadImage } from '@/utils/cloud'
 
@@ -151,6 +215,29 @@ const isOwner = ref(false)
 const isRider = ref(false)
 const autoConfirmText = ref('')
 var autoConfirmTimer = null
+var locationTimer = null
+
+// 地图相关
+const mapReady = ref(false)
+const mapScale = ref(15)
+const mapCenter = reactive({ lat: 0, lng: 0 })
+const markers = ref([])
+const polyline = ref([])
+const refreshCooling = ref(false)
+const cooldownText = ref('3s')
+var lastRefreshTime = 0
+var cooldownTimer = null
+const riderLocationTime = ref('')
+const showQrcode = ref(false)
+const workWechatId = ref('your_work_wechat_id')
+
+const copyWechatId = () => {
+  uni.setClipboardData({
+    data: workWechatId.value,
+    success: () => { uni.showToast({ title: '已复制微信号', icon: 'success' }) }
+  })
+}
+
 const task = ref({
   id: '', title: '', desc: '',
   taskLocation: '', deliverLocation: '',
@@ -160,6 +247,8 @@ const task = ref({
   pickupPhoto: '', pickupPhotoTime: '',
   deliverPhoto: '', deliverPhotoTime: '',
   submitTime: null,
+  destLat: 0, destLng: 0,
+  riderLat: 0, riderLng: 0,
   time: ''
 })
 
@@ -174,6 +263,8 @@ onLoad((opts) => {
 
 onUnload(() => {
   if (autoConfirmTimer) { clearInterval(autoConfirmTimer); autoConfirmTimer = null }
+  if (locationTimer) { clearInterval(locationTimer); locationTimer = null }
+  if (cooldownTimer) { clearInterval(cooldownTimer); cooldownTimer = null }
 })
 
 const goRiderRegister = () => {
@@ -224,11 +315,177 @@ const loadDetail = async (id) => {
       deliverPhoto: d.deliverPhoto || '',
       deliverPhotoTime: d.deliverPhotoTime ? formatPhotoTime(d.deliverPhotoTime) : '',
       submitTime: d.submitTime || null,
+      destLat: d.destLat || 0,
+      destLng: d.destLng || 0,
+      riderLat: d.riderLat || 0,
+      riderLng: d.riderLng || 0,
       time: ''
+    }
+
+    // 骑手进入详情页时自动上报位置
+    if (isRider.value && d.riderId === myOpenid && d.status === 1) {
+      reportMyLocation()
+      locationTimer = setInterval(reportMyLocation, 15000)
+    }
+
+    // 用户查看时加载地图
+    if (d.status === 1) {
+      initMap()
+      if (!isRider.value) {
+        locationTimer = setInterval(function() { refreshRiderLocation() }, 10000)
+      }
     }
 
     // 启动自动确认倒计时
     startAutoConfirmCountdown()
+  }
+}
+
+// 骑手上报自己的位置
+const reportMyLocation = () => {
+  console.log('[reportMyLocation] 尝试上报位置')
+  uni.authorize({
+    scope: 'scope.userLocation',
+    success: () => {
+      uni.getLocation({
+        type: 'gcj02',
+        success: (loc) => {
+          console.log('[reportMyLocation] 获取位置成功', loc.latitude, loc.longitude)
+          callCloud('errand', 'reportLocation', {
+            taskId: taskId.value,
+            latitude: loc.latitude,
+            longitude: loc.longitude
+          })
+          task.value.riderLat = loc.latitude
+          task.value.riderLng = loc.longitude
+          updateMarkers()
+          if (!mapReady.value) initMap()
+        },
+        fail: (err) => {
+          console.log('[reportMyLocation] getLocation失败', err)
+        }
+      })
+    },
+    fail: (err) => {
+      console.log('[reportMyLocation] 授权失败', err)
+    }
+  })
+}
+
+// 用户刷新骑手位置（3秒冷却）
+const refreshRiderLocation = async () => {
+  var now = Date.now()
+  if (now - lastRefreshTime < 3000) {
+    uni.showToast({ title: '请稍后再刷新', icon: 'none' })
+    return
+  }
+  lastRefreshTime = now
+  refreshCooling.value = true
+  var remaining = 3
+  cooldownText.value = remaining + 's'
+  if (cooldownTimer) clearInterval(cooldownTimer)
+  cooldownTimer = setInterval(() => {
+    remaining--
+    if (remaining <= 0) {
+      clearInterval(cooldownTimer)
+      cooldownTimer = null
+      refreshCooling.value = false
+    } else {
+      cooldownText.value = remaining + 's'
+    }
+  }, 1000)
+
+  var res = await callCloud('errand', 'getRiderLocation', { taskId: taskId.value })
+  if (res.code === 0 && res.data.riderLat) {
+    task.value.riderLat = res.data.riderLat
+    task.value.riderLng = res.data.riderLng
+    if (res.data.riderLocationTime) {
+      riderLocationTime.value = formatPhotoTime(res.data.riderLocationTime)
+    }
+    updateMarkers()
+  }
+}
+
+// 初始化地图
+const initMap = () => {
+  var t = task.value
+  console.log('[initMap] destLat:', t.destLat, 'destLng:', t.destLng, 'riderLat:', t.riderLat, 'riderLng:', t.riderLng)
+  // 只要有任意一个坐标就显示地图
+  if (!t.destLat && !t.riderLat) {
+    console.log('[initMap] 没有任何坐标，不显示地图')
+    mapReady.value = false
+    return
+  }
+  if (t.riderLat && t.destLat) {
+    mapCenter.lat = (t.riderLat + t.destLat) / 2
+    mapCenter.lng = (t.riderLng + t.destLng) / 2
+  } else if (t.destLat) {
+    mapCenter.lat = t.destLat
+    mapCenter.lng = t.destLng
+  } else if (t.riderLat) {
+    mapCenter.lat = t.riderLat
+    mapCenter.lng = t.riderLng
+  }
+  updateMarkers()
+  mapReady.value = true
+  console.log('[initMap] 地图已就绪, mapReady=true')
+}
+
+// 更新地图标记
+const updateMarkers = () => {
+  var t = task.value
+  var newMarkers = []
+  if (t.riderLat && t.riderLng) {
+    newMarkers.push({
+      id: 1,
+      latitude: t.riderLat,
+      longitude: t.riderLng,
+      iconPath: '/static/logo.png',
+      width: 30,
+      height: 30,
+      callout: {
+        content: '接单人位置',
+        display: 'ALWAYS',
+        fontSize: 12,
+        borderRadius: 8,
+        padding: 6,
+        bgColor: '#FF9800',
+        color: '#fff'
+      }
+    })
+  }
+  if (t.destLat && t.destLng) {
+    newMarkers.push({
+      id: 2,
+      latitude: t.destLat,
+      longitude: t.destLng,
+      iconPath: '/static/logo.png',
+      width: 30,
+      height: 30,
+      callout: {
+        content: t.deliverLocation || '送达地点',
+        display: 'ALWAYS',
+        fontSize: 12,
+        borderRadius: 8,
+        padding: 6,
+        bgColor: '#E53E3E',
+        color: '#fff'
+      }
+    })
+  }
+  markers.value = newMarkers
+  if (t.riderLat && t.riderLng && t.destLat && t.destLng) {
+    polyline.value = [{
+      points: [
+        { latitude: t.riderLat, longitude: t.riderLng },
+        { latitude: t.destLat, longitude: t.destLng }
+      ],
+      color: '#FF9800',
+      width: 4,
+      dottedLine: true
+    }]
+    mapCenter.lat = (t.riderLat + t.destLat) / 2
+    mapCenter.lng = (t.riderLng + t.destLng) / 2
   }
 }
 
@@ -278,11 +535,12 @@ const statusDesc = computed(() => ({
 const showAction = computed(() => {
   var s = task.value.status
   if (s === 2 || s === 3) return false
+  // 待接单：发布者可取消，非发布者的骑手可接单
   if (s === 0 && isOwner.value) return true
-  if (s === 0 && isRider.value) return true
-  // 进行中：只有接单人能提交完成
+  if (s === 0 && isRider.value && !isOwner.value) return true
+  // 进行中：只有接单人（非发布者）能提交完成
   if (s === 1 && !isOwner.value) return true
-  // 待确认：只有发布者能确认完成
+  // 待确认：只有发布者能确认/退回
   if (s === 4 && isOwner.value) return true
   return false
 })
@@ -290,27 +548,14 @@ const showAction = computed(() => {
 const actionText = computed(() => {
   var s = task.value.status
   if (s === 0 && isOwner.value) return '取消任务'
-  if (s === 0 && isRider.value) return '接受任务'
-  if (s === 1) return '提交完成'
+  if (s === 0 && isRider.value && !isOwner.value) return '接受任务'
+  if (s === 1 && !isOwner.value) return '提交完成'
   if (s === 4 && isOwner.value) return '确认完成，支付报酬'
   return ''
 })
 
-const handleReject = () => {
-  uni.showModal({
-    title: '退回任务',
-    content: '确认退回？接单人需要重新执行并提交完成。',
-    success: async (modalRes) => {
-      if (modalRes.confirm) {
-        const res = await callCloud('errand', 'updateStatus', { taskId: taskId.value, status: 1 })
-        if (res.code === 0) {
-          task.value.status = 1
-          task.value.statusText = '进行中'
-          uni.showToast({ title: '已退回，等待接单人重新完成', icon: 'none' })
-        }
-      }
-    }
-  })
+const goKefu = () => {
+  uni.navigateTo({ url: '/pages/kefu/show' })
 }
 
 const handleAction = async () => {
@@ -337,6 +582,9 @@ const handleAction = async () => {
       task.value.statusText = '进行中'
       task.value.runner = { avatar: '🧑‍🎓', name: '我', phone: '' }
       uni.showToast({ title: '接单成功', icon: 'success' })
+      reportMyLocation()
+      if (!locationTimer) locationTimer = setInterval(reportMyLocation, 15000)
+      initMap()
     }
     return
   }
@@ -380,6 +628,11 @@ const handleAction = async () => {
     })
     return
   }
+}
+
+const maskPhone = (phone) => {
+  if (!phone || phone.length < 7) return phone || ''
+  return phone.substring(0, 3) + '****' + phone.substring(7)
 }
 
 const callUser = () => {
@@ -484,4 +737,56 @@ const previewPhoto = (src) => {
 .upload-icon { font-size: 48rpx; color: #FF9800; }
 .upload-text { font-size: 20rpx; color: #FF9800; margin-top: 4rpx; }
 .photo-pending { font-size: 24rpx; color: #999; }
+
+/* 地图 */
+.map-wrap { width: 100%; height: 400rpx; border-radius: 16rpx; overflow: hidden; }
+.rider-map { width: 100%; height: 400rpx; }
+.map-legend { display: flex; gap: 32rpx; margin-top: 16rpx; padding: 0 8rpx; }
+.legend-item { display: flex; align-items: center; }
+.legend-dot { width: 20rpx; height: 20rpx; border-radius: 50%; margin-right: 8rpx; }
+.rider-dot { background: #FF9800; }
+.dest-dot { background: #E53E3E; }
+.legend-text { font-size: 22rpx; color: #718096; }
+.map-actions { display: flex; align-items: center; justify-content: space-between; margin-top: 12rpx; }
+.map-btn { padding: 12rpx 24rpx; background: #FFF3E0; border-radius: 24rpx; }
+.map-btn.disabled { background: #F0F0F0; opacity: 0.6; }
+.map-btn:active { background: #FFE0B2; }
+.map-btn.disabled:active { background: #F0F0F0; }
+.map-btn text { font-size: 24rpx; color: #E65100; font-weight: 600; }
+.map-btn.disabled text { color: #999; }
+.map-time { font-size: 22rpx; color: #A0AEC0; }
+
+/* 操作按钮行（待确认状态双按钮） */
+.action-row-btns { display: flex; gap: 20rpx; }
+
+/* 企业微信进群卡片 */
+.wechat-card { background: #FFF8F0; border-radius: 16rpx; padding: 24rpx; display: flex; align-items: center; }
+.wechat-card:active { opacity: 0.8; }
+.wechat-icon-wrap { width: 72rpx; height: 72rpx; border-radius: 18rpx; background: linear-gradient(135deg, #07C160, #06AD56); display: flex; align-items: center; justify-content: center; margin-right: 20rpx; flex-shrink: 0; }
+.wechat-icon { font-size: 32rpx; }
+.wechat-info { flex: 1; }
+.wechat-title { font-size: 26rpx; color: #1A1A2E; font-weight: 700; display: block; }
+.wechat-desc { font-size: 22rpx; color: #A0AEC0; margin-top: 4rpx; display: block; }
+.wechat-arrow { font-size: 36rpx; color: #CBD5E0; font-weight: 300; }
+
+/* 企业微信二维码弹窗 */
+.qr-mask { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 100; display: flex; align-items: center; justify-content: center; }
+.qr-popup { width: 600rpx; background: #fff; border-radius: 28rpx; padding: 48rpx 40rpx; position: relative; display: flex; flex-direction: column; align-items: center; animation: fadeIn 0.2s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+.qr-close { position: absolute; top: 20rpx; right: 24rpx; width: 56rpx; height: 56rpx; border-radius: 50%; background: #F0F2F5; display: flex; align-items: center; justify-content: center; }
+.qr-close text { font-size: 28rpx; color: #718096; }
+.qr-title { font-size: 32rpx; font-weight: 800; color: #1A1A2E; margin-bottom: 8rpx; }
+.qr-subtitle { font-size: 24rpx; color: #A0AEC0; margin-bottom: 32rpx; }
+.qr-image { width: 400rpx; height: 400rpx; border-radius: 16rpx; margin-bottom: 28rpx; }
+.qr-copy-row { display: flex; align-items: center; gap: 16rpx; margin-bottom: 20rpx; }
+.qr-wechat-id { font-size: 24rpx; color: #4A5568; }
+.qr-copy-btn { padding: 8rpx 24rpx; border-radius: 20rpx; background: #EBF4FF; }
+.qr-copy-btn text { font-size: 22rpx; color: #2B6CB0; font-weight: 600; }
+.qr-tip { font-size: 22rpx; color: #CBD5E0; }
+.reject-btn { flex: 1; background: #FFF3E0; border-radius: 48rpx; padding: 28rpx; text-align: center; }
+.reject-btn text { color: #E65100; font-size: 28rpx; font-weight: bold; }
+.auto-confirm-tip { text-align: center; padding: 12rpx 0 0; }
+.auto-confirm-tip text { font-size: 22rpx; color: #A0AEC0; }
+.confirm-btn { flex: 1; background: linear-gradient(135deg, #66BB6A, #43A047); border-radius: 48rpx; padding: 28rpx; text-align: center; }
+.confirm-btn text { color: #fff; font-size: 28rpx; font-weight: bold; }
 </style>

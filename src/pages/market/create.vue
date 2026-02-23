@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <view class="create-goods">
     <view class="upload-section">
       <text class="section-title">📷 商品图片</text>
@@ -17,14 +17,14 @@
       <view class="form-card">
         <view class="form-item">
           <text class="form-label">标题</text>
-          <input placeholder="描述一下你的宝贝" v-model="form.title" maxlength="30" />
+          <input placeholder="描述一下你的宝贝" v-model="form.title" maxlength="30"></input>
         </view>
         <view class="divider"></view>
         <view class="form-item">
           <text class="form-label">价格</text>
           <view class="price-input">
             <text class="yen">¥</text>
-            <input type="digit" placeholder="0.00" v-model="form.price" />
+            <input type="digit" placeholder="0.00" v-model="form.price"></input>
           </view>
         </view>
         <view class="divider"></view>
@@ -60,7 +60,7 @@
       <view class="form-card">
         <view class="form-item">
           <text class="form-label">微信号</text>
-          <input placeholder="方便买家联系你" v-model="form.contact" />
+          <input placeholder="方便买家联系你" v-model="form.contact"></input>
         </view>
         <view class="divider"></view>
         <view class="form-item">

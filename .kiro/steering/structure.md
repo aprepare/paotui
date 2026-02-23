@@ -7,28 +7,34 @@
 │   ├── pages.json                # Route definitions, nav bar styles, tab bar config
 │   ├── manifest.json             # App metadata, WeChat appid, permissions
 │   ├── uni.scss                  # uni-app built-in SCSS variables
-│   ├── pages/                    # Page components (one folder per feature module)
+│   ├── pages/                    # Main package pages
 │   │   ├── index/                # Home page (live stats, latest orders, building filter)
 │   │   ├── express/              # Express pickup: index, create, detail, rider-register, building-orders
 │   │   ├── errand/               # General errands: index, create, detail
-│   │   ├── carpool/              # Carpooling: index, create, detail
+│   │   ├── order/                # My orders: all, create, detail, list
 │   │   ├── market/               # Second-hand market: index, create, detail, my
 │   │   ├── forum/                # Campus forum: index, create, detail, my
-│   │   ├── team/                 # Team up: index, create, detail, list
-│   │   ├── order/                # My orders: create, detail, list
+│   │   ├── job/                  # Part-time jobs hub: index (main listing)
+│   │   ├── welfare/              # Campus welfare / deals (configurable from admin)
+│   │   ├── mine/                 # Profile: index, favorites, services, wallet, withdraw
 │   │   ├── message/              # Message center
-│   │   ├── mine/                 # Profile: index, favorites, services
-│   │   ├── login/                # Login / profile completion
-│   │   ├── job/                  # Part-time jobs listing
-│   │   ├── welfare/              # Campus welfare / deals
-│   │   ├── graduate/             # Graduate exam services
+│   │   ├── login/                # Login / profile completion (phone required)
 │   │   └── kefu/                 # Customer service (image display)
-│   ├── components/               # Shared components
+│   ├── pages/ (subPackages)      # Sub-packages for code splitting
+│   │   ├── carpool/              # Carpooling: index, create, detail
+│   │   ├── team/                 # Team up: index, create, detail, list
+│   │   ├── graduate/             # Graduate exam: index, checkin, schedule, resources, experience
+│   │   ├── skill/                # Skill rental: index, create, detail
+│   │   ├── wash/                 # Shoe washing group buy: index
+│   │   ├── admin/                # In-app admin panel: index
+│   │   └── job-sub/              # Job sub-pages: tutor, tutor-create, campus, anaya, arcadia, seasonal, all
+│   ├── components/
+│   │   ├── CustomTabBar.vue      # Custom tab bar (replaces native tabBar)
 │   │   ├── MsgNotify.vue         # Floating unread message notification banner
 │   │   └── ServiceFab.vue        # Floating customer service button
 │   ├── utils/
 │   │   └── cloud.js              # Helpers: callCloud(), checkLogin(), uploadImage(), uploadImages()
-│   └── static/                   # Static assets (logo, tab icons, images)
+│   └── static/                   # Static assets (logo, tab icons, action icons, welfare icons, QR codes)
 │
 ├── cloudfunctions/               # Backend (WeChat Cloud Functions)
 │   ├── user/                     # Auth, profile, rider registration, favorites, SMS
@@ -40,9 +46,15 @@
 │   ├── forum/                    # Forum posts, comments, likes
 │   ├── team/                     # Team activities, join/leave, photos
 │   ├── message/                  # Message CRUD, read/unread, send
-│   ├── home/                     # Home page data: live stats, latest orders
+│   ├── home/                     # Home page data: live stats, latest orders, page config
+│   ├── tutor/                    # Tutor posts: list, create, apply, contact, delete
+│   ├── wash/                     # Wash group buy: products, groups, join, my groups
+│   ├── skill/                    # Skill rental: list, create, detail
+│   ├── admin/                    # Admin: stats, CRUD for all modules, welfare config, wash products
 │   └── seed/                     # Test data seeder (populates all collections)
 │
+├── server/                       # Express.js + MongoDB backend (currently unused, switched back to cloud)
+├── admin/                        # Vue 3 + Element Plus admin panel (web, currently unused)
 ├── project.config.json           # WeChat DevTools project config
 ├── vite.config.js                # Vite config (uni plugin only)
 └── package.json                  # Frontend dependencies and scripts
@@ -55,6 +67,7 @@
 - Pages use Vue 3 `<script setup>` with Composition API. Lifecycle hooks come from `@dcloudio/uni-app` (`onLoad`, `onShow`, `onPullDownRefresh`, etc.).
 - Navigation uses `uni.navigateTo()` and `uni.switchTab()`. Login gating via `checkLogin()` from `src/utils/cloud.js`.
 - All cloud calls go through `callCloud(functionName, action, data)` — never call `wx.cloud.callFunction` directly from pages.
+- Custom tab bar: native tabBar is hidden via `uni.hideTabBar()` in `onShow`, replaced by `CustomTabBar.vue` component.
 
 ### Cloud Functions
 - Each cloud function is a single `index.js` using CommonJS (`require`/`exports.main`).
@@ -62,6 +75,7 @@
 - Standard response shape: `{ code: 0, data: ... }` for success, `{ code: -1, msg: '...' }` for errors.
 - User identity comes from `cloud.getWXContext().OPENID` — never passed from the client.
 - Each cloud function has its own `package.json` with `wx-server-sdk` as the sole dependency.
+- Use try/catch around collection queries to handle missing collections gracefully.
 
 ### Database Collections
 | Collection | Used By |
@@ -75,10 +89,16 @@
 | `market_goods` | market |
 | `team_activities` | team |
 | `team_members` | team |
-| `messages` | message, express, errand, forum |
+| `messages` | message, express, errand, forum, tutor |
 | `user_favorites` | user |
 | `sms_codes` | user |
 | `stats` | home, express |
+| `tutor_posts` | tutor |
+| `wash_products` | wash, admin |
+| `wash_groups` | wash |
+| `skill_posts` | skill |
+| `page_config` | home, admin |
+| `welfare_config` | admin |
 
 ### Styling
 - Uses `rpx` units throughout (750rpx = screen width on WeChat).

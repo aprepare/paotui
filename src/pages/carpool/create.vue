@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <view class="create-carpool">
     <!-- 路线信息 -->
     <view class="form-section">
@@ -6,17 +6,17 @@
       <view class="form-card">
         <view class="form-item">
           <text class="form-label">出发地</text>
-          <input placeholder="如：学校南门" v-model="form.from" />
+          <input placeholder="如：学校南门" v-model="form.from"></input>
         </view>
         <view class="divider"></view>
         <view class="form-item">
           <text class="form-label">目的地</text>
-          <input placeholder="如：火车站" v-model="form.to" />
+          <input placeholder="如：火车站" v-model="form.to"></input>
         </view>
         <view class="divider"></view>
         <view class="form-item">
           <text class="form-label">上车地点</text>
-          <input placeholder="精确的上车地点" v-model="form.pickupLocation" />
+          <input placeholder="精确的上车地点" v-model="form.pickupLocation"></input>
         </view>
       </view>
     </view>
@@ -64,7 +64,7 @@
       <view class="form-card">
         <view class="form-item">
           <text class="form-label">联系方式</text>
-          <input placeholder="微信号/手机号" v-model="form.contact" />
+          <input placeholder="微信号/手机号" v-model="form.contact"></input>
         </view>
         <view class="divider"></view>
         <view class="form-item column">

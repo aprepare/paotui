@@ -4,7 +4,7 @@
     <view class="menu-group">
       <text class="group-title">个人</text>
       <view class="menu-card">
-        <view class="menu-item last" @click="goPage('/pages/mine/favorites')">
+        <view class="menu-item last" @click="goPage('/pages/mine-sub/favorites')">
           <view class="menu-icon-bg" style="background: linear-gradient(135deg, #F6E05E, #D69E2E);"><text class="mi">⭐</text></view>
           <text class="menu-text">我的收藏</text>
           <text class="menu-arrow">›</text>

@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <view class="create-order">
     <view class="form-section">
       <text class="section-title">📦 订单类型</text>
@@ -14,12 +14,12 @@
       <view class="form-card">
         <view class="form-item">
           <text class="form-label">取件地址</text>
-          <input placeholder="如：菜鸟驿站3号架" v-model="form.fromAddr" />
+          <input placeholder="如：菜鸟驿站3号架" v-model="form.fromAddr"></input>
         </view>
         <view class="divider"></view>
         <view class="form-item">
           <text class="form-label">送达地址</text>
-          <input placeholder="如：6号宿舍楼302" v-model="form.toAddr" />
+          <input placeholder="如：6号宿舍楼302" v-model="form.toAddr"></input>
         </view>
       </view>
     </view>
@@ -28,12 +28,12 @@
       <view class="form-card">
         <view class="form-item">
           <text class="form-label">物品描述</text>
-          <input placeholder="如：一个中号快递" v-model="form.desc" />
+          <input placeholder="如：一个中号快递" v-model="form.desc"></input>
         </view>
         <view class="divider"></view>
         <view class="form-item">
           <text class="form-label">备注</text>
-          <input placeholder="可选，如：放门口就行" v-model="form.remark" />
+          <input placeholder="可选，如：放门口就行" v-model="form.remark"></input>
         </view>
       </view>
     </view>
@@ -49,7 +49,7 @@
       </view>
       <view v-if="customPrice" class="custom-price-input">
         <text>¥</text>
-        <input type="digit" placeholder="输入金额" v-model="form.price" />
+        <input type="digit" placeholder="输入金额" v-model="form.price"></input>
       </view>
     </view>
     <view class="submit-btn" @click="submit">

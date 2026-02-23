@@ -1,9 +1,9 @@
-<template>
+﻿<template>
   <view class="forum-page">
     <view class="search-bar">
       <view class="search-input">
         <text class="search-icon">🔍</text>
-        <input placeholder="搜索帖子/用户" v-model="keyword" />
+        <input placeholder="搜索帖子/用户" v-model="keyword"></input>
       </view>
     </view>
 
@@ -42,10 +42,12 @@
     </view>
 
     <MsgNotify />
+      <CustomTabBar :current="2" />
   </view>
 </template>
 
 <script setup>
+import CustomTabBar from '@/components/CustomTabBar.vue'
 import { ref, computed } from 'vue'
 import { onShow, onShareAppMessage } from '@dcloudio/uni-app'
 import { callCloud, checkLogin } from '@/utils/cloud'
@@ -92,7 +94,9 @@ var formatTime = (t) => {
   return y + '-' + (m < 10 ? '0' + m : m) + '-' + (day < 10 ? '0' + day : day)
 }
 
-onShow(() => { loadData() })
+onShow(() => {
+  uni.hideTabBar({ animation: false })
+  loadData() })
 
 const filteredPosts = computed(() => {
   const key = keyword.value.trim()
@@ -109,11 +113,11 @@ const toggleLike = async (post) => {
   }
 }
 const goDetail = (id) => {
-  uni.navigateTo({ url: '/pages/forum/detail?id=' + id })
+  uni.navigateTo({ url: '/pages/forum-sub/detail?id=' + id })
 }
 const goCreate = () => {
   if (!checkLogin()) return
-  uni.navigateTo({ url: '/pages/forum/create' })
+  uni.navigateTo({ url: '/pages/forum-sub/create' })
 }
 const isUrl = (str) => {
   if (!str || typeof str !== 'string') return false
@@ -132,7 +136,7 @@ onShareAppMessage(() => {
     if (title.length > 40) title = title.substring(0, 40) + '...'
     return {
       title: title,
-      path: '/pages/forum/detail?id=' + shareData.value.id
+      path: '/pages/forum-sub/detail?id=' + shareData.value.id
     }
   }
   return {

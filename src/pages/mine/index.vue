@@ -68,14 +68,26 @@
           <text class="menu-text">我的接单</text>
           <text class="menu-arrow">›</text>
         </view>
-        <view class="menu-item" @click="goPage('/pages/forum/my')">
+        <view class="menu-item" @click="goPage('/pages/forum-sub/my')">
           <view class="menu-icon-bg" style="background: linear-gradient(135deg, #4FD1C5, #319795);"><text class="mi">💬</text></view>
           <text class="menu-text">我的帖子</text>
           <text class="menu-arrow">›</text>
         </view>
-        <view class="menu-item last" @click="goPage('/pages/mine/favorites')">
+        <view class="menu-item last" @click="goPage('/pages/mine-sub/favorites')">
           <view class="menu-icon-bg" style="background: linear-gradient(135deg, #F6E05E, #D69E2E);"><text class="mi">⭐</text></view>
           <text class="menu-text">我的收藏</text>
+          <text class="menu-arrow">›</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 我的钱包（所有登录用户可见） -->
+    <view class="menu-group" v-if="isLoggedIn">
+      <view class="menu-card">
+        <view class="menu-item last" @click="showWallet">
+          <view class="menu-icon-bg" style="background: linear-gradient(135deg, #F6AD55, #DD6B20);"><text class="mi">💰</text></view>
+          <text class="menu-text">我的钱包</text>
+          <view class="wallet-amount"><text>¥{{ stats.income || 0 }}</text></view>
           <text class="menu-arrow">›</text>
         </view>
       </view>
@@ -91,15 +103,9 @@
           <view class="rider-tip"><text>接单赚钱</text></view>
           <text class="menu-arrow">›</text>
         </view>
-        <view class="menu-item" v-if="isRider" @click="goPage('/pages/express/building-orders')">
+        <view class="menu-item last" v-if="isRider" @click="goPage('/pages/express/building-orders')">
           <view class="menu-icon-bg" style="background: linear-gradient(135deg, #63B3ED, #2B6CB0);"><text class="mi">🏢</text></view>
           <text class="menu-text">楼栋订单统计</text>
-          <text class="menu-arrow">›</text>
-        </view>
-        <view class="menu-item last" @click="showWallet">
-          <view class="menu-icon-bg" style="background: linear-gradient(135deg, #F6AD55, #DD6B20);"><text class="mi">💰</text></view>
-          <text class="menu-text">我的钱包</text>
-          <view class="wallet-amount"><text>¥{{ stats.income || 0 }}</text></view>
           <text class="menu-arrow">›</text>
         </view>
       </view>
@@ -116,16 +122,31 @@
       </view>
     </view>
 
+    <!-- 管理后台入口（仅管理员可见） -->
+    <view class="menu-group" v-if="isAdmin">
+      <text class="group-title">管理员</text>
+      <view class="menu-card">
+        <view class="menu-item last" @click="goPage('/pages/admin/index')">
+          <view class="menu-icon-bg" style="background: linear-gradient(135deg, #1A1A2E, #0F3460);"><text class="mi">🛡️</text></view>
+          <text class="menu-text">管理后台</text>
+          <view class="rider-tip" style="background: linear-gradient(135deg, #FFF5F5, #FED7D7); border-color: #FEB2B2;"><text style="color: #E53E3E;">管理员</text></view>
+          <text class="menu-arrow">›</text>
+        </view>
+      </view>
+    </view>
+
     <view class="logout-btn" v-if="isLoggedIn" @click="handleLogout">
       <text>退出登录</text>
     </view>
 
     <MsgNotify />
     <ServiceFab />
+      <CustomTabBar :current="4" />
   </view>
 </template>
 
 <script setup>
+import CustomTabBar from '@/components/CustomTabBar.vue'
 import { ref, reactive, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { callCloud } from '@/utils/cloud.js'
@@ -134,6 +155,7 @@ import MsgNotify from '@/components/MsgNotify.vue'
 
 const isRider = ref(false)
 const isLoggedIn = ref(false)
+const isAdmin = ref(false)
 const unreadCount = ref(0)
 const userInfo = reactive({ name: '加载中...', phone: '', riderId: '', level: 'Lv.1 新手', avatar: '' })
 const stats = reactive({ publishedCount: 0, takenCount: 0, income: 0 })
@@ -184,6 +206,14 @@ const loadUnreadCount = async () => {
   }
 }
 
+const checkAdminStatus = async () => {
+  if (!isLoggedIn.value) { isAdmin.value = false; return }
+  var res = await callCloud('admin', 'checkAdmin')
+  if (res.code === 0) {
+    isAdmin.value = !!res.isAdmin
+  }
+}
+
 const requireLogin = () => {
   if (isLoggedIn.value) return true
   uni.navigateTo({ url: '/pages/login/index' })
@@ -207,11 +237,7 @@ const isValidImage = (src) => {
 }
 const showTip = (msg) => { uni.showToast({ title: msg, icon: 'none' }) }
 const showWallet = () => {
-  uni.showModal({
-    title: '我的钱包',
-    content: '累计收入 ¥' + (stats.income || 0) + '\n提现功能即将上线',
-    showCancel: false
-  })
+  uni.navigateTo({ url: '/pages/mine-sub/wallet' })
 }
 const showFeedback = () => {
   uni.navigateTo({ url: '/pages/kefu/show?img=' + encodeURIComponent('/static/TeamWork.png') })
@@ -240,7 +266,9 @@ const handleLogout = () => {
   })
 }
 
-onShow(() => { loadProfile(); loadStats(); loadUnreadCount() })
+onShow(() => {
+  uni.hideTabBar({ animation: false })
+  loadProfile(); loadStats(); loadUnreadCount(); checkAdminStatus() })
 </script>
 
 <style scoped>

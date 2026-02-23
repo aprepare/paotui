@@ -23,3 +23,6 @@ dist
 # Windows reserved names
 nul
 project.private.config.json
+
+# Kiro context chunks
+chunk_*.txt

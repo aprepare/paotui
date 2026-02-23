@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <view class="rider-register">
     <!-- 顶部说明 -->
     <view class="header-banner">
@@ -13,17 +13,17 @@
       <view class="form-card">
         <view class="form-item">
           <text class="form-label">真实姓名</text>
-          <input placeholder="请输入真实姓名" v-model="form.realName" />
+          <input placeholder="请输入真实姓名" v-model="form.realName"></input>
         </view>
         <view class="divider"></view>
         <view class="form-item">
           <text class="form-label">手机号码</text>
-          <input type="number" placeholder="请输入手机号" v-model="form.phone" maxlength="11" />
+          <input type="number" placeholder="请输入手机号" v-model="form.phone" maxlength="11"></input>
         </view>
         <view class="divider"></view>
         <view class="form-item sms-row">
           <text class="form-label">验证码</text>
-          <input type="number" placeholder="请输入验证码" v-model="smsCode" maxlength="6" class="sms-input" />
+          <input type="number" placeholder="请输入验证码" v-model="smsCode" maxlength="6" class="sms-input"></input>
           <view class="sms-btn" :class="{disabled: !isPhoneValid || countdown > 0}" @click="sendCode">
             <text>{{ countdown > 0 ? countdown + 's' : '获取验证码' }}</text>
           </view>
@@ -41,17 +41,17 @@
       <view class="form-card">
         <view class="form-item">
           <text class="form-label">学校</text>
-          <input placeholder="请输入学校名称" v-model="form.school" />
+          <input placeholder="请输入学校名称" v-model="form.school"></input>
         </view>
         <view class="divider"></view>
         <view class="form-item">
           <text class="form-label">学号</text>
-          <input type="number" placeholder="12位学号" v-model="form.studentId" maxlength="12" @input="onStudentIdInput" />
+          <input type="number" placeholder="12位学号" v-model="form.studentId" maxlength="12" @input="onStudentIdInput"></input>
         </view>
         <view class="divider"></view>
         <view class="form-item">
           <text class="form-label">宿舍楼</text>
-          <picker :range="buildingList" @change="onBuildingChange">
+          <picker mode="multiSelector" :range="buildingColumns" :value="buildingIndex" @columnchange="onColumnChange" @change="onBuildingChange">
             <view class="picker-value">
               <text>{{ form.building || '请选择所在宿舍楼' }}</text>
               <text class="picker-arrow">›</text>
@@ -104,7 +104,16 @@
 import { reactive, ref, computed } from 'vue'
 import { callCloud, uploadImage, checkLogin } from '@/utils/cloud'
 
-const buildingList = ['1号宿舍楼', '2号宿舍楼', '3号宿舍楼', '5号宿舍楼', '6号宿舍楼', '8号宿舍楼', '10号宿舍楼', '12号宿舍楼']
+const buildingData = {
+  '东区': ['一舍女', '二舍男', '三舍女', '四舍男', '五舍女', '六舍男', '七舍女', '八舍男'],
+  '西区': ['一组团男', '二组团女', '二组团男', '三组团女', '三组团男', '四组团男', '五组团男', '六组团女', '七组团男', '八组团男', '九组团女', '十组团女', '十一组团男', '十二组团男', '十二组团女']
+}
+var areaList = ['东区', '西区']
+const buildingIndex = ref([0, 0])
+const buildingColumns = computed(() => {
+  var area = areaList[buildingIndex.value[0]] || '东区'
+  return [areaList, buildingData[area]]
+})
 
 const smsCode = ref('')
 const countdown = ref(0)
@@ -153,8 +162,20 @@ const onStudentIdInput = (e) => {
   form.studentId = v
 }
 
+const onColumnChange = (e) => {
+  var col = e.detail.column
+  var val = e.detail.value
+  var newIdx = [buildingIndex.value[0], buildingIndex.value[1]]
+  newIdx[col] = val
+  if (col === 0) { newIdx[1] = 0 }
+  buildingIndex.value = newIdx
+}
+
 const onBuildingChange = (e) => {
-  form.building = buildingList[e.detail.value]
+  var vals = e.detail.value
+  var area = areaList[vals[0]]
+  var bld = buildingData[area][vals[1]]
+  form.building = area + bld
 }
 
 const uploadStudentCard = () => {

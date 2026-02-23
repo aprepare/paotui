@@ -23,28 +23,12 @@ exports.main = async (event, context) => {
     case 'getLatestOrders': {
       const { limit = 10 } = data
       // 分别查待接单和非待接单，确保待接单订单一定显示
-      var expressPending = await db.collection('express_orders')
-        .where({ status: 0 })
-        .orderBy('tip', 'desc')
-        .orderBy('createTime', 'desc')
-        .limit(limit)
-        .get()
-      var expressOther = await db.collection('express_orders')
-        .where({ status: _.and(_.neq(0), _.neq(4)) })
-        .orderBy('createTime', 'desc')
-        .limit(limit)
-        .get()
-      var errandPending = await db.collection('errand_tasks')
-        .where({ status: 0 })
-        .orderBy('tip', 'desc')
-        .orderBy('createTime', 'desc')
-        .limit(limit)
-        .get()
-      var errandOther = await db.collection('errand_tasks')
-        .where({ status: _.and(_.neq(0), _.neq(3)) })
-        .orderBy('createTime', 'desc')
-        .limit(limit)
-        .get()
+      var [expressPending, expressOther, errandPending, errandOther] = await Promise.all([
+        db.collection('express_orders').where({ status: 0 }).orderBy('tip', 'desc').orderBy('createTime', 'desc').limit(limit).get(),
+        db.collection('express_orders').where({ status: _.and(_.neq(0), _.neq(4)) }).orderBy('createTime', 'desc').limit(limit).get(),
+        db.collection('errand_tasks').where({ status: 0 }).orderBy('tip', 'desc').orderBy('createTime', 'desc').limit(limit).get(),
+        db.collection('errand_tasks').where({ status: _.and(_.neq(0), _.neq(3)) }).orderBy('createTime', 'desc').limit(limit).get()
+      ])
       // 标记类型
       var expressList = expressPending.data.concat(expressOther.data).map(function(o) {
         o.orderType = 'express'
@@ -88,6 +72,12 @@ exports.main = async (event, context) => {
         return tb - ta
       })
       return { code: 0, data: all.slice(0, limit) }
+    }
+
+    case 'getPageConfig': {
+      const pcRes = await db.collection('page_config').where({ key: 'home' }).get()
+      if (pcRes.data.length === 0) return { code: 0, data: null }
+      return { code: 0, data: pcRes.data[0].config || null }
     }
 
     case 'getSchools': {

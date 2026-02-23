@@ -13,7 +13,7 @@
           <text class="hero-sub">实时更新</text>
         </view>
         <view class="hero-right">
-          <image class="hero-gif" src="/static/快递.gif" mode="aspectFit" />
+          <image class="hero-gif" src="/static/kuaidi.jpg" mode="aspectFit" />
         </view>
       </view>
     </view>
@@ -22,10 +22,9 @@
     <view class="section">
       <text class="section-label">快捷操作</text>
       <view class="action-row">
-        <view class="action-card" v-for="act in actions" :key="act.text" @click="goPage(act.link)">
-          <view class="action-icon-bg" :style="{ background: act.bg }">
-            <text class="action-icon">{{ act.emoji }}</text>
-          </view>
+        <view class="action-item" v-for="act in actions" :key="act.text" @click="goPage(act.link)">
+          <image v-if="act.iconUrl" class="action-img" :src="act.iconUrl" mode="aspectFit" />
+          <text v-else class="action-emoji">{{ act.emoji }}</text>
           <text class="action-name">{{ act.text }}</text>
         </view>
       </view>
@@ -48,10 +47,10 @@
       <view v-for="order in filteredOrders" :key="order.id" class="order-card" @click="goDetail(order.id, order.orderType)">
         <view class="order-tag" :class="order.sizeClass">{{ order.sizeText }}</view>
         <view class="order-info">
-          <text class="order-from">{{ order.pickupPoint }}</text>
+          <text class="order-from">{{ order.building }}</text>
           <view class="order-route">
             <view class="route-line"></view>
-            <text class="order-to">{{ order.building }}</text>
+            <text class="order-to">{{ order.pickupPoint }}</text>
           </view>
           <text class="order-meta">{{ order.time }}</text>
         </view>
@@ -86,10 +85,12 @@
 
     <MsgNotify />
     <ServiceFab />
+      <CustomTabBar :current="0" />
   </view>
 </template>
 
 <script setup>
+import CustomTabBar from '@/components/CustomTabBar.vue'
 import { ref, reactive, computed } from 'vue'
 import { onLoad, onUnload, onShow, onPullDownRefresh } from '@dcloudio/uni-app'
 import { callCloud, checkLogin } from '@/utils/cloud.js'
@@ -104,27 +105,26 @@ const defaultBanners = [
 const banners = ref(defaultBanners)
 
 const defaultActions = [
-  { emoji: '📦', text: '代取快递', link: '/pages/express/create', bg: 'linear-gradient(135deg, #4299E1, #2B6CB0)' },
-  { emoji: '🏃', text: '万能跑腿', link: '/pages/errand/create', bg: 'linear-gradient(135deg, #ED8936, #DD6B20)' },
-  { emoji: '🏅', text: '骑手注册', link: '/pages/express/rider-register', bg: 'linear-gradient(135deg, #48BB78, #38A169)' }
+  { emoji: '📦', iconUrl: '/static/action/kuaidi.png', text: '代取快递', link: '/pages/express/create', bg: 'linear-gradient(135deg, #4299E1, #2B6CB0)' },
+  { emoji: '🏃', iconUrl: '/static/action/paotui.png', text: '万能跑腿', link: '/pages/errand/create', bg: 'linear-gradient(135deg, #ED8936, #DD6B20)' },
+  { emoji: '🏅', iconUrl: '/static/action/qishou.png', text: '骑手注册', link: '/pages/express/rider-register', bg: 'linear-gradient(135deg, #48BB78, #38A169)' }
 ]
 const actions = ref(defaultActions)
 
 const loadPageConfig = async () => {
   try {
     const res = await callCloud('home', 'getPageConfig')
-    if (res.code === 0 && res.data && res.data.sections) {
-      const sections = res.data.sections.filter(s => s.visible !== false)
-      const bannerSec = sections.find(s => s.key === 'banners')
-      if (bannerSec && bannerSec.items && bannerSec.items.length > 0) {
-        banners.value = bannerSec.items.map((it, i) => ({
-          id: i + 1, emoji: it.emoji || '', title: it.text || '', desc: it.link || '', bg: it.bg || 'linear-gradient(135deg, #4299E1, #2B6CB0)'
+    if (res.code === 0 && res.data) {
+      if (res.data.banners && res.data.banners.length > 0) {
+        banners.value = res.data.banners.map((it, i) => ({
+          id: i + 1, emoji: it.emoji || '', title: it.title || '', desc: it.desc || '',
+          bg: it.bg || 'linear-gradient(135deg, #4299E1, #2B6CB0)'
         }))
       }
-      const actionSec = sections.find(s => s.key === 'actions')
-      if (actionSec && actionSec.items && actionSec.items.length > 0) {
-        actions.value = actionSec.items.map(it => ({
-          emoji: it.emoji || '', text: it.text || '', link: it.link || '', bg: it.bg || 'linear-gradient(135deg, #4299E1, #2B6CB0)'
+      if (res.data.actions && res.data.actions.length > 0) {
+        actions.value = res.data.actions.map(it => ({
+          emoji: it.emoji || '', text: it.text || '', link: it.link || '',
+          bg: it.bg || 'linear-gradient(135deg, #4299E1, #2B6CB0)'
         }))
       }
     }
@@ -235,7 +235,9 @@ onLoad(() => {
   loadPageConfig()
   liveTimer = setInterval(refreshLive, 30000)
 })
-onShow(() => { loadOrders() })
+onShow(() => {
+  uni.hideTabBar({ animation: false })
+  loadOrders() })
 onUnload(() => { if (liveTimer) clearInterval(liveTimer) })
 onPullDownRefresh(async () => {
   await Promise.all([refreshLive(), loadOrders()])
@@ -271,6 +273,7 @@ const goDetail = (id, orderType) => {
 .hero-sub { font-size: 22rpx; color: rgba(255,255,255,0.5); margin-top: 10rpx; }
 .hero-right { width: 180rpx; height: 160rpx; border-radius: 20rpx; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; overflow: hidden; }
 .hero-gif { width: 150rpx; height: 150rpx; }
+.hero-emoji { font-size: 80rpx; }
 
 /* 通用区块 */
 .section { padding: 28rpx 28rpx 0; }
@@ -279,13 +282,12 @@ const goDetail = (id, orderType) => {
 .section-link { font-size: 26rpx; color: #fff; font-weight: 700; background: linear-gradient(135deg, #4299E1, #2B6CB0); padding: 10rpx 24rpx; border-radius: 24rpx; }
 
 /* 快捷操作 */
-.action-row { display: flex; gap: 16rpx; }
-.action-card { flex: 1; background: #fff; border-radius: 20rpx; padding: 28rpx 0 20rpx; display: flex; flex-direction: column; align-items: center; box-shadow: 0 4rpx 16rpx rgba(0,0,0,0.04), 0 1rpx 4rpx rgba(0,0,0,0.06); transition: transform 0.2s ease, box-shadow 0.2s ease; }
-.action-card:active { transform: scale(0.95); box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.08); }
-.action-icon-bg { width: 72rpx; height: 72rpx; border-radius: 20rpx; display: flex; align-items: center; justify-content: center; margin-bottom: 12rpx; box-shadow: 0 4rpx 12rpx rgba(0,0,0,0.1); transition: transform 0.25s ease; }
-.action-card:active .action-icon-bg { transform: scale(1.1); }
-.action-icon { font-size: 32rpx; }
-.action-name { font-size: 22rpx; color: #2D3748; font-weight: 600; }
+.action-row { display: flex; justify-content: space-around; padding: 8rpx 0; }
+.action-item { display: flex; flex-direction: column; align-items: center; padding: 16rpx 0; }
+.action-item:active { opacity: 0.7; }
+.action-img { width: 120rpx; height: 120rpx; margin-bottom: 12rpx; }
+.action-emoji { font-size: 56rpx; margin-bottom: 12rpx; }
+.action-name { font-size: 24rpx; color: #2D3748; font-weight: 600; }
 
 /* 楼栋筛选 */
 .building-filter { white-space: nowrap; margin-bottom: 20rpx; }
@@ -314,10 +316,10 @@ const goDetail = (id, orderType) => {
 .order-to { font-size: 24rpx; color: #718096; }
 .order-meta { font-size: 22rpx; color: #A0AEC0; display: block; margin-top: 6rpx; }
 .order-end { text-align: right; min-width: 120rpx; }
-.order-price { font-size: 34rpx; color: #E53E3E; font-weight: 800; display: block; }
+.order-price { font-size: 50rpx; color: #E53E3E; font-weight: 800; display: block; }
 .order-tip-row { display: flex; align-items: baseline; justify-content: flex-end; margin-top: 4rpx; }
 .order-tip-label { font-size: 20rpx; color: #2B6CB0; font-weight: 500; margin-right: 4rpx; }
-.order-tip-num { font-size: 50rpx; color: #2B6CB0; font-weight: 800; line-height: 1; }
+.order-tip-num { font-size: 40rpx; color: #2B6CB0; font-weight: 700; }
 .order-state { font-size: 22rpx; display: block; margin-top: 6rpx; font-weight: 600; }
 
 /* 轮播图 */

@@ -6,7 +6,7 @@
   "versionCode": "100",
   "transformPx": false,
   "mp-weixin": {
-    "appid": "",
+    "appid": "wx8c7aa4be05058ad8",
     "setting": {
       "urlCheck": false,
       "es6": true,
@@ -20,7 +20,7 @@
         "desc": "用于展示当前位置和骑手距离"
       }
     },
-    "requiredPrivateInfos": ["getLocation"]
+    "requiredPrivateInfos": ["getLocation", "chooseLocation"]
   },
   "permission": {
     "scope.userLocation": {

@@ -23,7 +23,7 @@ exports.main = async (event, context) => {
   const now = Date.now()
 
   // 清空旧数据
-  const cols = ['express_orders', 'errand_tasks', 'carpool', 'forum_posts', 'forum_comments', 'market_goods', 'team_activities', 'team_members']
+  const cols = ['express_orders', 'errand_tasks', 'carpool', 'forum_posts', 'forum_comments', 'market_goods', 'team_activities', 'team_members', 'experience_posts', 'experience_comments']
   await Promise.all(cols.map(c => clearCollection(c)))
 
   // 1. express_orders
@@ -71,7 +71,16 @@ exports.main = async (event, context) => {
     { openid, title: '考研政治全套资料', desc: '肖四肖八+徐涛核心考案全新未拆', price: 25, category: '书籍', images: [], views: 56, wants: 15, publisher: '上岸学长', status: 'active', createTime: new Date(now - 21600000) }
   ]
 
-  // 6. team_activities 组队（匹配 team 云函数的集合名）
+  // 6. experience_posts 考研经验帖
+  const experiencePosts = [
+    { openid, nickname: '学姐小王', avatar: '', title: '三跨上岸985，我的考研400+经验分享', content: '本科双非，跨专业跨学校跨地区，从3月开始备考，最终初试410分上岸。\n\n一、时间规划\n3-6月：打基础，数学高数+线代过一遍，英语每天背单词200个\n7-9月：强化阶段，数学刷题+英语阅读真题精读\n10-12月：冲刺阶段，政治背诵+模拟考试\n\n二、各科方法\n数学：张宇基础+李永乐线代，一定要多刷题\n英语：单词用墨墨背，阅读用唐迟方法论\n政治：9月开始不晚，跟徐涛强化+肖四肖八\n\n三、心态\n最难的不是学习本身，而是坚持。找到自己的节奏最重要。', category: '初试经验', school: '北京大学', admitted: true, images: [], likes: 186, comments: 3, likedBy: [], createTime: new Date(now - 86400000) },
+    { openid, nickname: '英语达人', avatar: '', title: '考研英语一85分复习全攻略', content: '从四级刚过到考研英语85分，分享我的方法：\n\n1. 单词：用艾宾浩斯遗忘曲线，每天新词+复习，坚持到考前\n2. 阅读：每天精读一篇真题，分析每个选项为什么对为什么错\n3. 作文：整理自己的模板，不要背万能模板，考场上一眼就能看出来\n4. 翻译：每天练一句长难句翻译\n5. 完形：放到最后做，性价比最低\n\n最重要的是：真题至少刷3遍，每遍都有新收获。', category: '学习方法', school: '复旦大学', admitted: true, images: [], likes: 152, comments: 2, likedBy: [], createTime: new Date(now - 172800000) },
+    { openid, nickname: '逆袭学长', avatar: '', title: '复试逆袭：初试倒数第三到最终录取', content: '初试擦线进复试，排名倒数第三，但复试表现优异最终被录取。\n\n复试准备：\n1. 专业课：把本科教材重新过一遍，重点章节做笔记\n2. 英语口语：每天练30分钟，准备自我介绍和常见问题\n3. 综合面试：了解导师研究方向，准备2-3个相关问题\n4. 联系导师：提前发邮件，附上简历和研究计划\n\n面试技巧：\n- 不会的问题诚实说不会，但要说出自己的思考方向\n- 保持微笑和自信，眼神交流很重要\n- 回答要有逻辑，先总后分', category: '复试经验', school: '浙江大学', admitted: true, images: [], likes: 234, comments: 1, likedBy: [], createTime: new Date(now - 259200000) },
+    { openid, nickname: '二战勇士', avatar: '', title: '二战上岸，给一战失败同学的建议', content: '一战差10分落榜，二战成功上岸。\n\n一战失败的教训：\n- 开始太晚，7月才正式复习\n- 没有系统规划，东一榔头西一棒子\n- 心态崩了好几次，浪费了很多时间\n\n二战调整：\n1. 3月就开始，给自己充足的时间\n2. 制定详细的月计划和周计划\n3. 找了一个研友互相监督\n4. 每周给自己放半天假，调节心态\n\n给一战失败的同学：失败不可怕，可怕的是不敢再来。', category: '心态调整', school: '南京大学', admitted: true, images: [], likes: 128, comments: 2, likedBy: [], createTime: new Date(now - 345600000) },
+    { openid, nickname: '数据分析师', avatar: '', title: '如何选择目标院校？这些数据你必须看', content: '择校不能只看排名，还要综合考虑：\n\n1. 报录比：低于5:1的相对好考\n2. 复试线趋势：看近3年的变化，稳定的比较好预测\n3. 专业课难度：自命题vs统考，难度差异很大\n4. 地理位置：考虑未来就业城市\n5. 导师情况：看导师的研究方向和招生名额\n\n推荐工具：\n- 研招网：官方数据最准确\n- 各校研究生院官网：看历年分数线\n- 考研帮：看学长学姐的经验\n\n记住：选择比努力更重要，但选好了就别犹豫。', category: '择校建议', school: '', admitted: false, images: [], likes: 198, comments: 1, likedBy: [], createTime: new Date(now - 432000000) }
+  ]
+
+  // 7. team_activities 组队（匹配 team 云函数的集合名）
   const teams = [
     { openid, title: '王者荣耀五排', desc: '冲星耀，需要辅助和打野', type: '校园开黑', place: '线上', time: '每晚8点', max: 5, current: 3, tag: '招募中', owner: '峡谷之巅', status: 'active', images: [], photos: [], createTime: new Date(now - 3600000) },
     { openid, title: '英雄联盟排位', desc: '黄金段位一起上铂金', type: '校园开黑', place: '线上', time: '周末下午', max: 5, current: 2, tag: '招募中', owner: '召唤师', status: 'active', images: [], photos: [], createTime: new Date(now - 7200000) },
@@ -82,11 +91,12 @@ exports.main = async (event, context) => {
   ]
 
   // 并行写入所有集合
-  const [exIds, erIds, cpIds, fpIds] = await Promise.all([
+  const [exIds, erIds, cpIds, fpIds, expIds] = await Promise.all([
     batchAdd('express_orders', expressOrders),
     batchAdd('errand_tasks', errandTasks),
     batchAdd('carpool', carpools),
-    batchAdd('forum_posts', forumPosts)
+    batchAdd('forum_posts', forumPosts),
+    batchAdd('experience_posts', experiencePosts)
   ])
 
   // 论坛评论需要 postId
@@ -98,10 +108,25 @@ exports.main = async (event, context) => {
     { postId: postIds[3], openid, nickname: '音乐爱好者', avatar: '🎵', content: '报名了！唱一首周杰伦的', createTime: new Date(now - 8000000) }
   ]
 
+  // 经验帖评论
+  const expPostIds = expIds.map(r => r._id)
+  const expCommentData = [
+    { postId: expPostIds[0], openid, nickname: '考研小白', avatar: '', content: '学姐太厉害了！请问数学基础差的话3月开始来得及吗？', likes: 0, likedBy: [], createTime: new Date(now - 80000000) },
+    { postId: expPostIds[0], openid, nickname: '备考中', avatar: '', content: '同三跨，看到你的帖子很受鼓舞，加油！', likes: 0, likedBy: [], createTime: new Date(now - 75000000) },
+    { postId: expPostIds[0], openid, nickname: '数学渣', avatar: '', content: '张宇的课确实好，跟着学了一个月感觉开窍了', likes: 0, likedBy: [], createTime: new Date(now - 70000000) },
+    { postId: expPostIds[1], openid, nickname: '英语苦手', avatar: '', content: '真题刷3遍这个建议太好了，我第二遍的时候确实发现了很多之前没注意的点', likes: 0, likedBy: [], createTime: new Date(now - 160000000) },
+    { postId: expPostIds[1], openid, nickname: '单词困难户', avatar: '', content: '墨墨背单词确实好用，推荐！', likes: 0, likedBy: [], createTime: new Date(now - 155000000) },
+    { postId: expPostIds[2], openid, nickname: '准备复试中', avatar: '', content: '联系导师的邮件模板能分享一下吗？', likes: 0, likedBy: [], createTime: new Date(now - 250000000) },
+    { postId: expPostIds[3], openid, nickname: '一战失败', avatar: '', content: '谢谢学长，看完决定二战了', likes: 0, likedBy: [], createTime: new Date(now - 340000000) },
+    { postId: expPostIds[3], openid, nickname: '同是二战', avatar: '', content: '找研友真的很重要，一个人太容易放弃了', likes: 0, likedBy: [], createTime: new Date(now - 335000000) },
+    { postId: expPostIds[4], openid, nickname: '择校纠结中', avatar: '', content: '报录比这个数据在哪里查比较准确？', likes: 0, likedBy: [], createTime: new Date(now - 420000000) }
+  ]
+
   await Promise.all([
     batchAdd('forum_comments', commentData),
     batchAdd('market_goods', marketGoods),
-    batchAdd('team_activities', teams)
+    batchAdd('team_activities', teams),
+    batchAdd('experience_comments', expCommentData)
   ])
 
   // 更新 stats
@@ -121,7 +146,9 @@ exports.main = async (event, context) => {
       forum_posts: forumPosts.length,
       forum_comments: commentData.length,
       market_goods: marketGoods.length,
-      team_activities: teams.length
+      team_activities: teams.length,
+      experience_posts: experiencePosts.length,
+      experience_comments: expCommentData.length
     }
   }
 }

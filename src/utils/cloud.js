@@ -1,5 +1,7 @@
-// API 服务器地址，开发环境用本地，生产环境替换为阿里云服务器地址
-const BASE_URL = 'http://localhost:3000/api'
+// 微信云开发模式
+// 备案完成后可切换回 HTTP 模式，修改 USE_CLOUD = false 并设置 BASE_URL
+const USE_CLOUD = true
+const BASE_URL = 'https://18sc.top/api'  // 备案后启用
 
 /**
  * 检查是否已登录（已完善用户信息）
@@ -13,7 +15,60 @@ export const checkLogin = () => {
 }
 
 /**
- * URL 映射：将 (functionName, action, data) 映射到 RESTful 端点
+ * 封装 uni.request 为 Promise（HTTP 模式用）
+ */
+function request(options) {
+  return new Promise((resolve, reject) => {
+    uni.request({
+      ...options,
+      success: (res) => resolve(res),
+      fail: (err) => reject(err)
+    })
+  })
+}
+
+/**
+ * 封装 uni.login 为 Promise
+ */
+function wxLogin() {
+  return new Promise((resolve, reject) => {
+    uni.login({
+      provider: 'weixin',
+      success: (res) => resolve(res),
+      fail: (err) => reject(err)
+    })
+  })
+}
+
+/**
+ * 封装 uni.uploadFile 为 Promise
+ */
+function uploadFilePromise(options) {
+  return new Promise((resolve, reject) => {
+    uni.uploadFile({
+      ...options,
+      success: (res) => resolve(res),
+      fail: (err) => reject(err)
+    })
+  })
+}
+
+/**
+ * 封装 wx.cloud.callFunction 为 Promise（兼容 uni-app）
+ */
+function callCloudFunction(name, data) {
+  return new Promise((resolve, reject) => {
+    wx.cloud.callFunction({
+      name: name,
+      data: data,
+      success: (res) => resolve(res),
+      fail: (err) => reject(err)
+    })
+  })
+}
+
+/**
+ * URL 映射：将 (functionName, action, data) 映射到 RESTful 端点（HTTP 模式用）
  */
 export function buildUrl(name, action, data = {}) {
   const id = data.id || data.orderId || data.taskId || data.postId || data.goodsId || data.carpoolId || data.activityId || data.msgId || data.commentId || ''
@@ -118,15 +173,34 @@ export function buildUrl(name, action, data = {}) {
 }
 
 /**
- * 云函数调用封装 — 改为 HTTP 请求
- * 保持原有调用签名: callCloud('express', 'list', { status: 0, page: 1 })
+ * 云函数调用封装 — 支持云开发和 HTTP 两种模式
+ * 调用签名: callCloud('express', 'list', { status: 0, page: 1 })
  */
-export const callCloud = async (name, action, data = {}) => {
+export const callCloud = async (name, action, data = {}, _isRetry = false) => {
+  // ========== 云开发模式 ==========
+  if (USE_CLOUD) {
+    try {
+      const res = await callCloudFunction(name, { action, data })
+      const result = res.result
+      if (result && result.code === 0) {
+        return result
+      }
+      const msg = (result && result.msg) || '请求失败'
+      console.error('[cloud]', name, action, msg)
+      uni.showToast({ title: msg, icon: 'none' })
+      return result || { code: -1, msg }
+    } catch (err) {
+      console.error('[cloud error]', name, action, err)
+      uni.showToast({ title: '网络异常，请重试', icon: 'none' })
+      return { code: -1, msg: err.errMsg || err.message || '网络异常' }
+    }
+  }
+
+  // ========== HTTP 模式（备案后启用）==========
   try {
     const token = uni.getStorageSync('token') || ''
     const { url, method } = buildUrl(name, action, data)
 
-    // GET 请求把 data 作为 query 参数
     let requestUrl = url
     let requestData = data
     if (method === 'GET') {
@@ -138,7 +212,7 @@ export const callCloud = async (name, action, data = {}) => {
       requestData = undefined
     }
 
-    const [err, res] = await uni.request({
+    const res = await request({
       url: requestUrl,
       method,
       data: requestData,
@@ -148,21 +222,13 @@ export const callCloud = async (name, action, data = {}) => {
       }
     })
 
-    if (err) {
-      console.error('[cloud error]', name, action, err)
-      uni.showToast({ title: '网络异常，请重试', icon: 'none' })
-      return { code: -1, msg: err.errMsg || '网络异常' }
-    }
-
     const result = res.data
 
-    // 401 token 过期，自动重新登录
-    if (res.statusCode === 401) {
+    if (res.statusCode === 401 && !_isRetry) {
       console.warn('[cloud] token expired, re-login')
       uni.removeStorageSync('token')
       await autoLogin()
-      // 重试一次
-      return callCloud(name, action, data)
+      return callCloud(name, action, data, true)
     }
 
     if (result && result.code === 0) {
@@ -175,28 +241,75 @@ export const callCloud = async (name, action, data = {}) => {
   } catch (err) {
     console.error('[cloud error]', name, action, err)
     uni.showToast({ title: '网络异常，请重试', icon: 'none' })
-    return { code: -1, msg: err.message }
+    return { code: -1, msg: err.errMsg || err.message || '网络异常' }
   }
 }
 
 /**
- * 自动登录：wx.login → POST /api/user/login → 存储 token
+ * 自动登录
+ * 云开发模式：直接调用 user 云函数的 login action
+ * HTTP 模式：wx.login 获取 code → 发送到服务器换 JWT
  */
 export const autoLogin = async () => {
+  // ========== 云开发模式 ==========
+  if (USE_CLOUD) {
+    try {
+      const res = await callCloudFunction('user', { action: 'login', data: {} })
+      const result = res.result
+      if (result && result.code === 0) {
+        const userInfo = result.data
+        uni.setStorageSync('userInfo', userInfo)
+        uni.setStorageSync('openid', userInfo.openid || '')
+        uni.setStorageSync('isRider', userInfo.isRider ? 1 : 0)
+        console.log('cloud login success', userInfo.openid)
+      } else {
+        console.error('cloud login failed', result)
+      }
+    } catch (e) {
+      console.error('autoLogin error', e)
+    }
+    return
+  }
+
+  // ========== HTTP 模式（备案后启用）==========
   try {
-    const [loginErr, loginRes] = await uni.login({ provider: 'weixin' })
-    if (loginErr || !loginRes.code) {
-      console.error('wx.login failed', loginErr)
+    const existingToken = uni.getStorageSync('token')
+    if (existingToken) {
+      try {
+        const profileRes = await request({
+          url: BASE_URL + '/user/profile',
+          method: 'GET',
+          header: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + existingToken
+          }
+        })
+        if (profileRes.data && profileRes.data.code === 0) {
+          const userInfo = profileRes.data.data
+          uni.setStorageSync('userInfo', userInfo)
+          uni.setStorageSync('openid', userInfo.openid || '')
+          uni.setStorageSync('isRider', userInfo.isRider ? 1 : 0)
+          console.log('token still valid, skip re-login')
+          return
+        }
+      } catch (e) {
+        console.log('existing token invalid, re-login')
+      }
+    }
+
+    const loginRes = await wxLogin()
+    if (!loginRes.code) {
+      console.error('wx.login failed, no code')
       return
     }
-    const [err, res] = await uni.request({
+    const res = await request({
       url: BASE_URL + '/user/login',
       method: 'POST',
       data: { code: loginRes.code },
       header: { 'Content-Type': 'application/json' }
     })
-    if (err || !res.data || res.data.code !== 0) {
-      console.error('login api failed', err, res)
+    if (!res.data || res.data.code !== 0) {
+      console.error('login api failed', res)
       return
     }
     const { token, userInfo } = res.data.data
@@ -211,20 +324,36 @@ export const autoLogin = async () => {
 }
 
 /**
- * 上传图片到 API Server
+ * 上传图片
+ * 云开发模式：上传到微信云存储
+ * HTTP 模式：上传到 API Server
  */
 export const uploadImage = async (tempPath, folder = 'images') => {
+  if (USE_CLOUD) {
+    const ext = tempPath.split('.').pop() || 'png'
+    const cloudPath = folder + '/' + Date.now() + '-' + Math.random().toString(36).substr(2, 8) + '.' + ext
+    const res = await wx.cloud.uploadFile({
+      cloudPath: cloudPath,
+      filePath: tempPath
+    })
+    return res.fileID
+  }
+
+  // HTTP 模式
   const token = uni.getStorageSync('token') || ''
-  const [err, res] = await uni.uploadFile({
+  const res = await uploadFilePromise({
     url: BASE_URL + '/upload/image?folder=' + folder,
     filePath: tempPath,
     name: 'file',
     header: { 'Authorization': token ? `Bearer ${token}` : '' }
   })
-  if (err) throw new Error('上传失败')
   const data = JSON.parse(res.data)
   if (data.code !== 0) throw new Error(data.msg || '上传失败')
-  return data.data.url
+  let url = data.data.url
+  if (url && url.startsWith('/')) {
+    url = BASE_URL.replace('/api', '') + url
+  }
+  return url
 }
 
 /**

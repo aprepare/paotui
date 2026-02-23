@@ -12,10 +12,10 @@
       <view v-for="order in displayList" :key="order.id" class="order-card" @click="goDetail(order)">
         <view class="order-tag" :class="order.tagClass">{{ order.tagText }}</view>
         <view class="order-info">
-          <text class="order-from">{{ order.from }}</text>
+          <text class="order-from">{{ order.to || order.from }}</text>
           <view class="order-route" v-if="order.to">
             <view class="route-line"></view>
-            <text class="order-to">{{ order.to }}</text>
+            <text class="order-to">{{ order.from }}</text>
           </view>
           <text class="order-meta">{{ order.time }}</text>
         </view>

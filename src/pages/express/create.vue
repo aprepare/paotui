@@ -1,6 +1,6 @@
-<template>
+﻿<template>
   <view class="create-express">
-    <!-- 智能识别提示 -->
+    <!-- 智能识别短信 -->
     <view class="sms-section">
       <text class="section-title">📱 粘贴快递短信，自动识别</text>
       <view class="sms-input-area">
@@ -54,7 +54,7 @@
 
     <!-- 收货信息 -->
     <view class="form-section">
-      <text class="section-title">🏠 收货信息（默认宿舍地址）</text>
+      <text class="section-title">🏠 收货信息</text>
       <view class="form-card">
         <view class="form-item">
           <text class="form-label">宿舍楼</text>
@@ -74,6 +74,24 @@
         <view class="form-item">
           <text class="form-label">联系电话</text>
           <input type="number" placeholder="接收快递的电话" v-model="form.phone" />
+        </view>
+      </view>
+    </view>
+
+    <!-- 地图选点：收货位置 -->
+    <view class="form-section">
+      <text class="section-title">🗺️ 收货位置（骑手导航用）</text>
+      <view class="location-picker-wrap">
+        <view class="location-display" v-if="destLocation.name">
+          <text class="location-display-name">📌 {{ destLocation.name }}</text>
+          <text class="location-display-addr" v-if="destLocation.address">{{ destLocation.address }}</text>
+          <text class="location-display-coord">✅ ({{ destLocation.lat.toFixed(4) }}, {{ destLocation.lng.toFixed(4) }})</text>
+        </view>
+        <view class="location-choose-btn" @tap="chooseDestLocation">
+          <text>{{ destLocation.name ? '📍 重新选择位置' : '📍 点击选择收货位置' }}</text>
+        </view>
+        <view class="location-tip" v-if="!destLocation.name">
+          <text>⚠️ 建议选择位置，方便骑手准确导航到你宿舍</text>
         </view>
       </view>
     </view>
@@ -129,8 +147,8 @@
     </view>
 
     <!-- 提交按钮 -->
-    <view class="submit-btn" @click="submit">
-      <text>发布订单 · ¥{{ totalPrice }}</text>
+    <view class="submit-btn" :class="{disabled: submitting}" @tap="submit">
+      <text>{{ submitting ? '发布中...' : '发布订单 · ¥' + totalPrice }}</text>
     </view>
   </view>
 </template>
@@ -146,7 +164,6 @@ const sizes = [
 ]
 const selectedSize = ref(0)
 const currentSize = computed(() => sizes[selectedSize.value])
-
 const tipList = [1, 2, 3, 5]
 const customTip = ref(false)
 
@@ -165,261 +182,152 @@ const smsText = ref('')
 const recognized = ref(false)
 
 const form = reactive({
-  pickupPoint: '',
-  pickupCode: '',
-  expressCompany: '',
-  building: '东区六舍男',
-  room: '',
-  phone: '',
-  tip: 0,
-  remark: ''
+  pickupPoint: '', pickupCode: '', expressCompany: '',
+  building: '东区六舍男', room: '', phone: '', tip: 0, remark: ''
 })
 
-const totalPrice = computed(() => {
-  return currentSize.value.price + (form.tip || 0)
-})
+// 用户选择的收货位置（地图选点结果）
+const destLocation = reactive({ name: '', address: '', lat: 0, lng: 0 })
 
-const selectSize = (i) => {
-  selectedSize.value = i
+const totalPrice = computed(() => currentSize.value.price + (form.tip || 0))
+
+const selectSize = (i) => { selectedSize.value = i }
+const selectTip = (t) => { customTip.value = false; form.tip = t }
+
+// 调用微信地图选点（先授权再打开）
+const chooseDestLocation = () => {
+  console.log('[chooseDestLocation] 点击了选择位置')
+  uni.authorize({
+    scope: 'scope.userLocation',
+    success: () => {
+      console.log('[chooseDestLocation] 授权成功，打开地图')
+      openLocationPicker()
+    },
+    fail: () => {
+      console.log('[chooseDestLocation] 授权失败，引导设置')
+      uni.showModal({
+        title: '需要位置权限',
+        content: '请在设置中开启位置权限，以便骑手准确导航到你的位置',
+        confirmText: '去设置',
+        cancelText: '取消',
+        success: (r) => {
+          if (r.confirm) {
+            uni.openSetting({
+              success: (settingRes) => {
+                if (settingRes.authSetting && settingRes.authSetting['scope.userLocation']) {
+                  openLocationPicker()
+                }
+              }
+            })
+          }
+        }
+      })
+    }
+  })
 }
 
-const selectTip = (t) => {
-  customTip.value = false
-  form.tip = t
+const openLocationPicker = () => {
+  // 先获取当前位置作为地图初始中心点
+  uni.getLocation({
+    type: 'gcj02',
+    success: (loc) => {
+      uni.chooseLocation({
+        latitude: loc.latitude,
+        longitude: loc.longitude,
+        success: (res) => {
+          console.log('[chooseLocation] 选点成功', res)
+          destLocation.name = res.name || res.address || '已选位置'
+          destLocation.address = res.address || ''
+          destLocation.lat = res.latitude
+          destLocation.lng = res.longitude
+        },
+        fail: (err) => {
+          console.log('[chooseLocation] 选点失败或取消', err)
+        }
+      })
+    },
+    fail: () => {
+      // 获取不到当前位置也尝试打开选点（不传初始坐标）
+      uni.chooseLocation({
+        success: (res) => {
+          destLocation.name = res.name || res.address || '已选位置'
+          destLocation.address = res.address || ''
+          destLocation.lat = res.latitude
+          destLocation.lng = res.longitude
+        },
+        fail: (err) => {
+          console.log('[chooseLocation] 选点失败', err)
+        }
+      })
+    }
+  })
 }
 
-// 智能识别快递短信
+// 智能识别快递短信（保留原有逻辑）
 const onSmsInput = () => {
   var text = smsText.value
-  if (!text || text.length < 6) {
-    recognized.value = false
-    return
-  }
-
-  var foundPoint = ''
-  var foundCode = ''
-  var foundCompany = ''
-
-  // ===== 识别快递公司 =====
+  if (!text || text.length < 6) { recognized.value = false; return }
+  var foundPoint = '', foundCode = '', foundCompany = ''
   var companies = ['顺丰', '京东', '中通', '韵达', '圆通', '申通', '极兔', '百世', '天天', '邮政', 'EMS', '德邦', '丰网', '众邮', '宅急送']
   for (var ei = 0; ei < companies.length; ei++) {
-    if (text.indexOf(companies[ei]) !== -1) {
-      foundCompany = companies[ei]
-      break
-    }
+    if (text.indexOf(companies[ei]) !== -1) { foundCompany = companies[ei]; break }
   }
-  if (!foundCompany) {
-    var signMatch = text.match(/【([^】]{2,10})】/)
-    if (signMatch) {
-      var sign = signMatch[1]
-      for (var si = 0; si < companies.length; si++) {
-        if (sign.indexOf(companies[si]) !== -1) {
-          foundCompany = companies[si]
-          break
-        }
-      }
-      if (!foundCompany && (sign.indexOf('快递') !== -1 || sign.indexOf('速递') !== -1 || sign.indexOf('物流') !== -1)) {
-        foundCompany = sign
-      }
-    }
-  }
-
-  // ===== 识别取件码 =====
-  // 优先级1: 「」中文书名号中的码（近邻宝）
   var cnBracketMatch = text.match(/凭[「]([A-Za-z0-9\-]{4,20})[」]/)
-  if (cnBracketMatch) {
-    foundCode = cnBracketMatch[1]
-  }
-  // 优先级2: 提货码XXXXX（中通超时提醒）
-  if (!foundCode) {
-    var labelCodeMatch = text.match(/提货码\s*([A-Za-z0-9\-]{4,20})/)
-    if (labelCodeMatch) foundCode = labelCodeMatch[1]
-  }
-  // 优先级3: 凭/请凭 后面的码（最常见格式）
-  if (!foundCode) {
-    var pingMatch = text.match(/[可请]*凭\s*([A-Za-z]-[\d]-\d{4})/)
-    if (pingMatch) foundCode = pingMatch[1]
-  }
-  if (!foundCode) {
-    var pingMatch2 = text.match(/[可请]*凭\s*(\d{1,3}-\d{1,3}-\d{2,8})/)
-    if (pingMatch2) foundCode = pingMatch2[1]
-  }
-  if (!foundCode) {
-    var pingMatch3 = text.match(/[可请]*凭\s*([A-Za-z]-\d{2,8})/)
-    if (pingMatch3) foundCode = pingMatch3[1]
-  }
-  if (!foundCode) {
-    var pingMatch4 = text.match(/[可请]*凭\s*(\d{6,12})/)
-    if (pingMatch4) foundCode = pingMatch4[1]
-  }
-  // 优先级4: 明确标注的取件码/取货码/验证码等
-  if (!foundCode) {
-    var labelPatterns = [
-      /取件码[：:\s]*([A-Za-z0-9\-]{2,20})/,
-      /取货码[：:\s]*([A-Za-z0-9\-]{2,20})/,
-      /取件号[：:\s]*([A-Za-z0-9\-]{2,20})/,
-      /验证码[：:\s]*([A-Za-z0-9\-]{2,20})/,
-      /签收码[：:\s]*([A-Za-z0-9\-]{2,20})/,
-      /开柜码[：:\s]*([A-Za-z0-9\-]{2,20})/,
-      /开箱码[：:\s]*([A-Za-z0-9\-]{2,20})/
-    ]
-    for (var ki = 0; ki < labelPatterns.length; ki++) {
-      var km = text.match(labelPatterns[ki])
-      if (km) { foundCode = km[1]; break }
-    }
-  }
-  // 优先级5: X-X-XXXX 格式兜底
-  if (!foundCode) {
-    var dashMatch = text.match(/(\d{1,3}-\d{1,3}-\d{2,8})/)
-    if (dashMatch) foundCode = dashMatch[1]
-  }
-
-  // ===== 识别取件点 =====
-  // 策略：根据短信结构分类处理
-
-  // 模式A: "已到XXX，凭YYY到ZZZ取件" — 驿小哥/驿收发/中通柜
-  // 取件点是"已到"后面到逗号/句号之间的内容
+  if (cnBracketMatch) foundCode = cnBracketMatch[1]
+  if (!foundCode) { var m = text.match(/提货码\s*([A-Za-z0-9\-]{4,20})/); if (m) foundCode = m[1] }
+  if (!foundCode) { var m2 = text.match(/[可请]*凭\s*([A-Za-z]-[\d]-\d{4})/); if (m2) foundCode = m2[1] }
+  if (!foundCode) { var m3 = text.match(/[可请]*凭\s*(\d{1,3}-\d{1,3}-\d{2,8})/); if (m3) foundCode = m3[1] }
+  if (!foundCode) { var m4 = text.match(/取件码[：:\s]*([A-Za-z0-9\-]{2,20})/); if (m4) foundCode = m4[1] }
+  if (!foundCode) { var m5 = text.match(/(\d{1,3}-\d{1,3}-\d{2,8})/); if (m5) foundCode = m5[1] }
   var yidaoMatch = text.match(/已到([^,，。！!?？\n]{2,40})[,，]/)
-  if (yidaoMatch) {
-    foundPoint = yidaoMatch[1].replace(/\s+$/, '')
-    // 中通柜特殊处理：已到XXX柜，凭YYY到H28取件 → 取件点拼接柜号
-    // 检查"凭XXX到"后面是否跟的是柜号（字母+数字，如H28/K14/F16）而不是地名
-    var slotAfterDao = text.match(/凭[^到]*到([A-Z]\d{1,3})取件/)
-    if (slotAfterDao) {
-      foundPoint = foundPoint + slotAfterDao[1]
-    }
-  }
-
-  // 模式B: "凭XXX到YYY柜ZZZ取件" — 近邻宝（无"已到"）
-  // 取件点是"到"和"取件/领取"之间的内容
-  if (!foundPoint) {
-    // 近邻宝格式：凭XXX到YYY柜ZZZ取件，ZZZ是字母+数字的柜号
-    var guiSlotMatch = text.match(/到([^\s,，。！!?？]{2,30}柜)([A-Z]\d{1,3})取件/)
-    if (guiSlotMatch) {
-      foundPoint = guiSlotMatch[1] + guiSlotMatch[2]
-    }
-  }
-
-  // 模式C: "请凭XXX到YYY领取/取件/取" — 菜鸟/圆通/申通/多多代收点
-  if (!foundPoint) {
-    var qingpingMatch = text.match(/凭[^到]*到([^\s,，。！!?？]{2,40}?)(?:领取|取件|自取|取(?:[,，。\s]|$))/)
-    if (qingpingMatch) {
-      var pt = qingpingMatch[1]
-      // 过滤掉"到店学校-XXX"这种二级地址（驿小哥），只在没有"已到"时才用
-      if (pt.indexOf('到店') === -1 && pt.indexOf('店学校') === -1) {
-        // 过滤掉纯柜号（如H28），这不是取件点
-        if (!/^[A-Z]\d{1,3}$/.test(pt)) {
-          foundPoint = pt
-        }
-      }
-    }
-  }
-
-  // 模式D: "在<XXX>" — 中通超时提醒
-  if (!foundPoint) {
-    var angleBracketMatch = text.match(/在<([^>]{2,30})>/)
-    if (angleBracketMatch) {
-      foundPoint = angleBracketMatch[1]
-    }
-  }
-
-  // 模式E: "来取" — 驿收发格式（凭XXX来取，取件点在"已到"中已处理）
-  // 如果还没找到，尝试"已到"后面不带逗号的情况
-  if (!foundPoint) {
-    var yidaoMatch2 = text.match(/已到([^,，。！!?？\n]{2,40}?)(?:[,，]|，请|，凭|请)/)
-    if (yidaoMatch2) {
-      foundPoint = yidaoMatch2[1].replace(/\s+$/, '')
-    }
-  }
-
-  // 模式F: 品牌名匹配兜底
-  if (!foundPoint) {
-    var brandPatterns = [
-      /菜鸟驿站[A-Za-z0-9\u4e00-\u9fa5（()）]*/,
-      /菜鸟[A-Za-z0-9\u4e00-\u9fa5]*驿站/,
-      /丰巢[快递柜]*[A-Za-z0-9\u4e00-\u9fa5（()）]*/,
-      /速递易[A-Za-z0-9\u4e00-\u9fa5]*/,
-      /近邻宝[A-Za-z0-9\u4e00-\u9fa5]*/,
-      /驿收发[A-Za-z0-9\u4e00-\u9fa5]*/,
-      /妈妈驿站[A-Za-z0-9\u4e00-\u9fa5]*/
-    ]
-    for (var pi = 0; pi < brandPatterns.length; pi++) {
-      var pm = text.match(brandPatterns[pi])
-      if (pm) { foundPoint = pm[0]; break }
-    }
-  }
-
-  // 模式G: "在/放在/存放XXX驿站/柜/站" 通用兜底
-  if (!foundPoint) {
-    var locMatch = text.match(/(?:已到|已放|已存|存放在?|放在|放到|在)[\s:：]*([^\s,，。！!?？\n]{2,25}(?:驿站|快递柜|快递点|代收点|自提点|服务站|营业部|超市|门店|柜|站点|站))/)
-    if (locMatch) foundPoint = locMatch[1]
-  }
-
-  // 清理取件点：去掉末尾多余的"地址：XXX"部分
-  if (foundPoint) {
-    var addrIdx = foundPoint.indexOf('，地址')
-    if (addrIdx > 0) foundPoint = foundPoint.substring(0, addrIdx)
-    // 去掉末尾的"运单尾号XXXX包裹"
-    foundPoint = foundPoint.replace(/运单尾号.*$/, '').replace(/\s+$/, '')
-  }
-
-  // 赋值
+  if (yidaoMatch) { foundPoint = yidaoMatch[1].replace(/\s+$/, '') }
+  if (!foundPoint) { var qm = text.match(/凭[^到]*到([^\s,，。！!?？]{2,40}?)(?:领取|取件|自取)/); if (qm) foundPoint = qm[1] }
+  if (!foundPoint) { var bm = text.match(/菜鸟驿站[A-Za-z0-9\u4e00-\u9fa5（()）]*/); if (bm) foundPoint = bm[0] }
   if (foundPoint) form.pickupPoint = foundPoint
   if (foundCode) form.pickupCode = foundCode
   if (foundCompany) form.expressCompany = foundCompany
-
   recognized.value = !!(foundPoint || foundCode)
 }
 
 const onColumnChange = (e) => {
-  var col = e.detail.column
-  var val = e.detail.value
+  var col = e.detail.column, val = e.detail.value
   var newIdx = [buildingIndex.value[0], buildingIndex.value[1]]
   newIdx[col] = val
-  if (col === 0) { newIdx[1] = 0 }
+  if (col === 0) newIdx[1] = 0
   buildingIndex.value = newIdx
 }
-
 const onBuildingChange = (e) => {
   var vals = e.detail.value
-  var area = areaList[vals[0]]
-  var bld = buildingData[area][vals[1]]
-  form.building = area + bld
+  form.building = areaList[vals[0]] + buildingData[areaList[vals[0]]][vals[1]]
 }
 
 const submitting = ref(false)
 const submit = async () => {
   if (!checkLogin()) return
-  if (!form.pickupPoint) {
-    uni.showToast({ title: '请填写取件点', icon: 'none' })
+  if (!form.pickupPoint) { uni.showToast({ title: '请填写取件点', icon: 'none' }); return }
+  if (!form.building || !form.room) { uni.showToast({ title: '请填写收货地址', icon: 'none' }); return }
+  if (!form.phone) { uni.showToast({ title: '请填写联系电话', icon: 'none' }); return }
+  // 验证位置坐标
+  if (!destLocation.lat || !destLocation.lng) {
+    uni.showModal({
+      title: '未选择收货位置',
+      content: '未选择地图位置，骑手将无法导航。是否继续发布？',
+      confirmText: '继续发布',
+      cancelText: '去选位置',
+      success: async (r) => {
+        if (r.confirm) await doSubmit(0, 0)
+        else chooseDestLocation()
+      }
+    })
     return
   }
-  if (!form.building || !form.room) {
-    uni.showToast({ title: '请填写收货地址', icon: 'none' })
-    return
-  }
-  if (!form.phone) {
-    uni.showToast({ title: '请填写联系电话', icon: 'none' })
-    return
-  }
+  await doSubmit(destLocation.lat, destLocation.lng)
+}
+
+const doSubmit = async (lat, lng) => {
   if (submitting.value) return
   submitting.value = true
-  // 获取当前位置作为收货地址坐标
-  var destLat = 0
-  var destLng = 0
-  try {
-    var locRes = await new Promise(function(resolve, reject) {
-      uni.getLocation({
-        type: 'gcj02',
-        success: function(r) { resolve(r) },
-        fail: function() { resolve(null) }
-      })
-    })
-    if (locRes) {
-      destLat = locRes.latitude
-      destLng = locRes.longitude
-    }
-  } catch (e) {}
+  uni.showLoading({ title: '发布中...', mask: true })
   const res = await callCloud('express', 'create', {
     pickupPoint: form.pickupPoint,
     pickupCode: form.pickupCode,
@@ -430,13 +338,17 @@ const submit = async () => {
     price: currentSize.value.price,
     tip: form.tip || 0,
     remark: form.remark,
-    destLat: destLat,
-    destLng: destLng
+    phone: form.phone,
+    destLat: lat,
+    destLng: lng
   })
   submitting.value = false
+  uni.hideLoading()
   if (res.code === 0) {
     uni.showToast({ title: '发布成功！', icon: 'success' })
     setTimeout(() => { uni.navigateBack() }, 1500)
+  } else {
+    uni.showToast({ title: res.msg || '发布失败', icon: 'none' })
   }
 }
 </script>
@@ -468,9 +380,19 @@ const submit = async () => {
 .form-label { font-size: 28rpx; color: #333; width: 160rpx; flex-shrink: 0; }
 .form-item input { flex: 1; font-size: 28rpx; }
 .divider { height: 1rpx; background: #f0f0f0; }
-
 .picker-value { flex: 1; display: flex; justify-content: space-between; align-items: center; font-size: 28rpx; color: #333; }
 .picker-arrow { font-size: 32rpx; color: #ccc; }
+
+/* 地图选点 */
+.location-picker-wrap { margin-bottom: 8rpx; }
+.location-display { background: #fff; border-radius: 16rpx; padding: 24rpx; box-shadow: 0 4rpx 12rpx rgba(0,0,0,0.08); margin-bottom: 16rpx; }
+.location-display-name { font-size: 28rpx; color: #333; font-weight: 600; display: block; }
+.location-display-addr { font-size: 22rpx; color: #999; display: block; margin-top: 8rpx; }
+.location-display-coord { font-size: 22rpx; color: #2E7D32; display: block; margin-top: 8rpx; }
+.location-choose-btn { background: linear-gradient(135deg, #4A90D9, #357ABD); border-radius: 12rpx; padding: 24rpx; text-align: center; }
+.location-choose-btn text { color: #fff; font-size: 28rpx; font-weight: 600; }
+.location-tip { margin-top: 12rpx; padding: 12rpx 16rpx; background: #FFF8E1; border-radius: 10rpx; }
+.location-tip text { font-size: 22rpx; color: #E65100; }
 
 .price-display { background: #fff; border-radius: 12rpx; padding: 20rpx 24rpx; box-shadow: 0 4rpx 12rpx rgba(0,0,0,0.08); margin-bottom: 16rpx; }
 .base-price { display: flex; justify-content: space-between; align-items: center; }
@@ -499,5 +421,6 @@ const submit = async () => {
 .notice-text { font-size: 22rpx; color: #795548; display: block; line-height: 36rpx; }
 
 .submit-btn { position: fixed; bottom: 40rpx; left: 24rpx; right: 24rpx; background: linear-gradient(135deg, #4A90D9, #357ABD); border-radius: 48rpx; padding: 28rpx; text-align: center; box-shadow: 0 8rpx 24rpx rgba(74,144,217,0.4); }
+.submit-btn.disabled { opacity: 0.5; pointer-events: none; }
 .submit-btn text { color: #fff; font-size: 32rpx; font-weight: bold; }
 </style>

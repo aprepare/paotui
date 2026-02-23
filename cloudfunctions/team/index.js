@@ -104,7 +104,7 @@ exports.main = async (event, context) => {
       const activity = await db.collection('team_activities').doc(activityId).get()
       if (activity.data.openid !== openid) return { code: -1, msg: '仅发起人可上传' }
       await db.collection('team_activities').doc(activityId).update({
-        data: { photos: _.push(fileIDs) }
+        data: { photos: _.push(...fileIDs) }
       })
       return { code: 0 }
     }

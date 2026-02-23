@@ -50,11 +50,21 @@
     <!-- 联系方式 -->
     <view class="section-card">
       <text class="card-title">📱 联系方式</text>
-      <view class="contact-row">
+      <view v-if="skill.unlocked" class="contact-row">
         <text class="contact-type">{{ skill.contactType || '微信' }}</text>
         <text class="contact-value">{{ skill.contact || '未填写' }}</text>
         <view class="copy-btn" @click="copyContact" v-if="skill.contact">
           <text>复制</text>
+        </view>
+      </view>
+      <view v-else class="contact-locked" @click="unlockContact">
+        <text class="lock-icon">🔒</text>
+        <view class="lock-info">
+          <text class="lock-text">联系方式已隐藏</text>
+          <text class="lock-price">支付 ¥1 查看联系方式</text>
+        </view>
+        <view class="unlock-btn">
+          <text>立即解锁</text>
         </view>
       </view>
     </view>
@@ -67,8 +77,8 @@
           <text class="icon-label">{{ favorited ? '已收藏' : '收藏' }}</text>
         </view>
       </view>
-      <view class="contact-btn" @click="contactSkiller">
-        <text>立即联系</text>
+      <view class="contact-btn" @click="skill.unlocked ? contactSkiller() : unlockContact()">
+        <text>{{ skill.unlocked ? '立即联系' : '🔒 付费查看联系方式 ¥1' }}</text>
       </view>
     </view>
   </view>
@@ -77,13 +87,14 @@
 <script setup>
 import { ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { callCloud } from '@/utils/cloud'
+import { callCloud, checkLogin } from '@/utils/cloud'
 
 const avatarBg = 'linear-gradient(135deg, #F687B3, #D53F8C)'
-const skill = ref({ title: '', publisher: '', price: 0, priceUnit: '次', desc: '', category: '', views: 0, works: [], contact: '', contactType: '微信' })
+const skill = ref({ title: '', publisher: '', price: 0, priceUnit: '次', desc: '', category: '', views: 0, works: [], contact: '', contactType: '微信', unlocked: false })
 const favorited = ref(false)
+var skillId = ''
 
-onLoad((opts) => { if (opts && opts.id) loadDetail(opts.id) })
+onLoad((opts) => { if (opts && opts.id) { skillId = opts.id; loadDetail(opts.id) } })
 
 const loadDetail = async (id) => {
   const res = await callCloud('skill', 'detail', { id })
@@ -95,11 +106,33 @@ const loadDetail = async (id) => {
       desc: d.desc || '', category: d.category || '其他',
       views: d.views || 0,
       works: (d.works || []).filter(w => w && typeof w === 'string'),
-      contact: d.contact || '', contactType: d.contactType || '微信'
+      contact: d.contact || '', contactType: d.contactType || '微信',
+      unlocked: d.unlocked || false
     }
   }
   const favRes = await callCloud('user', 'checkFavorite', { targetId: id, targetType: 'skill' })
   if (favRes.code === 0) favorited.value = favRes.favorited
+}
+
+const unlockContact = () => {
+  if (!checkLogin()) return
+  uni.showModal({
+    title: '付费查看联系方式',
+    content: '将从钱包余额扣除 ¥1，确认解锁？',
+    success: async (res) => {
+      if (res.confirm) {
+        uni.showLoading({ title: '解锁中...' })
+        const r = await callCloud('skill', 'unlockContact', { id: skillId })
+        uni.hideLoading()
+        if (r.code === 0) {
+          skill.value.contact = r.data.contact
+          skill.value.contactType = r.data.contactType
+          skill.value.unlocked = true
+          uni.showToast({ title: '解锁成功', icon: 'success' })
+        }
+      }
+    }
+  })
 }
 
 const previewImage = (index) => {
@@ -159,6 +192,15 @@ const contactSkiller = () => {
 .contact-value { flex: 1; font-size: 28rpx; color: #2D3748; font-weight: 600; }
 .copy-btn { padding: 10rpx 24rpx; background: #FFF5F7; border-radius: 20rpx; }
 .copy-btn text { font-size: 24rpx; color: #D53F8C; font-weight: 600; }
+.contact-locked { display: flex; align-items: center; background: #F7FAFC; border-radius: 12rpx; padding: 24rpx; }
+.contact-locked:active { background: #EDF2F7; }
+.lock-icon { font-size: 40rpx; margin-right: 16rpx; }
+.lock-info { flex: 1; }
+.lock-text { font-size: 26rpx; color: #718096; display: block; }
+.lock-price { font-size: 22rpx; color: #A0AEC0; margin-top: 4rpx; display: block; }
+.unlock-btn { padding: 12rpx 28rpx; background: linear-gradient(135deg, #F687B3, #D53F8C); border-radius: 24rpx; box-shadow: 0 4rpx 12rpx rgba(213,63,140,0.25); }
+.unlock-btn:active { transform: scale(0.95); }
+.unlock-btn text { font-size: 24rpx; color: #fff; font-weight: 700; }
 .bottom-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; display: flex; align-items: center; padding: 16rpx 24rpx 36rpx; box-shadow: 0 -4rpx 12rpx rgba(0,0,0,0.06); }
 .bottom-left { display: flex; gap: 32rpx; margin-right: 24rpx; }
 .bottom-icon-item { display: flex; flex-direction: column; align-items: center; }

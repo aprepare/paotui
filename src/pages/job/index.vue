@@ -1,5 +1,12 @@
 <template>
   <view class="job-page">
+    <!-- 联系客服发布招聘 -->
+    <view class="publish-recruit-btn" @click="onPublishRecruit">
+      <text class="publish-recruit-icon">📢</text>
+      <text class="publish-recruit-text">联系客服发布招聘信息</text>
+      <text class="publish-recruit-arrow">›</text>
+    </view>
+
     <!-- 分类入口 2x2 -->
     <view class="cat-grid">
       <view class="cat-card" v-for="cat in categories" :key="cat.title" @click="onCatTap(cat)">
@@ -27,7 +34,7 @@
     <view class="feed-section">
       <view class="feed-header">
         <text class="feed-title">热门兼职</text>
-        <text class="feed-more">更多 ›</text>
+        <text class="feed-more" @click="onMoreTap">更多 ›</text>
       </view>
       <swiper class="feed-swiper" vertical autoplay circular :interval="3000" :duration="600" indicator-dots indicator-color="rgba(43,108,176,0.2)" indicator-active-color="#2B6CB0">
         <swiper-item v-for="job in jobList" :key="job.id">
@@ -55,11 +62,40 @@
         </swiper-item>
       </swiper>
     </view>
+    <!-- 详情弹出层 -->
+    <view class="popup-mask" v-if="showDetail" @click="showDetail = false">
+      <view class="popup-body" @click.stop>
+        <view class="popup-close" @click="showDetail = false"><text>✕</text></view>
+        <view class="popup-content" v-if="detailJob">
+          <view class="popup-emoji-wrap" :style="{background: detailJob.bg}">
+            <text class="popup-emoji-icon">{{ detailJob.emoji }}</text>
+          </view>
+          <text class="popup-title">{{ detailJob.title }}</text>
+          <text class="popup-company">{{ detailJob.company }}</text>
+          <view class="popup-grid">
+            <view class="popup-field">
+              <text class="popup-label">📍 工作地点</text>
+              <text class="popup-val">{{ detailJob.location }}</text>
+            </view>
+            <view class="popup-field">
+              <text class="popup-label">💰 薪资待遇</text>
+              <text class="popup-val price">{{ detailJob.pay }}</text>
+            </view>
+          </view>
+          <view class="popup-tip">
+            <text>📌 详细信息即将上线，敬请期待</text>
+          </view>
+        </view>
+      </view>
+    </view>
     <MsgNotify />
+      <CustomTabBar :current="1" />
   </view>
 </template>
 
 <script setup>
+import CustomTabBar from '@/components/CustomTabBar.vue'
+import { onShow } from '@dcloudio/uni-app'
 import { ref } from 'vue'
 import MsgNotify from '@/components/MsgNotify.vue'
 
@@ -80,12 +116,15 @@ const jobList = ref([
 ])
 
 const onCatTap = (cat) => {
-  if (cat.title === '家教信息') {
-    uni.navigateTo({ url: '/pages/job/tutor' })
-    return
+  const routeMap = {
+    '家教信息': '/pages/job-sub/tutor',
+    '校内兼职': '/pages/job-sub/campus',
+    '阿那亚兼职': '/pages/job-sub/anaya',
+    '阿尔卡迪亚兼职': '/pages/job-sub/arcadia'
   }
-  if (cat.title === '校内兼职') {
-    uni.navigateTo({ url: '/pages/job/campus' })
+  const url = routeMap[cat.title]
+  if (url) {
+    uni.navigateTo({ url })
     return
   }
   uni.showModal({
@@ -95,19 +134,26 @@ const onCatTap = (cat) => {
   })
 }
 const onSeasonTap = () => {
-  uni.showModal({
-    title: '寒暑假兼职',
-    content: '精选假期好岗位正在收录中，敬请期待',
-    showCancel: false
-  })
+  uni.navigateTo({ url: '/pages/job-sub/seasonal' })
 }
+const onMoreTap = () => {
+  uni.navigateTo({ url: '/pages/job-sub/all' })
+}
+const showDetail = ref(false)
+const detailJob = ref(null)
+
 const onJobTap = (job) => {
-  uni.showModal({
-    title: job.title,
-    content: '公司：' + job.company + '\n地点：' + job.location + '\n薪资：' + job.pay + '\n\n详细信息即将上线',
-    showCancel: false
-  })
+  detailJob.value = job
+  showDetail.value = true
 }
+
+const onPublishRecruit = () => {
+  uni.navigateTo({ url: '/pages/kefu/show?img=' + encodeURIComponent('/static/TeamWork.png') })
+}
+
+onShow(() => {
+  uni.hideTabBar({ animation: false })
+  })
 </script>
 
 <style scoped>
@@ -152,4 +198,30 @@ const onJobTap = (job) => {
 .feed-pay { font-size: 32rpx; color: #E53E3E; font-weight: 800; }
 .feed-apply-btn { padding: 10rpx 28rpx; border-radius: 24rpx; background: linear-gradient(135deg, #4299E1, #2B6CB0); box-shadow: 0 4rpx 12rpx rgba(43,108,176,0.25); }
 .feed-apply-btn text { font-size: 22rpx; color: #fff; font-weight: 700; }
+
+/* 发布招聘按钮 */
+.publish-recruit-btn { margin: 24rpx 24rpx 0; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 16rpx; padding: 28rpx 32rpx; display: flex; align-items: center; box-shadow: 0 8rpx 24rpx rgba(102,126,234,0.25); }
+.publish-recruit-btn:active { transform: scale(0.98); opacity: 0.9; }
+.publish-recruit-icon { font-size: 40rpx; margin-right: 16rpx; }
+.publish-recruit-text { flex: 1; font-size: 30rpx; font-weight: 700; color: #fff; letter-spacing: 1rpx; }
+.publish-recruit-arrow { font-size: 36rpx; color: rgba(255,255,255,0.7); font-weight: 300; }
+
+/* Popup */
+.popup-mask { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 100; display: flex; align-items: flex-end; justify-content: center; }
+.popup-body { width: 100%; max-height: 80vh; background: #fff; border-radius: 32rpx 32rpx 0 0; padding: 40rpx 32rpx; padding-bottom: calc(40rpx + env(safe-area-inset-bottom)); position: relative; overflow-y: auto; animation: slideUp 0.25s ease-out; }
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.popup-close { position: absolute; top: 24rpx; right: 28rpx; width: 56rpx; height: 56rpx; border-radius: 50%; background: #F0F2F5; display: flex; align-items: center; justify-content: center; }
+.popup-close text { font-size: 28rpx; color: #718096; }
+.popup-content { display: flex; flex-direction: column; align-items: center; }
+.popup-emoji-wrap { width: 120rpx; height: 120rpx; border-radius: 28rpx; display: flex; align-items: center; justify-content: center; margin-bottom: 24rpx; }
+.popup-emoji-icon { font-size: 56rpx; }
+.popup-title { font-size: 34rpx; font-weight: 800; color: #1A1A2E; margin-bottom: 8rpx; }
+.popup-company { font-size: 26rpx; color: #718096; margin-bottom: 28rpx; }
+.popup-grid { display: flex; flex-wrap: wrap; gap: 20rpx; width: 100%; margin-bottom: 24rpx; }
+.popup-field { width: calc(50% - 10rpx); background: #F7FAFC; border-radius: 16rpx; padding: 20rpx; }
+.popup-label { font-size: 22rpx; color: #A0AEC0; display: block; margin-bottom: 6rpx; }
+.popup-val { font-size: 28rpx; color: #2D3748; font-weight: 600; display: block; }
+.popup-val.price { color: #E53E3E; font-weight: 800; }
+.popup-tip { background: #FFFAF0; border-radius: 12rpx; padding: 20rpx; width: 100%; text-align: center; }
+.popup-tip text { font-size: 24rpx; color: #DD6B20; }
 </style>

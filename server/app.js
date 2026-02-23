@@ -13,6 +13,7 @@ app.use(express.urlencoded({ extended: true }))
 
 // Static files - admin panel
 app.use('/admin', express.static(path.join(__dirname, 'public/admin')))
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')))
 
 // Routes
 app.use('/api/upload', require('./routes/upload'))

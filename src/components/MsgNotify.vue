@@ -102,7 +102,7 @@ var dismiss = () => {
 var goMessage = () => {
   dismiss()
   var urlMap = {
-    forum: '/pages/forum/detail?id=',
+    forum: '/pages/forum-sub/detail?id=',
     express: '/pages/express/detail?id=',
     errand: '/pages/errand/detail?id='
   }

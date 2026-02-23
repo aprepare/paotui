@@ -1,7 +1,7 @@
 <template>
   <view class="kefu-container" @tap="goBack">
-    <image :src="imgSrc" class="kefu-image" mode="aspectFit"></image>
-    <text class="tap-hint">点击 anywhere 返回</text>
+    <image :src="imgSrc" class="kefu-image" mode="widthFix"></image>
+    <text class="tap-hint">点击任意位置返回</text>
   </view>
 </template>
 
@@ -30,13 +30,12 @@ const goBack = () => {
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  padding: 40rpx;
+  padding: 0;
   background: rgba(0,0,0,0.8);
 }
 .kefu-image {
-  max-width: 90vw;
-  max-height: 80vh;
-  border-radius: 16rpx;
+  width: 100vw;
+  max-height: 90vh;
 }
 .tap-hint {
   margin-top: 40rpx;

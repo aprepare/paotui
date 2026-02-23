@@ -1,9 +1,9 @@
-<template>
+﻿<template>
   <view class="market-page">
     <view class="search-bar">
       <view class="search-input">
         <text class="search-icon">🔍</text>
-        <input placeholder="搜索你想要的宝贝" v-model="keyword" />
+        <input placeholder="搜索你想要的宝贝" v-model="keyword"></input>
       </view>
     </view>
     <view class="category-bar">

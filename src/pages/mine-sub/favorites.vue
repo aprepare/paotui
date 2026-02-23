@@ -61,7 +61,7 @@ var typeName = function(type) {
 
 var goDetail = function(item) {
   if (item.targetType === 'post') {
-    uni.navigateTo({ url: '/pages/forum/detail?id=' + item.targetId })
+    uni.navigateTo({ url: '/pages/forum-sub/detail?id=' + item.targetId })
   } else if (item.targetType === 'goods') {
     uni.navigateTo({ url: '/pages/market/detail?id=' + item.targetId })
   }

@@ -31,6 +31,9 @@
             <view class="unread-dot" v-if="!item.read"></view>
           </view>
           <text class="msg-content">{{ item.content }}</text>
+          <view v-if="item.fromPhone" class="msg-contact">
+            <text class="msg-contact-text">📱 {{ item.fromName || '匿名' }}：{{ item.fromPhone }}</text>
+          </view>
           <text class="msg-time">{{ formatTime(item.createTime) }}</text>
         </view>
         <view class="msg-del-btn" @click.stop="deleteOne(item._id)">
@@ -72,14 +75,18 @@ var iconMap = {
   comment: '💬',
   order_accept: '🏃',
   order_status: '📦',
-  order_cancel: '❌'
+  order_cancel: '❌',
+  tutor_apply: '📝',
+  tutor_contact: '📞'
 }
 var bgMap = {
   like: 'linear-gradient(135deg, #F6AD55, #DD6B20)',
   comment: 'linear-gradient(135deg, #63B3ED, #2B6CB0)',
   order_accept: 'linear-gradient(135deg, #68D391, #38A169)',
   order_status: 'linear-gradient(135deg, #B794F4, #805AD5)',
-  order_cancel: 'linear-gradient(135deg, #FC8181, #E53E3E)'
+  order_cancel: 'linear-gradient(135deg, #FC8181, #E53E3E)',
+  tutor_apply: 'linear-gradient(135deg, #F6AD55, #DD6B20)',
+  tutor_contact: 'linear-gradient(135deg, #68D391, #38A169)'
 }
 
 var getIcon = (type) => { return iconMap[type] || '🔔' }
@@ -144,9 +151,10 @@ var onMsgClick = async (item) => {
   var targetId = item.targetId
   if (!targetId) return
   var urlMap = {
-    forum: '/pages/forum/detail?id=',
+    forum: '/pages/forum-sub/detail?id=',
     express: '/pages/express/detail?id=',
-    errand: '/pages/errand/detail?id='
+    errand: '/pages/errand/detail?id=',
+    tutor: '/pages/job-sub/tutor?id='
   }
   var url = urlMap[targetType]
   if (url) {
@@ -215,6 +223,8 @@ onShow(() => { loadMessages(true) })
 .msg-title { font-size: 28rpx; font-weight: 600; color: #1A1A2E; flex: 1; }
 .unread-dot { width: 14rpx; height: 14rpx; border-radius: 50%; background: #E53E3E; flex-shrink: 0; margin-left: 8rpx; }
 .msg-content { font-size: 26rpx; color: #718096; margin-top: 8rpx; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.msg-contact { margin-top: 8rpx; padding: 10rpx 16rpx; background: #EBF8FF; border-radius: 8rpx; }
+.msg-contact-text { font-size: 26rpx; color: #2B6CB0; font-weight: 600; }
 .msg-time { font-size: 22rpx; color: #A0AEC0; margin-top: 8rpx; display: block; }
 
 .msg-del-btn { flex-shrink: 0; margin-left: 16rpx; padding: 8rpx 20rpx; border-radius: 20rpx; background: #FFF5F5; align-self: center; }

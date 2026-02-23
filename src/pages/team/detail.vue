@@ -46,12 +46,43 @@
       </view>
     </view>
 
+    <!-- 企业微信进群引导（已加入的成员可见） -->
+    <view class="section" v-if="isJoined && team.status !== 'ended' && team.status !== 'expired'">
+      <text class="section-label">💬 加入组队群聊</text>
+      <view class="wechat-card" @click="showQrcode = true">
+        <view class="wechat-icon-wrap">
+          <text class="wechat-icon">🏢</text>
+        </view>
+        <view class="wechat-info">
+          <text class="wechat-title">添加企业微信，自动拉你进群</text>
+          <text class="wechat-desc">点击查看二维码 · 扫码添加后自动邀请入群</text>
+        </view>
+        <text class="wechat-arrow">›</text>
+      </view>
+    </view>
+
+    <!-- 企业微信二维码弹窗 -->
+    <view class="qr-mask" v-if="showQrcode" @click="showQrcode = false">
+      <view class="qr-popup" @click.stop>
+        <view class="qr-close" @click="showQrcode = false"><text>✕</text></view>
+        <text class="qr-title">扫码添加企业微信</text>
+        <text class="qr-subtitle">添加后将自动邀请您进入组队群聊</text>
+        <image class="qr-image" src="/static/qrcode-work-wechat.png" mode="aspectFit" />
+        <view class="qr-copy-row">
+          <text class="qr-wechat-id">企业微信号：{{ workWechatId }}</text>
+          <view class="qr-copy-btn" @click="copyWechatId"><text>复制</text></view>
+        </view>
+        <text class="qr-tip">长按二维码可保存到相册</text>
+      </view>
+    </view>
+
     <!-- 底部操作 -->
     <view class="bottom-bar" v-if="team.status !== 'ended' && team.status !== 'expired'">
       <view v-if="team.isOwner" class="bottom-actions">
         <view class="end-btn" @click="onEndActivity"><text>结束活动</text></view>
       </view>
       <view v-else-if="isJoined" class="bottom-actions">
+        <view class="wechat-group-btn" @click="showQrcode = true"><text>加微信进群</text></view>
         <view class="leave-btn" @click="onLeave"><text>退出组队</text></view>
       </view>
       <view v-else-if="team.current < team.max">
@@ -79,6 +110,15 @@ const team = ref({
 const members = ref([])
 const isJoined = ref(false)
 const isExpired = ref(false)
+const showQrcode = ref(false)
+const workWechatId = ref('your_work_wechat_id') // 替换成你的企业微信号
+
+const copyWechatId = () => {
+  uni.setClipboardData({
+    data: workWechatId.value,
+    success: () => { uni.showToast({ title: '已复制微信号', icon: 'success' }) }
+  })
+}
 
 onLoad(async (query) => {
   const id = query.id
@@ -218,4 +258,33 @@ const onEndActivity = () => {
 .end-btn text { color: #fff; font-size: 30rpx; font-weight: 700; }
 .leave-btn { flex: 1; border: 2rpx solid #E53E3E; border-radius: 48rpx; padding: 28rpx; text-align: center; }
 .leave-btn text { color: #E53E3E; font-size: 30rpx; font-weight: 700; }
+
+/* 企业微信进群卡片 */
+.wechat-card { background: #fff; border-radius: 20rpx; padding: 28rpx; display: flex; align-items: center; box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.04); }
+.wechat-card:active { opacity: 0.8; }
+.wechat-icon-wrap { width: 80rpx; height: 80rpx; border-radius: 20rpx; background: linear-gradient(135deg, #07C160, #06AD56); display: flex; align-items: center; justify-content: center; margin-right: 20rpx; flex-shrink: 0; }
+.wechat-icon { font-size: 36rpx; }
+.wechat-info { flex: 1; }
+.wechat-title { font-size: 28rpx; color: #1A1A2E; font-weight: 700; display: block; }
+.wechat-desc { font-size: 22rpx; color: #A0AEC0; margin-top: 4rpx; display: block; }
+.wechat-arrow { font-size: 36rpx; color: #CBD5E0; font-weight: 300; }
+
+/* 企业微信二维码弹窗 */
+.qr-mask { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 100; display: flex; align-items: center; justify-content: center; }
+.qr-popup { width: 600rpx; background: #fff; border-radius: 28rpx; padding: 48rpx 40rpx; position: relative; display: flex; flex-direction: column; align-items: center; animation: fadeIn 0.2s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+.qr-close { position: absolute; top: 20rpx; right: 24rpx; width: 56rpx; height: 56rpx; border-radius: 50%; background: #F0F2F5; display: flex; align-items: center; justify-content: center; }
+.qr-close text { font-size: 28rpx; color: #718096; }
+.qr-title { font-size: 32rpx; font-weight: 800; color: #1A1A2E; margin-bottom: 8rpx; }
+.qr-subtitle { font-size: 24rpx; color: #A0AEC0; margin-bottom: 32rpx; }
+.qr-image { width: 400rpx; height: 400rpx; border-radius: 16rpx; margin-bottom: 28rpx; }
+.qr-copy-row { display: flex; align-items: center; gap: 16rpx; margin-bottom: 20rpx; }
+.qr-wechat-id { font-size: 24rpx; color: #4A5568; }
+.qr-copy-btn { padding: 8rpx 24rpx; border-radius: 20rpx; background: #EBF4FF; }
+.qr-copy-btn text { font-size: 22rpx; color: #2B6CB0; font-weight: 600; }
+.qr-tip { font-size: 22rpx; color: #CBD5E0; }
+
+/* 底部加微信进群按钮 */
+.wechat-group-btn { flex: 1; background: linear-gradient(135deg, #07C160, #06AD56); border-radius: 48rpx; padding: 28rpx; text-align: center; box-shadow: 0 8rpx 24rpx rgba(7,193,96,0.3); }
+.wechat-group-btn text { color: #fff; font-size: 30rpx; font-weight: 700; }
 </style>

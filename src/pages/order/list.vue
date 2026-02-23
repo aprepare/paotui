@@ -70,13 +70,31 @@
         <view class="order-body">
           <view class="addr-row">
             <text class="addr-icon">📍</text>
-            <text class="addr-text">{{ order.fromAddr }}{{ order.toAddr ? ' → ' + order.toAddr : '' }}</text>
+            <text class="addr-text">{{ order.toAddr || order.fromAddr }}{{ order.toAddr && order.fromAddr ? ' ← ' + order.fromAddr : '' }}</text>
           </view>
           <text class="order-desc" v-if="order.desc">{{ order.desc }}</text>
         </view>
         <view class="order-footer">
           <text class="order-time">{{ order.time }}</text>
           <text class="order-price" v-if="order.price">¥{{ order.price }}</text>
+        </view>
+        <!-- 应聘者信息（家教） -->
+        <view v-if="order.applicants && order.applicants.length > 0" class="applicants-section">
+          <view class="applicants-title">
+            <text>📝 应聘者（{{ order.applicants.length }}人）</text>
+          </view>
+          <view v-for="(ap, idx) in order.applicants" :key="idx" class="applicant-item">
+            <view class="applicant-info">
+              <text class="applicant-name">{{ ap.name }}</text>
+              <text class="applicant-type">{{ ap.type === 'tutor_apply' ? '应聘' : '联系' }}</text>
+            </view>
+            <view class="applicant-phone" v-if="ap.phone" @click.stop="callPhone(ap.phone)">
+              <text>📱 {{ ap.phone }}</text>
+            </view>
+          </view>
+        </view>
+        <view v-if="order.applicants && order.applicants.length === 0 && tab === 15" class="no-applicants">
+          <text>暂无应聘者</text>
         </view>
       </view>
       <view v-if="currentList.length === 0 && !loading" class="empty">
@@ -103,6 +121,7 @@ var carpoolList = ref([])
 var goodsList = ref([])
 var teamList = ref([])
 var skillList = ref([])
+var tutorList = ref([])
 
 var expressStatusMap = { 0: '待接单', 1: '已接单', 2: '配送中', 3: '已完成', 4: '已取消' }
 var expressColorMap = { 0: '#DD6B20', 1: '#2B6CB0', 2: '#38A169', 3: '#A0AEC0', 4: '#E53E3E' }
@@ -165,62 +184,99 @@ var loadData = async function() {
   if (userInfo && userInfo.isRider) isRider.value = true
   isRider.value = isRider.value || !!uni.getStorageSync('isRider')
 
-  var r1 = await callCloud('order', 'myPublished')
-  if (r1.code === 0) {
-    var eArr = [], rArr = []
-    for (var i = 0; i < r1.data.length; i++) {
-      var o = r1.data[i]
-      if (o.type === '万能跑腿') rArr.push(mapErrand(o))
-      else eArr.push(mapExpress(o))
+  try {
+    var r1 = await callCloud('order', 'myPublished')
+    if (r1.code === 0) {
+      var eArr = [], rArr = []
+      for (var i = 0; i < r1.data.length; i++) {
+        var o = r1.data[i]
+        if (o.type === '万能跑腿') rArr.push(mapErrand(o))
+        else eArr.push(mapExpress(o))
+      }
+      expressList.value = eArr
+      errandList.value = rArr
     }
-    expressList.value = eArr
-    errandList.value = rArr
-  }
+  } catch (e) { console.log('loadData myPublished error:', e) }
 
-  var r2 = await callCloud('order', 'myAccepted')
-  if (r2.code === 0) {
-    var tArr = []
-    for (var j = 0; j < r2.data.length; j++) {
-      var o2 = r2.data[j]
-      if (o2.type === '万能跑腿') tArr.push(mapErrand(o2))
-      else tArr.push(mapExpress(o2))
+  try {
+    var r2 = await callCloud('order', 'myAccepted')
+    if (r2.code === 0) {
+      var tArr = []
+      for (var j = 0; j < r2.data.length; j++) {
+        var o2 = r2.data[j]
+        if (o2.type === '万能跑腿') tArr.push(mapErrand(o2))
+        else tArr.push(mapExpress(o2))
+      }
+      takenList.value = tArr
     }
-    takenList.value = tArr
-  }
+  } catch (e) { console.log('loadData myAccepted error:', e) }
 
-  var r3 = await callCloud('order', 'myCarpool')
-  if (r3.code === 0) {
-    var cArr = []
-    for (var k = 0; k < r3.data.length; k++) cArr.push(mapCarpool(r3.data[k]))
-    carpoolList.value = cArr
-  }
-
-  var r4 = await callCloud('market', 'myGoods')
-  if (r4.code === 0) {
-    var gArr = []
-    for (var m = 0; m < r4.data.length; m++) gArr.push(mapGoods(r4.data[m]))
-    goodsList.value = gArr
-  }
-
-  var r5 = await callCloud('team', 'myTeam')
-  if (r5.code === 0) {
-    var tArr2 = []
-    for (var n = 0; n < r5.data.length; n++) tArr2.push(mapTeam(r5.data[n]))
-    teamList.value = tArr2
-  }
-
-  var r6 = await callCloud('skill', 'my')
-  if (r6.code === 0) {
-    var sArr = []
-    for (var p = 0; p < r6.data.length; p++) {
-      var sk = r6.data[p]
-      sArr.push({ id: sk._id, type: '技能', typeEmoji: '🎯', _raw: 'skill',
-        fromAddr: sk.title || '', toAddr: '',
-        desc: sk.category || '', price: sk.price || 0, time: fmtTime(sk.createTime),
-        statusText: sk.status === 0 ? '上架中' : '已下架', statusColor: sk.status === 0 ? '#38A169' : '#A0AEC0' })
+  try {
+    var r3 = await callCloud('order', 'myCarpool')
+    if (r3.code === 0) {
+      var cArr = []
+      for (var k = 0; k < r3.data.length; k++) cArr.push(mapCarpool(r3.data[k]))
+      carpoolList.value = cArr
     }
-    skillList.value = sArr
-  }
+  } catch (e) { console.log('loadData myCarpool error:', e) }
+
+  try {
+    var r4 = await callCloud('market', 'myGoods')
+    if (r4.code === 0) {
+      var gArr = []
+      for (var m = 0; m < r4.data.length; m++) gArr.push(mapGoods(r4.data[m]))
+      goodsList.value = gArr
+    }
+  } catch (e) { console.log('loadData myGoods error:', e) }
+
+  try {
+    var r5 = await callCloud('team', 'myTeam')
+    if (r5.code === 0) {
+      var tArr2 = []
+      for (var n = 0; n < r5.data.length; n++) tArr2.push(mapTeam(r5.data[n]))
+      teamList.value = tArr2
+    }
+  } catch (e) { console.log('loadData myTeam error:', e) }
+
+  try {
+    var r6 = await callCloud('skill', 'my')
+    if (r6.code === 0) {
+      var sArr = []
+      for (var p = 0; p < r6.data.length; p++) {
+        var sk = r6.data[p]
+        sArr.push({ id: sk._id, type: '技能', typeEmoji: '🎯', _raw: 'skill',
+          fromAddr: sk.title || '', toAddr: '',
+          desc: sk.category || '', price: sk.price || 0, time: fmtTime(sk.createTime),
+          statusText: sk.status === 0 ? '上架中' : '已下架', statusColor: sk.status === 0 ? '#38A169' : '#A0AEC0' })
+      }
+      skillList.value = sArr
+    }
+  } catch (e) { console.log('loadData skill error:', e) }
+
+  try {
+    var r7 = await callCloud('tutor', 'myPosts')
+    console.log('tutor myPosts result:', JSON.stringify(r7))
+    if (r7.code === 0) {
+      var tArr3 = []
+      for (var q = 0; q < r7.data.length; q++) {
+        var tp = r7.data[q]
+        tArr3.push({
+          id: tp._id, _raw: 'tutor',
+          type: tp.type === 'demand' ? '家长需求' : '家教信息',
+          typeEmoji: tp.type === 'demand' ? '📋' : '📚',
+          fromAddr: tp.title || tp.name || '',
+          toAddr: '',
+          desc: tp.subject || '',
+          price: tp.price || tp.budget || 0,
+          time: fmtTime(tp.createTime),
+          statusText: tp.status === 1 ? '发布中' : '已关闭',
+          statusColor: tp.status === 1 ? '#38A169' : '#A0AEC0',
+          applicants: tp.applicants || []
+        })
+      }
+      tutorList.value = tArr3
+    }
+  } catch (e) { console.log('loadData tutor error:', e) }
 
   loading.value = false
 }
@@ -232,7 +288,7 @@ var currentList = computed(function() {
   if (tab.value === 12) return carpoolList.value
   if (tab.value === 13) return goodsList.value
   if (tab.value === 14) return teamList.value
-  if (tab.value === 15) return []
+  if (tab.value === 15) return tutorList.value
   if (tab.value === 16) return []
   if (tab.value === 17) return skillList.value
   return []
@@ -245,7 +301,11 @@ var goDetail = function(order) {
   else if (order._raw === 'team') uni.navigateTo({ url: '/pages/team/detail?id=' + order.id })
   else if (order._raw === 'goods') uni.navigateTo({ url: '/pages/market/detail?id=' + order.id })
   else if (order._raw === 'skill') uni.navigateTo({ url: '/pages/skill/detail?id=' + order.id })
+  else if (order._raw === 'tutor') uni.navigateTo({ url: '/pages/job-sub/tutor' })
   else uni.navigateTo({ url: '/pages/express/detail?id=' + order.id })
+}
+var callPhone = function(phone) {
+  uni.makePhoneCall({ phoneNumber: phone })
 }
 var goRegister = function() { uni.navigateTo({ url: '/pages/express/rider-register' }) }
 
@@ -300,4 +360,17 @@ onShow(function() { loadData() })
 .empty { display: flex; flex-direction: column; align-items: center; padding: 120rpx 0; }
 .empty-emoji { font-size: 80rpx; margin-bottom: 16rpx; }
 .empty-text { font-size: 28rpx; color: #A0AEC0; }
+
+/* 应聘者 */
+.applicants-section { margin-top: 16rpx; padding-top: 16rpx; border-top: 1rpx solid #EDF2F7; }
+.applicants-title { margin-bottom: 12rpx; }
+.applicants-title text { font-size: 26rpx; color: #2B6CB0; font-weight: 700; }
+.applicant-item { display: flex; justify-content: space-between; align-items: center; padding: 12rpx 16rpx; background: #F7FAFC; border-radius: 12rpx; margin-bottom: 8rpx; }
+.applicant-info { display: flex; align-items: center; gap: 12rpx; }
+.applicant-name { font-size: 26rpx; color: #2D3748; font-weight: 600; }
+.applicant-type { font-size: 20rpx; color: #fff; background: #4299E1; padding: 2rpx 12rpx; border-radius: 10rpx; }
+.applicant-phone { padding: 6rpx 16rpx; background: #EBF8FF; border-radius: 12rpx; }
+.applicant-phone text { font-size: 24rpx; color: #2B6CB0; font-weight: 600; }
+.no-applicants { margin-top: 12rpx; padding-top: 12rpx; border-top: 1rpx solid #EDF2F7; text-align: center; }
+.no-applicants text { font-size: 24rpx; color: #A0AEC0; }
 </style>

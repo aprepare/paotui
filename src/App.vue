@@ -4,7 +4,14 @@ import { autoLogin } from './utils/cloud'
 
 onLaunch(() => {
   console.log('App Launch')
-  // 自动登录（wx.login → API Server → JWT）
+  // #ifdef MP-WEIXIN
+  if (wx.cloud) {
+    wx.cloud.init({
+      env: 'cloudbase-3g5qd6t022a198cf',
+      traceUser: true
+    })
+  }
+  // #endif
   autoLogin()
 })
 
@@ -18,7 +25,6 @@ onHide(() => {
 </script>
 
 <style>
-/* 全局样式 */
 page {
   background-color: #F0F2F5;
   font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif;
@@ -32,7 +38,6 @@ view, text, image, input, textarea, button {
   box-sizing: border-box;
 }
 
-/* 主题色变量 */
 :root {
   --primary: #2B6CB0;
   --primary-light: #4299E1;
@@ -54,7 +59,6 @@ view, text, image, input, textarea, button {
   --shadow-lg: 0 16rpx 48rpx rgba(0,0,0,0.08), 0 8rpx 16rpx rgba(0,0,0,0.04);
 }
 
-/* 全局动画 - 点击反馈 */
 .tap-active { transition: transform 0.15s ease, opacity 0.15s ease; }
 .tap-active:active { transform: scale(0.96); opacity: 0.85; }
 </style>

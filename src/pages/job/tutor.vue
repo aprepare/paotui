@@ -3,7 +3,7 @@
     <!-- 顶部 Tab -->
     <view class="tab-bar">
       <view class="tab-item" :class="{active: activeTab === 'market'}" @click="activeTab = 'market'">
-        <text class="tab-text">家教市场</text>
+        <text class="tab-text">家教信息</text>
         <view class="tab-line" v-if="activeTab === 'market'"></view>
       </view>
       <view class="tab-item" :class="{active: activeTab === 'demand'}" @click="activeTab = 'demand'">
@@ -116,6 +116,81 @@
         <text class="fab-text">+ 发布需求</text>
       </view>
     </view>
+
+    <!-- 详情弹出层 -->
+    <view class="popup-mask" v-if="showDetail" @click="showDetail = false">
+      <view class="popup-body" @click.stop>
+        <view class="popup-close" @click="showDetail = false"><text>✕</text></view>
+
+        <!-- 家长需求详情 -->
+        <view v-if="detailType === 'demand' && detailData" class="popup-content">
+          <view class="popup-tag" :style="{background: detailData.tagBg}"><text>{{ detailData.subject }}</text></view>
+          <text class="popup-title">{{ detailData.title }}</text>
+          <text class="popup-desc">{{ detailData.desc }}</text>
+          <view class="popup-grid">
+            <view class="popup-field">
+              <text class="popup-label">👨‍🎓 学生年级</text>
+              <text class="popup-val">{{ detailData.grade }}</text>
+            </view>
+            <view class="popup-field">
+              <text class="popup-label">📍 上课地点</text>
+              <text class="popup-val">{{ detailData.location }}</text>
+            </view>
+            <view class="popup-field">
+              <text class="popup-label">🕐 上课时间</text>
+              <text class="popup-val">{{ detailData.schedule }}</text>
+            </view>
+            <view class="popup-field">
+              <text class="popup-label">💰 薪资预算</text>
+              <text class="popup-val price">¥{{ detailData.budget }}/小时</text>
+            </view>
+          </view>
+          <view class="popup-parent">
+            <text>👤 发布者：{{ detailData.parentName }}</text>
+            <text class="popup-time">{{ detailData.postTime }}</text>
+          </view>
+          <view class="popup-action" @click="onApplyDemand(detailData)"><text>我要应聘</text></view>
+        </view>
+
+        <!-- 家教自荐详情 -->
+        <view v-if="detailType === 'tutor' && detailData" class="popup-content">
+          <view class="popup-tutor-top">
+            <view class="popup-avatar" :style="{background: detailData.avatarBg}">
+              <text class="popup-avatar-emoji">{{ detailData.avatar }}</text>
+            </view>
+            <view class="popup-tutor-info">
+              <view class="popup-tutor-name-row">
+                <text class="popup-tutor-name">{{ detailData.name }}</text>
+                <view class="popup-verify" v-if="detailData.verified"><text>✅ 已认证</text></view>
+              </view>
+              <text class="popup-school">{{ detailData.school }} · {{ detailData.major }}</text>
+            </view>
+          </view>
+          <view class="popup-tags">
+            <view v-for="tag in detailData.subjects" :key="tag" class="popup-subject-tag"><text>{{ tag }}</text></view>
+          </view>
+          <view class="popup-grid">
+            <view class="popup-field">
+              <text class="popup-label">📋 授课模式</text>
+              <text class="popup-val">{{ detailData.mode }}</text>
+            </view>
+            <view class="popup-field">
+              <text class="popup-label">📍 授课区域</text>
+              <text class="popup-val">{{ detailData.area }}</text>
+            </view>
+            <view class="popup-field">
+              <text class="popup-label">💰 课时费用</text>
+              <text class="popup-val price">¥{{ detailData.price }}/小时</text>
+            </view>
+            <view class="popup-field">
+              <text class="popup-label">⏳ 教学经验</text>
+              <text class="popup-val">{{ detailData.experience }}</text>
+            </view>
+          </view>
+          <view class="popup-action" @click="onContactTutor(detailData)"><text>联系家教</text></view>
+        </view>
+      </view>
+    </view>
   </view>
 </template>
 
@@ -154,20 +229,25 @@ const filteredDemand = computed(() => {
   return demands.value.filter(d => d.subject === demandFilter.value)
 })
 
+const showDetail = ref(false)
+const detailType = ref('')
+const detailData = ref(null)
+
 const onTutorTap = (tutor) => {
-  uni.showModal({
-    title: tutor.name,
-    content: `学校：${tutor.school}\n专业：${tutor.major}\n科目：${tutor.subjects.join('、')}\n模式：${tutor.mode}\n区域：${tutor.area}\n价格：¥${tutor.price}/小时\n经验：${tutor.experience}`,
-    showCancel: false
-  })
+  detailType.value = 'tutor'
+  detailData.value = tutor
+  showDetail.value = true
 }
 
 const onDemandTap = (item) => {
-  uni.showModal({
-    title: item.title,
-    content: `科目：${item.subject}\n年级：${item.grade}\n地点：${item.location}\n时间：${item.schedule}\n预算：¥${item.budget}/小时\n\n${item.desc}`,
-    showCancel: false
-  })
+  detailType.value = 'demand'
+  detailData.value = item
+  showDetail.value = true
+}
+
+const onContactTutor = (tutor) => {
+  showDetail.value = false
+  uni.showToast({ title: '已发送联系请求', icon: 'success' })
 }
 
 const onApplyDemand = (item) => {
@@ -176,6 +256,7 @@ const onApplyDemand = (item) => {
     content: `确定要应聘「${item.title}」吗？`,
     success: (res) => {
       if (res.confirm) {
+        showDetail.value = false
         uni.showToast({ title: '已提交应聘申请', icon: 'success' })
       }
     }
@@ -254,4 +335,38 @@ const onPostDemand = () => {
 /* FAB */
 .fab-btn { position: fixed; bottom: 60rpx; right: 40rpx; padding: 24rpx 40rpx; border-radius: 40rpx; background: linear-gradient(135deg, #4299E1, #2B6CB0); box-shadow: 0 8rpx 24rpx rgba(43,108,176,0.35); z-index: 20; }
 .fab-text { font-size: 28rpx; color: #fff; font-weight: 700; }
+
+/* Popup */
+.popup-mask { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 100; display: flex; align-items: flex-end; justify-content: center; }
+.popup-body { width: 100%; max-height: 85vh; background: #fff; border-radius: 32rpx 32rpx 0 0; padding: 40rpx 32rpx; padding-bottom: calc(40rpx + env(safe-area-inset-bottom)); position: relative; overflow-y: auto; animation: slideUp 0.25s ease-out; }
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.popup-close { position: absolute; top: 24rpx; right: 28rpx; width: 56rpx; height: 56rpx; border-radius: 50%; background: #F0F2F5; display: flex; align-items: center; justify-content: center; }
+.popup-close text { font-size: 28rpx; color: #718096; }
+.popup-content { padding-top: 8rpx; }
+.popup-tag { display: inline-block; padding: 8rpx 24rpx; border-radius: 20rpx; margin-bottom: 20rpx; }
+.popup-tag text { font-size: 24rpx; color: #fff; font-weight: 600; }
+.popup-title { font-size: 36rpx; font-weight: 800; color: #1A1A2E; display: block; margin-bottom: 12rpx; }
+.popup-desc { font-size: 26rpx; color: #718096; line-height: 1.6; display: block; margin-bottom: 24rpx; }
+.popup-grid { display: flex; flex-wrap: wrap; gap: 20rpx; margin-bottom: 24rpx; }
+.popup-field { width: calc(50% - 10rpx); background: #F7FAFC; border-radius: 16rpx; padding: 20rpx; }
+.popup-label { font-size: 22rpx; color: #A0AEC0; display: block; margin-bottom: 6rpx; }
+.popup-val { font-size: 28rpx; color: #2D3748; font-weight: 600; display: block; }
+.popup-val.price { color: #E53E3E; font-weight: 800; }
+.popup-parent { display: flex; justify-content: space-between; align-items: center; padding: 20rpx 0; border-top: 1rpx solid #EDF2F7; margin-bottom: 20rpx; }
+.popup-parent text { font-size: 26rpx; color: #718096; }
+.popup-time { font-size: 22rpx; color: #A0AEC0; }
+.popup-action { background: linear-gradient(135deg, #4299E1, #2B6CB0); padding: 24rpx; border-radius: 16rpx; text-align: center; box-shadow: 0 8rpx 24rpx rgba(43,108,176,0.25); }
+.popup-action text { color: #fff; font-size: 30rpx; font-weight: 700; }
+/* Tutor detail in popup */
+.popup-tutor-top { display: flex; align-items: center; margin-bottom: 24rpx; }
+.popup-avatar { width: 112rpx; height: 112rpx; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 24rpx; flex-shrink: 0; }
+.popup-avatar-emoji { font-size: 52rpx; }
+.popup-tutor-info { flex: 1; }
+.popup-tutor-name-row { display: flex; align-items: center; gap: 12rpx; }
+.popup-tutor-name { font-size: 34rpx; font-weight: 800; color: #1A1A2E; }
+.popup-verify text { font-size: 22rpx; color: #38A169; }
+.popup-school { font-size: 26rpx; color: #718096; margin-top: 8rpx; display: block; }
+.popup-tags { display: flex; gap: 12rpx; margin-bottom: 24rpx; flex-wrap: wrap; }
+.popup-subject-tag { padding: 8rpx 24rpx; border-radius: 20rpx; background: #EBF4FF; }
+.popup-subject-tag text { font-size: 24rpx; color: #2B6CB0; font-weight: 600; }
 </style>

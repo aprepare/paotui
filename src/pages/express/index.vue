@@ -65,7 +65,7 @@
           <view class="card-body">
             <view class="addr-row">
               <text class="addr-icon">📍</text>
-              <text class="addr-text">{{ order.pickupPoint || '未知' }} → {{ order.building }}{{ order.room }}</text>
+              <text class="addr-text">{{ order.building }}{{ order.room }} ← {{ order.pickupPoint || '未知' }}</text>
             </view>
             <text class="order-desc" v-if="order.remark">{{ order.remark }}</text>
           </view>

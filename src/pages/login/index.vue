@@ -23,19 +23,19 @@
       <!-- 昵称 -->
       <view class="form-item">
         <text class="form-label">昵称</text>
-        <input type="nickname" v-model="nickname" placeholder="点击获取微信昵称" placeholder-style="color:#A0AEC0" class="form-input" />
+        <input type="nickname" v-model="nickname" placeholder="点击获取微信昵称" placeholder-style="color:#A0AEC0" class="form-input"></input>
       </view>
       <view class="divider"></view>
       <!-- 手机号 -->
       <view class="form-item">
         <text class="form-label">手机号</text>
-        <input type="number" v-model="phone" placeholder="选填，方便骑手联系你" placeholder-style="color:#A0AEC0" maxlength="11" class="form-input" />
+        <input type="number" v-model="phone" placeholder="请输入手机号" placeholder-style="color:#A0AEC0" maxlength="11" class="form-input"></input>
       </view>
       <view class="divider"></view>
       <!-- 验证码 -->
       <view class="form-item">
         <text class="form-label">验证码</text>
-        <input type="number" v-model="smsCode" placeholder="请输入验证码" placeholder-style="color:#A0AEC0" maxlength="6" class="form-input sms-input" />
+        <input type="number" v-model="smsCode" placeholder="请输入验证码" placeholder-style="color:#A0AEC0" maxlength="6" class="form-input sms-input"></input>
         <view class="sms-btn" :class="{disabled: !isPhoneValid || countdown > 0}" @click="sendCode">
           <text>{{ countdown > 0 ? countdown + 's' : '获取验证码' }}</text>
         </view>
@@ -56,7 +56,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { callCloud, uploadImage } from '@/utils/cloud'
 
 const avatarUrl = ref('')
@@ -120,11 +120,15 @@ const saveProfile = async () => {
     uni.showToast({ title: '请输入昵称', icon: 'none' })
     return
   }
+  if (!phone.value || phone.value.length !== 11 || !isPhoneValid.value) {
+    uni.showToast({ title: '请输入正确的11位手机号', icon: 'none' })
+    return
+  }
   if (saving.value) return
   saving.value = true
 
-  // 如果填了手机号，先验证短信验证码
-  if (phone.value && phone.value.length === 11 && !phoneVerified.value) {
+  // 手机号必填，必须验证短信验证码
+  if (!phoneVerified.value) {
     if (!smsCode.value || smsCode.value.length !== 6) {
       uni.showToast({ title: '请输入6位验证码', icon: 'none' })
       saving.value = false
@@ -138,6 +142,7 @@ const saveProfile = async () => {
     }
     phoneVerified.value = true
   }
+  var submitPhone = phone.value.trim()
 
   var avatar = avatarUrl.value
   // 如果选了新头像（临时路径），上传到云存储
@@ -154,7 +159,7 @@ const saveProfile = async () => {
   var res = await callCloud('user', 'updateProfile', {
     name: nickname.value.trim(),
     avatar: avatar,
-    phone: phone.value.trim()
+    phone: submitPhone
   })
   saving.value = false
 
@@ -162,7 +167,7 @@ const saveProfile = async () => {
     var info = uni.getStorageSync('userInfo') || {}
     info.name = nickname.value.trim()
     info.avatar = avatar
-    info.phone = phone.value.trim()
+    info.phone = submitPhone
     uni.setStorageSync('userInfo', info)
     uni.showToast({ title: '保存成功', icon: 'success' })
     setTimeout(function() { uni.navigateBack() }, 1500)

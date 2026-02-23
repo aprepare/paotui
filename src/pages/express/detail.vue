@@ -521,17 +521,17 @@ var showAction = computed(function() {
   var s = order.value.status
   if (s >= 3) return false
   if (s === 4) return false
-  if (isRider.value) return true
+  // 骑手（非发布者）可以接单/操作
+  if (isRider.value && !isOwner.value) return true
+  // 发布者可以取消（待接单/已接单）或确认收货
   if (isOwner.value && s === 0) return true
-  // 已接单时用户可以取消
   if (isOwner.value && s === 1) return true
-  // 配送中用户不能取消，但能确认收货
   if (s === 2 && isOwner.value && order.value.deliverPhoto) return true
   return false
 })
 var actionText = computed(function() {
   var s = order.value.status
-  if (isRider.value) {
+  if (isRider.value && !isOwner.value) {
     if (s === 0) return '接单'
     if (s === 1) return '已取件，开始配送'
     if (s === 2) return '已送达，完成订单'
@@ -544,7 +544,7 @@ var actionText = computed(function() {
 })
 
 var handleAction = async function() {
-  if (isRider.value) {
+  if (isRider.value && !isOwner.value) {
     if (order.value.status === 0) {
       var res = await callCloud('express', 'accept', { orderId: orderId.value })
       if (res.code === 0) {

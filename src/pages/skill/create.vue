@@ -1,11 +1,11 @@
-<template>
+﻿<template>
   <view class="create-skill">
     <view class="form-section">
       <text class="section-title">🎯 技能信息</text>
       <view class="form-card">
         <view class="form-item">
           <text class="form-label">技能名称</text>
-          <input placeholder="例如：PS修图、视频剪辑" v-model="form.title" maxlength="30" />
+          <input placeholder="例如：PS修图、视频剪辑" v-model="form.title" maxlength="30"></input>
         </view>
         <view class="divider"></view>
         <view class="form-item">
@@ -19,7 +19,7 @@
           <text class="form-label">收费价格</text>
           <view class="price-row">
             <text class="yen">¥</text>
-            <input type="digit" placeholder="0" v-model="form.price" class="price-input" />
+            <input type="digit" placeholder="0" v-model="form.price" class="price-input"></input>
             <text class="price-sep">/</text>
             <picker :range="priceUnits" @change="form.priceUnit = priceUnits[$event.detail.value]">
               <text class="unit-picker">{{ form.priceUnit }}</text>
@@ -65,7 +65,7 @@
         <view class="divider"></view>
         <view class="form-item">
           <text class="form-label">{{ form.contactType }}号</text>
-          <input :placeholder="'输入你的' + form.contactType + '号'" v-model="form.contact" />
+          <input :placeholder="'输入你的' + form.contactType + '号'" v-model="form.contact"></input>
         </view>
       </view>
     </view>

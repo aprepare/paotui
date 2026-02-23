@@ -3,7 +3,7 @@
     <view class="search-bar">
       <view class="search-input">
         <text class="search-icon">🔍</text>
-        <input placeholder="搜索技能服务" v-model="keyword" @confirm="loadData" />
+        <input placeholder="搜索技能服务" v-model="keyword" @confirm="loadData"></input>
       </view>
     </view>
     <view class="category-bar">

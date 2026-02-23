@@ -47,7 +47,7 @@
     - POST /api/user/sms/verify（校验验证码）
     - _Requirements: 2.1, 2.2, 2.5_
   - [ ]* 2.2 编写用户登录属性测试
-    - **Property 4: Auto-Create User on New Openid**
+    - **Property 4: Auto-Create User on New Openid**  
     - **Validates: Requirements 2.5**
   - [ ]* 2.3 编写管理员密码哈希属性测试
     - **Property 10: Admin Password Hashing Round-Trip**

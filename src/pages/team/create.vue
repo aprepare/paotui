@@ -5,7 +5,7 @@
       <text class="card-label">基本信息</text>
       <view class="form-item">
         <text class="form-label">活动标题</text>
-        <input class="form-input" v-model="form.title" placeholder="输入活动标题" placeholder-style="color:#A0AEC0" />
+        <input class="form-input" v-model="form.title" placeholder="输入活动标题" placeholder-style="color:#A0AEC0"></input>
       </view>
       <view class="form-item">
         <text class="form-label">活动类型</text>
@@ -18,7 +18,7 @@
       </view>
       <view class="form-item">
         <text class="form-label">活动地点</text>
-        <input class="form-input" v-model="form.place" placeholder="输入活动地点" placeholder-style="color:#A0AEC0" />
+        <input class="form-input" v-model="form.place" placeholder="输入活动地点" placeholder-style="color:#A0AEC0"></input>
       </view>
       <view class="form-item">
         <text class="form-label">活动时间</text>
@@ -40,7 +40,7 @@
       </view>
       <view class="form-item">
         <text class="form-label">最大人数</text>
-        <input class="form-input" v-model="form.max" type="number" placeholder="输入最大参与人数" placeholder-style="color:#A0AEC0" />
+        <input class="form-input" v-model="form.max" type="number" placeholder="输入最大参与人数" placeholder-style="color:#A0AEC0"></input>
       </view>
     </view>
 

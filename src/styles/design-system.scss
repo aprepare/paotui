@@ -1,0 +1,338 @@
+/**
+ * 统一的设计系统
+ * 包含：色彩、间距、圆角、阴影、动画等全局变量
+ */
+
+/* ========== 色彩系统 ========== */
+
+/* 品牌色 */
+$color-primary: #2B6CB0;      /* 主蓝 */
+$color-primary-light: #EBF4FF;  /* 主蓝浅 */
+$color-primary-lighter: #F7FAFF; /* 主蓝更浅 */
+
+$color-secondary: #DD6B20;    /* 辅橙 */
+$color-secondary-light: #FEF3E2; /* 辅橙浅 */
+
+$color-success: #38A169;      /* 成功绿 */
+$color-success-light: #F0FDF4; /* 成功绿浅 */
+
+$color-warning: #ED8936;      /* 警告橙 */
+$color-warning-light: #FFFAF0; /* 警告橙浅 */
+
+$color-error: #E53E3E;        /* 错误红 */
+$color-error-light: #FFEBEE;  /* 错误红浅 */
+
+$color-info: #4299E1;         /* 信息蓝 */
+$color-info-light: #EBF8FF;   /* 信息蓝浅 */
+
+/* 中性色 */
+$color-text-primary: #1A1A2E;   /* 主文字 */
+$color-text-secondary: #2D3748; /* 次文字 */
+$color-text-tertiary: #718096;  /* 三级文字 */
+$color-text-disabled: #A0AEC0;  /* 禁用文字 */
+
+$color-bg-primary: #FFFFFF;     /* 主背景 */
+$color-bg-secondary: #F7FAFC;   /* 次背景 */
+$color-bg-tertiary: #F0F2F5;    /* 三级背景 */
+
+$color-border: #E2E8F0;         /* 边框色 */
+$color-border-light: #EDF2F7;   /* 浅边框 */
+
+/* ========== 间距系统 ========== */
+
+$spacing-xs: 8rpx;    /* 8px */
+$spacing-sm: 12rpx;   /* 12px */
+$spacing-base: 16rpx; /* 16px */
+$spacing-md: 20rpx;   /* 20px */
+$spacing-lg: 24rpx;   /* 24px */
+$spacing-xl: 32rpx;   /* 32px */
+$spacing-2xl: 40rpx;  /* 40px */
+
+/* ========== 圆角系统 ========== */
+
+$radius-sm: 8rpx;
+$radius-md: 12rpx;
+$radius-lg: 16rpx;
+$radius-xl: 20rpx;
+$radius-2xl: 28rpx;
+$radius-full: 50%;
+
+/* ========== 阴影系统 ========== */
+
+$shadow-sm: 0 2rpx 8rpx rgba(0, 0, 0, 0.04), 0 1rpx 3rpx rgba(0, 0, 0, 0.06);
+$shadow-md: 0 4rpx 12rpx rgba(0, 0, 0, 0.08), 0 2rpx 6rpx rgba(0, 0, 0, 0.06);
+$shadow-lg: 0 8rpx 24rpx rgba(0, 0, 0, 0.12), 0 4rpx 12rpx rgba(0, 0, 0, 0.08);
+$shadow-xl: 0 12rpx 32rpx rgba(0, 0, 0, 0.16), 0 6rpx 16rpx rgba(0, 0, 0, 0.12);
+
+/* ========== 排版系统 ========== */
+
+/* 字体尺寸 */
+$font-size-2xs: 18rpx;  /* 微小 */
+$font-size-xs: 20rpx;   /* 极小 */
+$font-size-sm: 22rpx;   /* 小 */
+$font-size-base: 24rpx; /* 正文 */
+$font-size-md: 26rpx;   /* 中 */
+$font-size-lg: 28rpx;   /* 大 */
+$font-size-xl: 32rpx;   /* 特大 */
+$font-size-2xl: 36rpx;  /* 超大 */
+$font-size-3xl: 44rpx;  /* 巨大 */
+
+/* 字体粗细 */
+$font-weight-normal: 400;
+$font-weight-medium: 500;
+$font-weight-semibold: 600;
+$font-weight-bold: 700;
+$font-weight-extrabold: 800;
+
+/* 行高 */
+$line-height-tight: 1.2;
+$line-height-normal: 1.5;
+$line-height-relaxed: 1.6;
+$line-height-loose: 1.8;
+
+/* ========== 过渡和动画 ========== */
+
+$transition-fast: 150ms ease;
+$transition-base: 200ms ease;
+$transition-slow: 300ms ease;
+
+$duration-fast: 150ms;
+$duration-base: 200ms;
+$duration-slow: 300ms;
+
+$easing-linear: linear;
+$easing-ease: ease;
+$easing-in: ease-in;
+$easing-out: ease-out;
+$easing-in-out: ease-in-out;
+$easing-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+$easing-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+
+/* ========== 渐变色 ========== */
+
+$gradient-primary: linear-gradient(135deg, $color-primary, #1A4F8B);
+$gradient-secondary: linear-gradient(135deg, $color-secondary, #C05621);
+$gradient-success: linear-gradient(135deg, $color-success, #2F5233);
+$gradient-warning: linear-gradient(135deg, $color-warning, #C65911);
+$gradient-error: linear-gradient(135deg, $color-error, #A52A2A);
+
+/* ========== 响应式断点 ========== */
+
+$bp-xs: 320px;
+$bp-sm: 384px;
+$bp-md: 512px;
+$bp-lg: 640px;
+$bp-xl: 768px;
+
+/* ========== Z-Index 层级 ========== */
+
+$z-hide: -1;
+$z-base: 1;
+$z-dropdown: 10;
+$z-sticky: 20;
+$z-fixed: 30;
+$z-modal: 100;
+$z-popover: 110;
+$z-tooltip: 120;
+
+/* ========== 混入（Mixins） ========== */
+
+@mixin flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@mixin flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+@mixin flex-col {
+  display: flex;
+  flex-direction: column;
+}
+
+@mixin truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@mixin text-truncate($lines: 1) {
+  @if $lines == 1 {
+    @include truncate;
+  } @else {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: $lines;
+    -webkit-box-orient: vertical;
+    text-overflow: ellipsis;
+  }
+}
+
+@mixin button-base {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: $font-size-base;
+  font-weight: $font-weight-semibold;
+  transition: all $transition-base;
+  border-radius: $radius-lg;
+  padding: $spacing-base $spacing-lg;
+}
+
+@mixin button-primary {
+  @include button-base;
+  background: $gradient-primary;
+  color: #fff;
+  
+  &:active {
+    transform: scale(0.97);
+    filter: brightness(0.95);
+  }
+  
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+@mixin button-secondary {
+  @include button-base;
+  background: $color-bg-tertiary;
+  color: $color-primary;
+  
+  &:active {
+    background: $color-primary-light;
+  }
+  
+  &:disabled {
+    opacity: 0.6;
+  }
+}
+
+@mixin card {
+  background: $color-bg-primary;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-sm;
+  transition: all $transition-base;
+  
+  &:active {
+    transform: scale(0.98);
+    box-shadow: $shadow-md;
+  }
+}
+
+@mixin input-field {
+  border: none;
+  border-bottom: 2rpx solid $color-border;
+  background: transparent;
+  font-size: $font-size-base;
+  color: $color-text-primary;
+  padding: $spacing-base 0;
+  transition: all $transition-base;
+  
+  &:focus {
+    border-bottom-color: $color-primary;
+    background: rgba($color-primary, 0.02);
+  }
+  
+  &::placeholder {
+    color: $color-text-disabled;
+  }
+  
+  &.error {
+    border-bottom-color: $color-error;
+    background: rgba($color-error, 0.02);
+  }
+}
+
+@mixin badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4rpx 12rpx;
+  border-radius: $radius-full;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-bold;
+  line-height: 1;
+}
+
+/* ========== 常用效果 ========== */
+
+/* 玻璃毛玻璃效果 */
+@mixin glass-morphism($opacity: 0.1) {
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(20px);
+  border: 1rpx solid rgba(255, 255, 255, 0.18);
+}
+
+/* 渐进加载骨架屏 */
+@mixin skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #f5f5f5 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.5s infinite;
+}
+
+@keyframes skeleton-loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* 浮动动画 */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-16rpx);
+  }
+}
+
+/* 滑入动画 */
+@keyframes slide-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(20rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 淡入动画 */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* 旋转加载 */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 脉冲动画 */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
