@@ -30,7 +30,7 @@ const onTouchMove = (e) => {
 const onTouchEnd = () => {}
 const onClick = () => {
   if (moved.value) return
-  uni.navigateTo({ url: '/pages/kefu/show?img=' + encodeURIComponent('/static/TeamWork.png') })
+  uni.navigateTo({ url: '/pages/kefu/show?img=' + encodeURIComponent('/static/TeamWork.jpg') })
 }
 </script>
 

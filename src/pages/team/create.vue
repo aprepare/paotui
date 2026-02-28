@@ -115,7 +115,8 @@ const onSubmit = async () => {
   if (!form.place) return uni.showToast({ title: '请输入活动地点', icon: 'none' })
   if (!form.date) return uni.showToast({ title: '请选择活动日期', icon: 'none' })
   if (!form.hour) return uni.showToast({ title: '请选择活动时间', icon: 'none' })
-  if (!form.max || Number(form.max) < 2) return uni.showToast({ title: '人数至少2人', icon: 'none' })
+  const maxVal = Number(form.max)
+  if (!form.max || !Number.isInteger(maxVal) || maxVal < 2 || maxVal > 100) return uni.showToast({ title: '人数范围为2-100人', icon: 'none' })
 
   var activityTime = form.date + ' ' + form.hour
 

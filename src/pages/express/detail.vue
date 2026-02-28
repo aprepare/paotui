@@ -210,6 +210,7 @@
 import { ref, reactive, computed } from 'vue'
 import { onLoad, onUnload } from '@dcloudio/uni-app'
 import { callCloud, uploadImage } from '@/utils/cloud'
+import { requestOrderSubscribe } from '@/utils/subscribe'
 
 var steps = ['待接单', '已接单', '配送中', '已完成']
 var isRider = ref(false)
@@ -546,6 +547,8 @@ var actionText = computed(function() {
 var handleAction = async function() {
   if (isRider.value && !isOwner.value) {
     if (order.value.status === 0) {
+      // 骑手接单前请求订阅授权（接收取消/状态变更通知）
+      await requestOrderSubscribe()
       var res = await callCloud('express', 'accept', { orderId: orderId.value })
       if (res.code === 0) {
         order.value.status = 1

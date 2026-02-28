@@ -122,7 +122,8 @@
 				{ "path": "index", "style": { "navigationBarTitleText": "福利外卖", "navigationBarBackgroundColor": "#DD6B20", "navigationBarTextStyle": "white" } },
 				{ "path": "menu", "style": { "navigationBarTitleText": "点餐", "navigationBarBackgroundColor": "#DD6B20", "navigationBarTextStyle": "white" } },
 				{ "path": "confirm", "style": { "navigationBarTitleText": "确认订单", "navigationBarBackgroundColor": "#DD6B20", "navigationBarTextStyle": "white" } },
-				{ "path": "orders", "style": { "navigationBarTitleText": "外卖订单", "navigationBarBackgroundColor": "#DD6B20", "navigationBarTextStyle": "white" } }
+				{ "path": "orders", "style": { "navigationBarTitleText": "外卖订单", "navigationBarBackgroundColor": "#DD6B20", "navigationBarTextStyle": "white" } },
+				{ "path": "detail", "style": { "navigationBarTitleText": "订单详情", "navigationBarBackgroundColor": "#DD6B20", "navigationBarTextStyle": "white" } }
 			]
 		},
 		{

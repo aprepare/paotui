@@ -13,6 +13,16 @@
           <text class="menu-text">我的跑腿任务</text>
           <text class="menu-arrow">›</text>
         </view>
+        <view class="menu-item" @click="goSub('/pages/order/list?tab=18')">
+          <view class="menu-icon-bg" style="background: linear-gradient(135deg, #ED8936, #C05621);"><text class="mi">🍔</text></view>
+          <text class="menu-text">我的外卖</text>
+          <text class="menu-arrow">›</text>
+        </view>
+        <view class="menu-item" @click="goSub('/pages/order/list?tab=19')">
+          <view class="menu-icon-bg" style="background: linear-gradient(135deg, #4FD1C5, #319795);"><text class="mi">🧼</text></view>
+          <text class="menu-text">我的洗护</text>
+          <text class="menu-arrow">›</text>
+        </view>
         <view class="menu-item" @click="goSub('/pages/order/list?tab=12')">
           <view class="menu-icon-bg" style="background: linear-gradient(135deg, #68D391, #38A169);"><text class="mi">🚗</text></view>
           <text class="menu-text">我的拼车</text>
@@ -122,6 +132,8 @@ var goodsList = ref([])
 var teamList = ref([])
 var skillList = ref([])
 var tutorList = ref([])
+var foodOrderList = ref([])
+var washOrderList = ref([])
 
 var expressStatusMap = { 0: '待接单', 1: '已接单', 2: '配送中', 3: '已完成', 4: '已取消' }
 var expressColorMap = { 0: '#DD6B20', 1: '#2B6CB0', 2: '#38A169', 3: '#A0AEC0', 4: '#E53E3E' }
@@ -278,6 +290,46 @@ var loadData = async function() {
     }
   } catch (e) { console.log('loadData tutor error:', e) }
 
+  try {
+    var r8 = await callCloud('food', 'myOrders', { page: 1, pageSize: 50 })
+    if (r8.code === 0) {
+      var fArr = []
+      var foodStatusMap = { 0: '待确认', 1: '制作中', 2: '配送中', 3: '已完成', 4: '已取消' }
+      var foodColorMap = { 0: '#DD6B20', 1: '#38A169', 2: '#4299E1', 3: '#A0AEC0', 4: '#E53E3E' }
+      for (var fi = 0; fi < r8.data.length; fi++) {
+        var fo = r8.data[fi]
+        var st = fo.status || 0
+        var stText = fo.statusText || foodStatusMap[st] || '待确认'
+        if (st === 2 && fo.deliveryMode === 'self_pickup') stText = '待自取'
+        fArr.push({ id: fo._id, type: '福利外卖', typeEmoji: '🍔', _raw: 'food',
+          fromAddr: fo.shopName || '', toAddr: fo.address || '',
+          desc: (fo.deliveryMode === 'self_pickup' ? '🏪自取' : '🚴配送') + ' · ' + (fo.items || []).map(function(x) { return x.name }).join('、'),
+          price: fo.totalPrice || 0, time: fmtTime(fo.createTime),
+          statusText: stText, statusColor: foodColorMap[st] || '#DD6B20' })
+      }
+      foodOrderList.value = fArr
+    }
+  } catch (e) { console.log('loadData food error:', e) }
+
+  try {
+    var r9 = await callCloud('wash', 'myOrders')
+    if (r9.code === 0) {
+      var wArr = []
+      var washStatusMap = { 0: '待处理', 1: '处理中', 2: '已完成', 3: '已取消' }
+      var washColorMap = { 0: '#DD6B20', 1: '#2B6CB0', 2: '#A0AEC0', 3: '#E53E3E' }
+      for (var wi = 0; wi < r9.data.length; wi++) {
+        var wo = r9.data[wi]
+        var ws = wo.status || 0
+        wArr.push({ id: wo._id, type: '萌马洗护', typeEmoji: '🧼', _raw: 'wash',
+          fromAddr: wo.productName || '', toAddr: wo.address || '',
+          desc: 'x' + (wo.quantity || 1) + (wo.needDelivery ? ' · 🏃跑腿取送' : ''),
+          price: wo.totalPrice || 0, time: fmtTime(wo.createTime),
+          statusText: wo.statusText || washStatusMap[ws] || '待处理', statusColor: washColorMap[ws] || '#DD6B20' })
+      }
+      washOrderList.value = wArr
+    }
+  } catch (e) { console.log('loadData wash error:', e) }
+
   loading.value = false
 }
 
@@ -291,6 +343,8 @@ var currentList = computed(function() {
   if (tab.value === 15) return tutorList.value
   if (tab.value === 16) return []
   if (tab.value === 17) return skillList.value
+  if (tab.value === 18) return foodOrderList.value
+  if (tab.value === 19) return washOrderList.value
   return []
 })
 
@@ -302,6 +356,7 @@ var goDetail = function(order) {
   else if (order._raw === 'goods') uni.navigateTo({ url: '/pages/market/detail?id=' + order.id })
   else if (order._raw === 'skill') uni.navigateTo({ url: '/pages/skill/detail?id=' + order.id })
   else if (order._raw === 'tutor') uni.navigateTo({ url: '/pages/job-sub/tutor' })
+  else if (order._raw === 'food') uni.navigateTo({ url: '/pages/food/detail?id=' + order.id })
   else uni.navigateTo({ url: '/pages/express/detail?id=' + order.id })
 }
 var callPhone = function(phone) {
@@ -312,7 +367,7 @@ var goRegister = function() { uni.navigateTo({ url: '/pages/express/rider-regist
 onLoad(function(opts) {
   if (opts && opts.tab) {
     tab.value = Number(opts.tab)
-    var titleMap = { 1: '我的接单', 10: '我的快递单', 11: '我的跑腿任务', 12: '我的拼车', 13: '我的商品', 14: '我的组队', 15: '我的家教', 16: '我的兼职', 17: '我的技能' }
+    var titleMap = { 1: '我的接单', 10: '我的快递单', 11: '我的跑腿任务', 12: '我的拼车', 13: '我的商品', 14: '我的组队', 15: '我的家教', 16: '我的兼职', 17: '我的技能', 18: '我的外卖', 19: '我的洗护' }
     var t = titleMap[tab.value]
     if (t) uni.setNavigationBarTitle({ title: t })
   }

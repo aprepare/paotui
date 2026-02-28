@@ -99,7 +99,7 @@
         </view>
         <view class="demand-footer">
           <view class="demand-parent">
-            <text>👤 {{ item.parentName }}</text>
+            <text>👤 家长（应聘后可见）</text>
           </view>
           <view class="demand-apply-btn" @click.stop="onApplyDemand(item)">
             <text>我要应聘</text>
@@ -146,7 +146,7 @@
             </view>
           </view>
           <view class="popup-parent">
-            <text>👤 发布者：{{ detailData.parentName }}</text>
+            <text>👤 发布者：家长（应聘后可见）</text>
             <text class="popup-time">{{ detailData.postTime }}</text>
           </view>
           <view class="popup-action" @click="onApplyDemand(detailData)"><text>我要应聘</text></view>

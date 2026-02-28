@@ -123,7 +123,7 @@ const loadPageConfig = async () => {
       }
       if (res.data.actions && res.data.actions.length > 0) {
         actions.value = res.data.actions.map(it => ({
-          emoji: it.emoji || '', text: it.text || '', link: it.link || '',
+          emoji: it.emoji || '', iconUrl: it.iconUrl || '', text: it.text || '', link: it.link || '',
           bg: it.bg || 'linear-gradient(135deg, #4299E1, #2B6CB0)'
         }))
       }
@@ -185,18 +185,11 @@ const formatTime = (t) => {
   return Math.floor(diff / 1440) + '天前'
 }
 
-// 排序优先级：待接单 > 配送中/进行中 > 已接单 > 已完成 > 已取消
-// 快递状态：0=待接单, 1=已接单, 2=配送中, 3=已完成, 4=已取消
-// 跑腿状态：0=待接单, 1=进行中, 2=已完成, 3=已取消
-var expressPriority = { 0: 0, 2: 1, 1: 2, 3: 3, 4: 4 }
-var errandPriority = { 0: 0, 1: 1, 4: 2, 2: 3, 3: 4 }
+// 排序：按创建时间倒序，最新的排最前面
 const sortedOrders = computed(() => [...latestOrders.value].sort((a, b) => {
-  var pm = a.orderType === 'errand' ? errandPriority : expressPriority
-  var pm2 = b.orderType === 'errand' ? errandPriority : expressPriority
-  var aOrder = pm[a.status] !== undefined ? pm[a.status] : 5
-  var bOrder = pm2[b.status] !== undefined ? pm2[b.status] : 5
-  if (aOrder !== bOrder) return aOrder - bOrder
-  return (b.tip || 0) - (a.tip || 0)
+  var ta = a.createTime ? new Date(a.createTime).getTime() : 0
+  var tb = b.createTime ? new Date(b.createTime).getTime() : 0
+  return tb - ta
 }))
 
 const selectedBuilding = ref('全部')

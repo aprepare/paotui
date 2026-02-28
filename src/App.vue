@@ -7,7 +7,7 @@ onLaunch(() => {
   // #ifdef MP-WEIXIN
   if (wx.cloud) {
     wx.cloud.init({
-      env: 'cloudbase-3g5qd6t022a198cf',
+      env: 'cloud1-1g0obuvy643250dd',
       traceUser: true
     })
   }

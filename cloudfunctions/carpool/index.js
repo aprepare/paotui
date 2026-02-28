@@ -3,6 +3,15 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const _ = db.command
 
+// 内容安全检查
+async function checkContent(openid, text, scene) {
+  if (!text || !text.trim()) return true
+  try {
+    const res = await cloud.openapi.security.msgSecCheck({ openid, scene: scene || 2, version: 2, content: text })
+    return res.result && res.result.suggest === 'pass'
+  } catch (e) { console.log('[contentCheck] error', e); return true }
+}
+
 exports.main = async (event, context) => {
   const { action, data = {} } = event
   const openid = cloud.getWXContext().OPENID
@@ -31,6 +40,22 @@ exports.main = async (event, context) => {
     case 'create': {
       const { from, to, departTime, pickupLocation, maxPeople, deadline, contact, remark } = data
       if (!from || !to || !departTime) return { code: -1, msg: 'missing fields' }
+      if (remark) {
+        const safe = await checkContent(openid, remark, 2)
+        if (!safe) return { code: -1, msg: '备注包含违规内容，请修改' }
+      }
+      // departTime must be in the future (Req 7.1, 7.3)
+      const departTs = new Date(departTime).getTime()
+      if (isNaN(departTs) || departTs <= Date.now()) {
+        return { code: -1, msg: '出发时间必须晚于当前时间' }
+      }
+      // deadline must be before departTime if provided (Req 7.2)
+      if (deadline) {
+        const deadlineTs = new Date(deadline).getTime()
+        if (!isNaN(deadlineTs) && deadlineTs >= departTs) {
+          return { code: -1, msg: '截止时间必须早于出发时间' }
+        }
+      }
       const user = await db.collection('users').where({ openid }).get()
       const userName = user.data.length > 0 ? user.data[0].name : '匿名'
       const res = await db.collection('carpool').add({

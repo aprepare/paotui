@@ -111,14 +111,28 @@ const form = reactive({
   remark: ''
 })
 
+// Track actual Date objects for validation
+const departDate = ref(null)
+const deadlineDate = ref(null)
+
+const buildDate = (vals) => {
+  const d = new Date(Date.now() + vals[0] * 86400000)
+  const h = parseInt(hours[vals[1]])
+  const m = parseInt(minutes[vals[2]])
+  d.setHours(h, m, 0, 0)
+  return d
+}
+
 const onDepartTimeChange = (e) => {
   const vals = e.detail.value
   form.departTime = `${days[vals[0]]} ${hours[vals[1]].replace('时',':')}${minutes[vals[2]].replace('分','')}`
+  departDate.value = buildDate(vals)
 }
 
 const onDeadlineChange = (e) => {
   const vals = e.detail.value
   form.deadline = `${days[vals[0]]} ${hours[vals[1]].replace('时',':')}${minutes[vals[2]].replace('分','')}`
+  deadlineDate.value = buildDate(vals)
 }
 
 const peopleOptions = [2, 3, 4, 5]
@@ -136,6 +150,16 @@ const submit = async () => {
   if (!form.departTime) {
     uni.showToast({ title: '请选择出发时间', icon: 'none' })
     return
+  }
+  if (departDate.value && departDate.value.getTime() <= Date.now()) {
+    uni.showToast({ title: '出发时间必须晚于当前时间', icon: 'none' })
+    return
+  }
+  if (form.deadline && departDate.value && deadlineDate.value) {
+    if (deadlineDate.value.getTime() >= departDate.value.getTime()) {
+      uni.showToast({ title: '截止时间必须早于出发时间', icon: 'none' })
+      return
+    }
   }
   if (!form.contact) {
     uni.showToast({ title: '请填写联系方式', icon: 'none' })

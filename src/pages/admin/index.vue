@@ -118,28 +118,65 @@
       <view class="empty" v-if="!contentList.length"><text>暂无数据</text></view>
     </view>
     <view class="section" v-if="currentTab === 'wash'">
-      <view class="card-title">🧼 洗鞋团购商品</view>
-      <view class="list-item" v-for="wp in washProducts" :key="wp._id">
-        <view class="li-body">
-          <view class="li-top">
-            <text class="li-name">{{ wp.name }}</text>
-            <text class="li-badge" :class="wp.status === 1 ? 'green' : 'red'">{{ wp.status === 1 ? '上架' : '下架' }}</text>
-          </view>
-          <text class="li-sub">原价¥{{ wp.originalPrice }} → 团购¥{{ wp.groupPrice }}  ·  {{ wp.groupSize }}人团</text>
-        </view>
-        <view class="li-acts">
-          <text class="act-green" @click.stop="toggleWashStatus(wp)">{{ wp.status === 1 ? '下架' : '上架' }}</text>
-          <text class="act-red" @click.stop="deleteWashProduct(wp)">删除</text>
-        </view>
+      <view class="card-title">🧼 萌马洗护管理</view>
+      <view class="chip-row">
+        <text class="chip" :class="{active: washTab === 'products'}" @click="washTab='products'">商品</text>
+        <text class="chip" :class="{active: washTab === 'orders'}" @click="washTab='orders'; loadWashOrders()">订单</text>
       </view>
-      <view class="empty" v-if="!washProducts.length"><text>暂无商品，请添加</text></view>
-      <view class="card-title mt">➕ 添加团购商品</view>
-      <view class="form-row"><text class="form-lbl">商品名</text><input class="form-ipt" v-model="newWash.name" placeholder="如：运动鞋清洗" /></view>
-      <view class="form-row"><text class="form-lbl">描述</text><input class="form-ipt" v-model="newWash.desc" placeholder="简短描述" /></view>
-      <view class="form-row"><text class="form-lbl">原价</text><input class="form-ipt" type="digit" v-model="newWash.originalPrice" placeholder="原价（元）" /></view>
-      <view class="form-row"><text class="form-lbl">团购价</text><input class="form-ipt" type="digit" v-model="newWash.groupPrice" placeholder="团购价（元）" /></view>
-      <view class="form-row"><text class="form-lbl">成团人数</text><input class="form-ipt" type="number" v-model="newWash.groupSize" placeholder="如 3" /></view>
-      <view class="btn-primary" @click="addWashProduct"><text>添加商品</text></view>
+
+      <!-- 商品管理 -->
+      <view v-if="washTab === 'products'">
+        <view class="list-item" v-for="wp in washProducts" :key="wp._id">
+          <view class="li-body">
+            <view class="li-top">
+              <text class="li-name">{{ wp.name }}</text>
+              <text class="li-badge" :class="wp.status === 1 ? 'green' : 'red'">{{ wp.status === 1 ? '上架' : '下架' }}</text>
+            </view>
+            <text class="li-sub">原价¥{{ wp.originalPrice }} → 团购¥{{ wp.groupPrice }}  ·  {{ wp.groupSize }}人团</text>
+          </view>
+          <view class="li-acts">
+            <text class="act-green" @click.stop="toggleWashStatus(wp)">{{ wp.status === 1 ? '下架' : '上架' }}</text>
+            <text class="act-red" @click.stop="deleteWashProduct(wp)">删除</text>
+          </view>
+        </view>
+        <view class="empty" v-if="!washProducts.length"><text>暂无商品，请添加</text></view>
+        <view class="card-title mt">➕ 添加团购商品</view>
+        <view class="form-row"><text class="form-lbl">商品名</text><input class="form-ipt" v-model="newWash.name" placeholder="如：运动鞋清洗" /></view>
+        <view class="form-row"><text class="form-lbl">描述</text><input class="form-ipt" v-model="newWash.desc" placeholder="简短描述" /></view>
+        <view class="form-row"><text class="form-lbl">原价</text><input class="form-ipt" type="digit" v-model="newWash.originalPrice" placeholder="原价（元）" /></view>
+        <view class="form-row"><text class="form-lbl">团购价</text><input class="form-ipt" type="digit" v-model="newWash.groupPrice" placeholder="团购价（元）" /></view>
+        <view class="form-row"><text class="form-lbl">成团人数</text><input class="form-ipt" type="number" v-model="newWash.groupSize" placeholder="如 3" /></view>
+        <view class="btn-primary" @click="addWashProduct"><text>添加商品</text></view>
+      </view>
+
+      <!-- 洗护订单管理 -->
+      <view v-if="washTab === 'orders'">
+        <view class="chip-row">
+          <text class="chip sm" :class="{active: washOrderStatus === -1}" @click="washOrderStatus=-1; washOrderPage=1; loadWashOrders()">全部</text>
+          <text class="chip sm" :class="{active: washOrderStatus === 0}" @click="washOrderStatus=0; washOrderPage=1; loadWashOrders()">待处理</text>
+          <text class="chip sm" :class="{active: washOrderStatus === 1}" @click="washOrderStatus=1; washOrderPage=1; loadWashOrders()">处理中</text>
+          <text class="chip sm" :class="{active: washOrderStatus === 2}" @click="washOrderStatus=2; washOrderPage=1; loadWashOrders()">已完成</text>
+          <text class="chip sm" :class="{active: washOrderStatus === 3}" @click="washOrderStatus=3; washOrderPage=1; loadWashOrders()">已取消</text>
+        </view>
+        <view class="list-item" v-for="wo in washOrders" :key="wo._id">
+          <view class="li-body">
+            <view class="li-top">
+              <text class="li-name">{{ wo.productName }} x{{ wo.quantity }}</text>
+              <text class="li-badge mode" v-if="wo.needDelivery">🏃跑腿</text>
+              <text class="li-badge" :class="'st' + wo.status">{{ wo.statusText || getWashStatusText(wo) }}</text>
+            </view>
+            <text class="li-sub">¥{{ (wo.totalPrice || 0).toFixed(2) }} · {{ wo.phone || '' }} · {{ fmtDate(wo.createTime) }}</text>
+            <text class="li-sub" v-if="wo.address">📍 {{ wo.address }}</text>
+            <text class="li-sub" v-if="wo.remark">💬 {{ wo.remark }}</text>
+          </view>
+          <view class="li-acts">
+            <text class="act-green" v-if="wo.status < 2" @click.stop="advanceWashOrder(wo)">{{ wo.status === 0 ? '开始处理' : '标记完成' }}</text>
+            <text class="act-red" v-if="wo.status === 0" @click.stop="cancelWashOrder(wo)">取消</text>
+          </view>
+        </view>
+        <view class="empty" v-if="!washOrders.length"><text>暂无订单</text></view>
+        <view class="load-more" v-if="washOrderHasMore" @click="washOrderPage++; loadWashOrders()"><text>加载更多</text></view>
+      </view>
     </view>
     <view class="section" v-if="currentTab === 'food'">
       <view class="card-title">🍔 外卖管理</view>
@@ -217,22 +254,24 @@
       <view v-if="foodTab === 'orders'">
         <view class="chip-row">
           <text class="chip sm" :class="{active: foodOrderStatus === -1}" @click="foodOrderStatus=-1; foodOrderPage=1; loadFoodOrders()">全部</text>
-          <text class="chip sm" :class="{active: foodOrderStatus === 0}" @click="foodOrderStatus=0; foodOrderPage=1; loadFoodOrders()">待接单</text>
-          <text class="chip sm" :class="{active: foodOrderStatus === 1}" @click="foodOrderStatus=1; foodOrderPage=1; loadFoodOrders()">进行中</text>
-          <text class="chip sm" :class="{active: foodOrderStatus === 2}" @click="foodOrderStatus=2; foodOrderPage=1; loadFoodOrders()">已完成</text>
+          <text class="chip sm" :class="{active: foodOrderStatus === 0}" @click="foodOrderStatus=0; foodOrderPage=1; loadFoodOrders()">待确认</text>
+          <text class="chip sm" :class="{active: foodOrderStatus === 1}" @click="foodOrderStatus=1; foodOrderPage=1; loadFoodOrders()">制作中</text>
+          <text class="chip sm" :class="{active: foodOrderStatus === 2}" @click="foodOrderStatus=2; foodOrderPage=1; loadFoodOrders()">配送/自取</text>
+          <text class="chip sm" :class="{active: foodOrderStatus === 3}" @click="foodOrderStatus=3; foodOrderPage=1; loadFoodOrders()">已完成</text>
         </view>
         <view class="list-item" v-for="fo in foodOrders" :key="fo._id">
           <view class="li-body">
             <view class="li-top">
               <text class="li-name">{{ fo.shopName }} #{{ (fo._id || '').substr(-4) }}</text>
-              <text class="li-badge" :class="'st' + fo.status">{{ foodStatusMap[fo.status] }}</text>
+              <text class="li-badge mode" v-if="fo.deliveryMode">{{ fo.deliveryMode === 'self_pickup' ? '🏪自取' : '🚴配送' }}</text>
+              <text class="li-badge" :class="'st' + fo.status">{{ fo.statusText || getFoodStatusText(fo) }}</text>
             </view>
-            <text class="li-sub">¥{{ (fo.totalPrice || 0).toFixed(2) }} · {{ fo.address || '' }} · {{ fmtDate(fo.createTime) }}</text>
+            <text class="li-sub">¥{{ (fo.totalPrice || 0).toFixed(2) }} · {{ fo.address || '到店自取' }} · {{ fmtDate(fo.createTime) }}</text>
           </view>
           <view class="li-acts">
-            <text class="act-green" v-if="fo.status < 2" @click.stop="advanceFoodOrder(fo)">{{ foodNextAction[fo.status] }}</text>
+            <text class="act-green" v-if="fo.status < 3 && fo.status !== 4" @click.stop="advanceFoodOrder(fo)">{{ getFoodNextAction(fo) }}</text>
             <text class="act-green" @click.stop="reprintOrder(fo)">打印</text>
-            <text class="act-red" v-if="fo.status === 0" @click.stop="cancelFoodOrder(fo)">取消</text>
+            <text class="act-red" v-if="fo.status <= 1" @click.stop="cancelFoodOrder(fo)">取消</text>
           </view>
         </view>
         <view class="empty" v-if="!foodOrders.length"><text>暂无订单</text></view>
@@ -255,10 +294,17 @@
           <text class="be-idx">轮播 {{ i + 1 }}</text>
           <text class="act-red" @click="removeBanner(i)">删除</text>
         </view>
-        <view class="form-row"><text class="form-lbl">Emoji</text><input class="form-ipt" v-model="editBanners[i].emoji" placeholder="如 📦" /></view>
-        <view class="form-row"><text class="form-lbl">标题</text><input class="form-ipt" v-model="editBanners[i].title" placeholder="轮播标题" /></view>
-        <view class="form-row"><text class="form-lbl">描述</text><input class="form-ipt" v-model="editBanners[i].desc" placeholder="轮播描述" /></view>
-        <view class="form-row"><text class="form-lbl">背景</text><input class="form-ipt" v-model="editBanners[i].bg" placeholder="linear-gradient(...)" /></view>
+        <view class="form-row">
+          <text class="form-lbl">图片</text>
+          <view class="btn-upload-sm" @click="uploadBannerImage(i)"><text>上传图片</text></view>
+        </view>
+        <view class="icon-preview-row" v-if="editBanners[i].imageUrl">
+          <image class="banner-preview-img" :src="editBanners[i].imageUrl" mode="aspectFill" />
+          <text class="act-red" @click="editBanners[i].imageUrl = ''">移除图片</text>
+        </view>
+        <view class="form-row"><text class="form-lbl">标题</text><input class="form-ipt" v-model="editBanners[i].title" placeholder="轮播标题（图片模式下不显示）" /></view>
+        <view class="form-row"><text class="form-lbl">描述</text><input class="form-ipt" v-model="editBanners[i].desc" placeholder="轮播描述（图片模式下不显示）" /></view>
+        <view class="form-row"><text class="form-lbl">背景</text><input class="form-ipt" v-model="editBanners[i].bg" placeholder="linear-gradient(...)（图片模式下不生效）" /></view>
       </view>
       <view class="btn-outline" @click="addBanner"><text>+ 添加轮播</text></view>
       <view class="card-title mt">⚡ 快捷操作</view>
@@ -267,15 +313,43 @@
           <text class="be-idx">操作 {{ j + 1 }}</text>
           <text class="act-red" @click="removeAction(j)">删除</text>
         </view>
-        <view class="form-row"><text class="form-lbl">Emoji</text><input class="form-ipt" v-model="editActions[j].emoji" placeholder="如 📦" /></view>
+        <view class="form-row"><text class="form-lbl">Emoji</text>
+          <input class="form-ipt-short" v-model="editActions[j].emoji" placeholder="如 📦" />
+          <view class="icon-or"><text>或</text></view>
+          <view class="btn-upload-sm" @click="uploadActionIcon(j)"><text>上传图片</text></view>
+        </view>
+        <view class="form-row" v-if="editActions[j].iconUrl"><text class="form-lbl">图标</text><image :src="editActions[j].iconUrl" style="width:60rpx;height:60rpx;" mode="aspectFit" /></view>
         <view class="form-row"><text class="form-lbl">文字</text><input class="form-ipt" v-model="editActions[j].text" placeholder="按钮文字" /></view>
         <view class="form-row"><text class="form-lbl">链接</text><input class="form-ipt" v-model="editActions[j].link" placeholder="/pages/express/create" /></view>
       </view>
       <view class="btn-outline" @click="addAction"><text>+ 添加操作</text></view>
       <view class="btn-primary mt" @click="savePageConfig"><text>保存首页配置</text></view>
 
-      <view class="card-title mt">🎨 福利页服务图标</view>
-      <view class="icon-tip"><text>管理福利页的服务入口，支持Emoji图标或上传图片</text></view>
+      <view class="card-title mt">🎨 福利页配置</view>
+
+      <view class="card-title-sub">🖼️ 福利页轮播图</view>
+      <view class="icon-tip"><text>上传图片后显示图片，未上传则显示渐变背景+文字</text></view>
+      <view class="banner-edit" v-for="(wb, wi) in editWelfareBanners" :key="'wb'+wi">
+        <view class="be-head">
+          <text class="be-idx">轮播 {{ wi + 1 }}</text>
+          <text class="act-red" @click="removeWelfareBanner(wi)">删除</text>
+        </view>
+        <view class="form-row">
+          <text class="form-lbl">图片</text>
+          <view class="btn-upload-sm" @click="uploadWelfareBannerImage(wi)"><text>上传图片</text></view>
+        </view>
+        <view class="icon-preview-row" v-if="editWelfareBanners[wi].imageUrl">
+          <image class="banner-preview-img" :src="editWelfareBanners[wi].imageUrl" mode="aspectFill" />
+          <text class="act-red" @click="editWelfareBanners[wi].imageUrl = ''">移除图片</text>
+        </view>
+        <view class="form-row"><text class="form-lbl">标题</text><input class="form-ipt" v-model="editWelfareBanners[wi].title" placeholder="轮播标题" /></view>
+        <view class="form-row"><text class="form-lbl">描述</text><input class="form-ipt" v-model="editWelfareBanners[wi].desc" placeholder="轮播描述" /></view>
+        <view class="form-row"><text class="form-lbl">背景</text><input class="form-ipt" v-model="editWelfareBanners[wi].bg" placeholder="linear-gradient(...)（上传图片后不生效）" /></view>
+      </view>
+      <view class="btn-outline" @click="addWelfareBanner"><text>+ 添加轮播</text></view>
+
+      <view class="card-title-sub mt">🎯 福利页服务图标</view>
+      <view class="icon-tip"><text>管理福利页的服务入口，支持上传图片</text></view>
       <view class="banner-edit" v-for="(s, si) in editServices" :key="'s'+si">
         <view class="be-head">
           <text class="be-idx">服务 {{ si + 1 }}</text>
@@ -283,11 +357,7 @@
         </view>
         <view class="form-row">
           <text class="form-lbl">图标</text>
-          <view class="icon-pick-row">
-            <input class="form-ipt-short" v-model="editServices[si].icon" placeholder="Emoji如🤝" />
-            <view class="icon-or"><text>或</text></view>
-            <view class="btn-upload-sm" @click="uploadServiceIcon(si)"><text>上传图片</text></view>
-          </view>
+          <view class="btn-upload-sm" @click="uploadServiceIcon(si)"><text>上传图片</text></view>
         </view>
         <view class="icon-preview-row" v-if="editServices[si].iconUrl">
           <image class="icon-preview-img" :src="editServices[si].iconUrl" mode="aspectFit" />
@@ -367,7 +437,7 @@ const tabs = [
   { key: 'orders', icon: '📦', label: '订单' },
   { key: 'withdraw', icon: '💰', label: '提现' },
   { key: 'content', icon: '📝', label: '内容' },
-  { key: 'wash', icon: '🧼', label: '团购' },
+  { key: 'wash', icon: '🧼', label: '洗护' },
   { key: 'food', icon: '🍔', label: '外卖' },
   { key: 'config', icon: '🖼️', label: '配置' },
   { key: 'admins', icon: '👑', label: '管理' }
@@ -381,7 +451,7 @@ const switchTab = (key) => {
   if (key === 'withdraw') { wdPage = 1; loadWithdrawals() }
   if (key === 'content') loadContent()
   if (key === 'config') { loadPageConfig(); loadIconConfig() }
-  if (key === 'wash') loadWashProducts()
+  if (key === 'wash') { loadWashProducts(); loadWashOrders() }
   if (key === 'food') { loadFoodShops(); loadFoodOrders(); loadPrinterConfig() }
   if (key === 'admins') loadAdmins()
 }
@@ -512,13 +582,52 @@ const editActions = ref([])
 const loadPageConfig = async () => {
   var res = await callCloud('admin', 'getPageConfig')
   if (res.code === 0 && res.data) { editBanners.value = (res.data.banners || []).map(b => ({ ...b })); editActions.value = (res.data.actions || []).map(a => ({ ...a })) }
-  if (!editBanners.value.length) editBanners.value = [{ emoji: '📦', title: '快递代取 极速送达', desc: '下单后最快30分钟送到宿舍', bg: 'linear-gradient(135deg, #4299E1, #2B6CB0)' }, { emoji: '🏃', title: '万能跑腿 有求必应', desc: '买饭、打印、取件 一键搞定', bg: 'linear-gradient(135deg, #ED8936, #DD6B20)' }, { emoji: '🎉', title: '新用户首单立减', desc: '注册即享优惠 快来体验吧', bg: 'linear-gradient(135deg, #48BB78, #38A169)' }]
+  if (!editBanners.value.length) editBanners.value = [{ imageUrl: '', title: '快递代取 极速送达', desc: '下单后最快30分钟送到宿舍', bg: 'linear-gradient(135deg, #4299E1, #2B6CB0)' }, { imageUrl: '', title: '万能跑腿 有求必应', desc: '买饭、打印、取件 一键搞定', bg: 'linear-gradient(135deg, #ED8936, #DD6B20)' }, { imageUrl: '', title: '新用户首单立减', desc: '注册即享优惠 快来体验吧', bg: 'linear-gradient(135deg, #48BB78, #38A169)' }]
   if (!editActions.value.length) editActions.value = [{ emoji: '📦', text: '代取快递', link: '/pages/express/create' }, { emoji: '🏃', text: '万能跑腿', link: '/pages/errand/create' }, { emoji: '🏅', text: '骑手注册', link: '/pages/express/rider-register' }]
 }
-const addBanner = () => editBanners.value.push({ emoji: '', title: '', desc: '', bg: 'linear-gradient(135deg, #4299E1, #2B6CB0)' })
+const addBanner = () => editBanners.value.push({ imageUrl: '', title: '', desc: '', bg: 'linear-gradient(135deg, #4299E1, #2B6CB0)' })
 const removeBanner = (i) => editBanners.value.splice(i, 1)
-const addAction = () => editActions.value.push({ emoji: '', text: '', link: '' })
+const uploadBannerImage = (idx) => {
+  uni.chooseImage({
+    count: 1, sizeType: ['compressed'], sourceType: ['album', 'camera'],
+    success: function(chooseRes) {
+      var tempPath = chooseRes.tempFilePaths[0]
+      uni.showLoading({ title: '上传中' })
+      var cloudPath = 'banners/banner_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6) + '.png'
+      wx.cloud.uploadFile({
+        cloudPath: cloudPath, filePath: tempPath,
+        success: function(upRes) {
+          editBanners.value[idx].imageUrl = upRes.fileID
+          uni.hideLoading()
+          uni.showToast({ title: '上传成功', icon: 'success' })
+        },
+        fail: function() { uni.hideLoading(); uni.showToast({ title: '上传失败', icon: 'none' }) }
+      })
+    }
+  })
+}
+const addAction = () => editActions.value.push({ emoji: '', iconUrl: '', text: '', link: '' })
 const removeAction = (j) => editActions.value.splice(j, 1)
+const uploadActionIcon = (idx) => {
+  uni.chooseImage({
+    count: 1, sizeType: ['compressed'], sourceType: ['album', 'camera'],
+    success: function(chooseRes) {
+      var tempPath = chooseRes.tempFilePaths[0]
+      uni.showLoading({ title: '上传中' })
+      var cloudPath = 'icons/action_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6) + '.png'
+      wx.cloud.uploadFile({
+        cloudPath: cloudPath, filePath: tempPath,
+        success: function(upRes) {
+          editActions.value[idx].iconUrl = upRes.fileID
+          editActions.value[idx].emoji = ''
+          uni.hideLoading()
+          uni.showToast({ title: '上传成功', icon: 'success' })
+        },
+        fail: function() { uni.hideLoading(); uni.showToast({ title: '上传失败', icon: 'none' }) }
+      })
+    }
+  })
+}
 const savePageConfig = async () => {
   uni.showLoading({ title: '保存中' })
   var res = await callCloud('admin', 'savePageConfig', { banners: editBanners.value, actions: editActions.value })
@@ -528,6 +637,13 @@ const savePageConfig = async () => {
 const adminList = ref([])
 // ========== 图标管理 ==========
 const editServices = ref([])
+const editWelfareBanners = ref([])
+const defaultWelfareBanners = [
+  { imageUrl: '', title: '新学期福利大放送', desc: '多重优惠等你来领', bg: 'linear-gradient(135deg, #F6AD55 0%, #ED8936 50%, #DD6B20 100%)' },
+  { imageUrl: '', title: '快递代取 首单立减', desc: '新用户专享优惠', bg: 'linear-gradient(135deg, #63B3ED 0%, #4299E1 50%, #2B6CB0 100%)' },
+  { imageUrl: '', title: '拼车出行 安全省钱', desc: '校园出行好帮手', bg: 'linear-gradient(135deg, #68D391 0%, #48BB78 50%, #38A169 100%)' },
+  { imageUrl: '', title: '校园兼职 轻松赚零花', desc: '海量岗位等你来', bg: 'linear-gradient(135deg, #F687B3 0%, #ED64A6 50%, #D53F8C 100%)' }
+]
 const editTabItems = ref([
   { text: '首页', iconUrl: '', selectedIconUrl: '' },
   { text: '兼职', iconUrl: '', selectedIconUrl: '' },
@@ -536,23 +652,33 @@ const editTabItems = ref([
   { text: '我的', iconUrl: '', selectedIconUrl: '' }
 ])
 const defaultServices = [
-  { icon: '\u{1F91D}', iconUrl: '', text: '校园搭子', desc: '找搭子一起', url: '/pages/team/index', gradient: 'linear-gradient(135deg, #63B3ED, #2B6CB0)' },
-  { icon: '\u{1F9FC}', iconUrl: '', text: '萌马洗护', desc: '洗护服务', url: '/pages/market/index', gradient: 'linear-gradient(135deg, #F6AD55, #DD6B20)' },
-  { icon: '\u{1F697}', iconUrl: '', text: '校园拼车', desc: '拼车省钱', url: '/pages/carpool/index', gradient: 'linear-gradient(135deg, #68D391, #38A169)' },
-  { icon: '\u{1F3AF}', iconUrl: '', text: '技能出租', desc: '技能变现', url: '/pages/skill/index', gradient: 'linear-gradient(135deg, #F687B3, #D53F8C)' },
-  { icon: '\u{1F4DA}', iconUrl: '', text: '考研服务', desc: '考研加油', url: '/pages/graduate/index', gradient: 'linear-gradient(135deg, #4FD1C5, #319795)' },
-  { icon: '\u{1F6D2}', iconUrl: '', text: '二手市场', desc: '闲置换钱', url: '/pages/market/index', gradient: 'linear-gradient(135deg, #FC8181, #E53E3E)' },
-  { icon: '\u{1F68C}', iconUrl: '', text: '小岛巴士', desc: '校园出行', url: '/pages/carpool/index', gradient: 'linear-gradient(135deg, #B794F4, #805AD5)' },
-  { icon: '\u{1F355}', iconUrl: '', text: '福利外卖', desc: '优惠点餐', url: '/pages/food/index', gradient: 'linear-gradient(135deg, #FBD38D, #DD6B20)' }
+  { iconUrl: '/static/welfare/dazi.png', text: '校园搭子', desc: '找搭子一起', url: '/pages/team/index', gradient: 'linear-gradient(135deg, #63B3ED, #2B6CB0)' },
+  { iconUrl: '/static/welfare/xihu.png', text: '萌马洗护', desc: '洗护服务', url: '/pages/wash/index', gradient: 'linear-gradient(135deg, #F6AD55, #DD6B20)' },
+  { iconUrl: '/static/welfare/pinche.png', text: '校园拼车', desc: '拼车省钱', url: '/pages/carpool/index', gradient: 'linear-gradient(135deg, #68D391, #38A169)' },
+  { iconUrl: '/static/welfare/jineng.png', text: '技能出租', desc: '技能变现', url: '/pages/skill/index', gradient: 'linear-gradient(135deg, #F687B3, #D53F8C)' },
+  { iconUrl: '/static/welfare/kaoyan.png', text: '考研服务', desc: '考研加油', url: '/pages/graduate/index', gradient: 'linear-gradient(135deg, #4FD1C5, #319795)' },
+  { iconUrl: '/static/welfare/ershou.png', text: '二手市场', desc: '闲置换钱', url: '/pages/market/index', gradient: 'linear-gradient(135deg, #FC8181, #E53E3E)' },
+  { iconUrl: '/static/welfare/bashi.png', text: '小岛巴士', desc: '校园出行', url: '/pages/carpool/index', gradient: 'linear-gradient(135deg, #B794F4, #805AD5)' },
+  { iconUrl: '/static/welfare/waimai.png', text: '福利外卖', desc: '优惠点餐', url: '/pages/food/index', gradient: 'linear-gradient(135deg, #FBD38D, #DD6B20)' }
 ]
 const loadIconConfig = async () => {
   uni.showLoading({ title: '加载中' })
   var res = await callCloud('admin', 'getWelfareConfig')
   uni.hideLoading()
-  if (res.code === 0 && res.data && res.data.services && res.data.services.length) {
-    editServices.value = res.data.services.map(function(s) { return { ...s } })
+  if (res.code === 0 && res.data) {
+    if (res.data.services && res.data.services.length) {
+      editServices.value = res.data.services.map(function(s) { return { ...s } })
+    } else {
+      editServices.value = defaultServices.map(function(s) { return { ...s } })
+    }
+    if (res.data.banners && res.data.banners.length) {
+      editWelfareBanners.value = res.data.banners.map(function(b) { return { ...b } })
+    } else {
+      editWelfareBanners.value = defaultWelfareBanners.map(function(b) { return { ...b } })
+    }
   } else {
     editServices.value = defaultServices.map(function(s) { return { ...s } })
+    editWelfareBanners.value = defaultWelfareBanners.map(function(b) { return { ...b } })
   }
   var tbRes = await callCloud('admin', 'getTabBarConfig')
   if (tbRes.code === 0 && tbRes.data && tbRes.data.tabs && tbRes.data.tabs.length) {
@@ -560,9 +686,30 @@ const loadIconConfig = async () => {
   }
 }
 const addService = () => {
-  editServices.value.push({ icon: '', iconUrl: '', text: '', desc: '', url: '', gradient: 'linear-gradient(135deg, #4299E1, #2B6CB0)' })
+  editServices.value.push({ iconUrl: '', text: '', desc: '', url: '', gradient: 'linear-gradient(135deg, #4299E1, #2B6CB0)' })
 }
 const removeService = (i) => { editServices.value.splice(i, 1) }
+const addWelfareBanner = () => editWelfareBanners.value.push({ imageUrl: '', title: '', desc: '', bg: 'linear-gradient(135deg, #4299E1, #2B6CB0)' })
+const removeWelfareBanner = (i) => editWelfareBanners.value.splice(i, 1)
+const uploadWelfareBannerImage = (idx) => {
+  uni.chooseImage({
+    count: 1, sizeType: ['compressed'], sourceType: ['album', 'camera'],
+    success: function(chooseRes) {
+      var tempPath = chooseRes.tempFilePaths[0]
+      uni.showLoading({ title: '上传中' })
+      var cloudPath = 'banners/welfare_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6) + '.png'
+      wx.cloud.uploadFile({
+        cloudPath: cloudPath, filePath: tempPath,
+        success: function(upRes) {
+          editWelfareBanners.value[idx].imageUrl = upRes.fileID
+          uni.hideLoading()
+          uni.showToast({ title: '上传成功', icon: 'success' })
+        },
+        fail: function() { uni.hideLoading(); uni.showToast({ title: '上传失败', icon: 'none' }) }
+      })
+    }
+  })
+}
 const uploadServiceIcon = (idx) => {
   uni.chooseImage({
     count: 1, sizeType: ['compressed'], sourceType: ['album', 'camera'],
@@ -574,7 +721,6 @@ const uploadServiceIcon = (idx) => {
         cloudPath: cloudPath, filePath: tempPath,
         success: function(upRes) {
           editServices.value[idx].iconUrl = upRes.fileID
-          editServices.value[idx].icon = ''
           uni.hideLoading()
           uni.showToast({ title: '上传成功', icon: 'success' })
         },
@@ -609,7 +755,7 @@ const uploadTabIcon = (idx, type) => {
 }
 const saveWelfareConfig = async () => {
   uni.showLoading({ title: '保存中' })
-  var res = await callCloud('admin', 'saveWelfareConfig', { services: editServices.value })
+  var res = await callCloud('admin', 'saveWelfareConfig', { services: editServices.value, banners: editWelfareBanners.value })
   uni.hideLoading()
   if (res.code === 0) uni.showToast({ title: '保存成功', icon: 'success' })
   else uni.showToast({ title: res.msg || '保存失败', icon: 'none' })
@@ -654,8 +800,17 @@ const foodOrderHasMore = ref(false)
 const foodOrderStatus = ref(-1)
 var foodOrderPage = 1
 const selectedShop = ref(null)
-const foodStatusMap = { 0: '待接单', 1: '进行中', 2: '已完成', 3: '已取消' }
-const foodNextAction = { 0: '接单', 1: '完成' }
+const foodStatusMap = { 0: '待确认', 1: '制作中', 2: '配送中', 3: '已完成', 4: '已取消' }
+const getFoodStatusText = (fo) => {
+  if (fo.status === 2) return fo.deliveryMode === 'self_pickup' ? '待自取' : '配送中'
+  return foodStatusMap[fo.status] || '未知'
+}
+const getFoodNextAction = (fo) => {
+  if (fo.status === 0) return '确认订单'
+  if (fo.status === 1) return fo.deliveryMode === 'self_pickup' ? '标记待自取' : '标记配送中'
+  if (fo.status === 2) return '标记完成'
+  return ''
+}
 const newShop = reactive({ name: '', category: '快餐', phone: '', address: '', deliveryFee: '', minOrder: '', printerSn: '', openTime: '08:00', closeTime: '22:00' })
 const newItem = reactive({ name: '', price: '', category: '热销', desc: '' })
 const printerCfg = reactive({ user: '', ukey: '', defaultSn: '' })
@@ -715,14 +870,14 @@ const loadFoodOrders = async () => {
 }
 const advanceFoodOrder = async (fo) => {
   var nextStatus = fo.status + 1
-  if (nextStatus > 2) return
+  if (nextStatus > 3) return
   await callCloud('food', 'updateOrderStatus', { orderId: fo._id, status: nextStatus })
-  uni.showToast({ title: foodStatusMap[nextStatus], icon: 'success' })
+  uni.showToast({ title: getFoodStatusText({ ...fo, status: nextStatus }), icon: 'success' })
   loadFoodOrders()
 }
 const cancelFoodOrder = (fo) => {
   uni.showModal({ title: '确认取消', content: '取消该外卖订单？', success: async (r) => {
-    if (r.confirm) { await callCloud('food', 'updateOrderStatus', { orderId: fo._id, status: 3, statusText: '已取消' }); uni.showToast({ title: '已取消', icon: 'success' }); loadFoodOrders() }
+    if (r.confirm) { await callCloud('food', 'updateOrderStatus', { orderId: fo._id, status: 4 }); uni.showToast({ title: '已取消', icon: 'success' }); loadFoodOrders() }
   }})
 }
 const reprintOrder = async (fo) => {
@@ -744,7 +899,14 @@ const savePrinterConfig = async () => {
 }
 
 // ========== 洗鞋团购管理 ==========
+const washTab = ref('products')
 const washProducts = ref([])
+const washOrders = ref([])
+const washOrderHasMore = ref(false)
+const washOrderStatus = ref(-1)
+var washOrderPage = 1
+const washStatusMap = { 0: '待处理', 1: '处理中', 2: '已完成', 3: '已取消' }
+const getWashStatusText = (wo) => washStatusMap[wo.status] || '未知'
 const newWash = reactive({ name: '', desc: '', originalPrice: '', groupPrice: '', groupSize: '3' })
 const loadWashProducts = async () => {
   var res = await callCloud('admin', 'washProductList')
@@ -776,6 +938,24 @@ const deleteWashProduct = (wp) => {
     if (r.confirm) { await callCloud('admin', 'deleteWashProduct', { productId: wp._id }); uni.showToast({ title: '已删除', icon: 'success' }); loadWashProducts() }
   }})
 }
+const loadWashOrders = async () => {
+  var params = { page: washOrderPage, pageSize: 20 }
+  if (washOrderStatus.value !== -1) params.status = washOrderStatus.value
+  var res = await callCloud('wash', 'adminOrderList', params)
+  if (res.code === 0) { washOrders.value = res.data || []; washOrderHasMore.value = (res.data || []).length >= 20 }
+}
+const advanceWashOrder = async (wo) => {
+  var nextStatus = wo.status + 1
+  if (nextStatus > 2) return
+  await callCloud('wash', 'updateOrderStatus', { orderId: wo._id, status: nextStatus })
+  uni.showToast({ title: washStatusMap[nextStatus] || '已更新', icon: 'success' })
+  loadWashOrders()
+}
+const cancelWashOrder = (wo) => {
+  uni.showModal({ title: '确认取消', content: '取消该洗护订单？', success: async (r) => {
+    if (r.confirm) { await callCloud('wash', 'updateOrderStatus', { orderId: wo._id, status: 3 }); uni.showToast({ title: '已取消', icon: 'success' }); loadWashOrders() }
+  }})
+}
 
 const fmtDate = (t) => { if (!t) return ''; var d = new Date(t); return (d.getMonth()+1) + '/' + d.getDate() + ' ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0') }
 onLoad(() => { loadDashboard() })
@@ -795,6 +975,7 @@ onLoad(() => { loadDashboard() })
 .main-scroll { height: calc(100vh - 200rpx); }
 .section { padding: 24rpx; }
 .card-title { font-size: 30rpx; font-weight: 700; color: #1A1A2E; margin-bottom: 20rpx; }
+.card-title-sub { font-size: 28rpx; font-weight: 600; color: #4A5568; margin-bottom: 16rpx; }
 .stats-grid { display: flex; flex-wrap: wrap; gap: 16rpx; }
 .s-card { width: calc(50% - 8rpx); background: #fff; border-radius: 16rpx; padding: 24rpx; box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.04); }
 .s-num { font-size: 40rpx; font-weight: 800; display: block; }
@@ -851,6 +1032,7 @@ onLoad(() => { loadDashboard() })
 .btn-upload-sm text { font-size: 24rpx; color: #2B6CB0; font-weight: 600; }
 .icon-preview-row { display: flex; align-items: center; gap: 16rpx; padding: 12rpx 20rpx; background: #F7FAFC; border-radius: 10rpx; margin-bottom: 12rpx; }
 .icon-preview-img { width: 64rpx; height: 64rpx; border-radius: 10rpx; }
+.banner-preview-img { width: 400rpx; height: 160rpx; border-radius: 10rpx; }
 .tab-icon-row { display: flex; gap: 24rpx; padding: 12rpx 0; }
 .tab-icon-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 12rpx; }
 .tab-icon-label { font-size: 24rpx; color: #4A5568; font-weight: 600; }

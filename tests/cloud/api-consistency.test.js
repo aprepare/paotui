@@ -75,45 +75,39 @@ describe('Feature: comprehensive-testing, Property 1: Unknown action returns err
   })
 })
 
-// ─── 16.2 Skill module parameter inconsistency ─────────────────────
+// ─── 16.2 Skill module - fixed behavior ─────────────────────
 
-describe('Skill module parameter inconsistency', () => {
+describe('Skill module (fixed)', () => {
   beforeEach(setup)
 
-  it('skill reads parameters from event directly, not event.data', async () => {
-    // When callCloud sends { action: 'create', data: { title: '...', ... } }
-    // skill reads event.title (undefined), not event.data.title
-    // This documents the inconsistency
+  it('skill reads parameters from event.data correctly after fix', async () => {
     const res = await skill.main({
       action: 'create',
-      data: { title: 'Test Skill', category: '设计', desc: 'desc', price: 50 },
+      data: { title: 'Test Skill', category: '设计', desc: 'desc', price: 50, contact: 'wx123' },
     }, {})
 
-    // The skill function reads from event directly, so event.title is undefined
-    // but it still creates a record (with undefined fields)
-    // This is the inconsistency: it should read from event.data but reads from event
+    // After fix: skill properly reads from event.data and validates
     expect(res.code).toBe(0)
 
-    // Verify the created skill has undefined title because skill reads event.title not event.data.title
     const cloud = createTestEnv('test_user')
     const db = cloud.database()
-    const skills = await db.collection('skills').where({ _openid: 'test_user' }).get()
+    const skills = await db.collection('skills').where({ openid: 'test_user' }).get()
     expect(skills.data.length).toBe(1)
-    // title is undefined because skill reads from event.title, not event.data.title
-    expect(skills.data[0].title).toBeUndefined()
+    expect(skills.data[0].title).toBe('Test Skill')
   })
 
-  it('skill uses _openid field instead of openid', async () => {
-    // Create a skill directly to verify the field name
-    const res = await skill.main({ action: 'create', title: 'Direct', category: '其他' }, {})
+  it('skill uses openid field after fix', async () => {
+    const res = await skill.main({
+      action: 'create',
+      data: { title: 'Direct', category: '其他', price: 10, contact: 'qq123' },
+    }, {})
     expect(res.code).toBe(0)
 
     const cloud = createTestEnv('test_user')
     const db = cloud.database()
-    const skills = await db.collection('skills').where({ _openid: 'test_user' }).get()
+    const skills = await db.collection('skills').where({ openid: 'test_user' }).get()
     expect(skills.data.length).toBe(1)
-    // skill uses _openid, other functions use openid
-    expect(skills.data[0]._openid).toBe('test_user')
+    expect(skills.data[0].openid).toBe('test_user')
   })
 
   it('skill default case returns 未知操作 instead of unknown action: <action>', async () => {

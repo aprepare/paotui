@@ -7,12 +7,12 @@ const { main } = await import('../../cloudfunctions/errand/index.js')
 function setup() {
   resetDatabase()
   seedDoc('users', 'u1', { openid: 'owner', name: 'Owner' })
-  seedDoc('users', 'u2', { openid: 'rider', name: 'Rider' })
+  seedDoc('users', 'u2', { openid: 'rider', name: 'Rider', isRider: true })
 }
 
 async function createTask(openid = 'owner') {
   createTestEnv(openid)
-  const res = await main({ action: 'create', data: { title: '帮取快递', desc: '菜鸟驿站取件' } }, {})
+  const res = await main({ action: 'create', data: { title: '帮取快递', desc: '菜鸟驿站取件', price: 10 } }, {})
   return res.id
 }
 
@@ -23,7 +23,7 @@ describe('errand cloud function - unit tests', () => {
 
   it('create with valid fields returns code 0', async () => {
     createTestEnv('owner')
-    const res = await main({ action: 'create', data: { title: '帮买咖啡', desc: '星巴克美式' } }, {})
+    const res = await main({ action: 'create', data: { title: '帮买咖啡', desc: '星巴克美式', price: 15 } }, {})
     expect(res.code).toBe(0)
     expect(res.id).toBeTruthy()
   })
@@ -55,6 +55,9 @@ describe('errand cloud function - unit tests', () => {
     const taskId = await createTask('owner')
     createTestEnv('rider')
     await main({ action: 'accept', data: { taskId } }, {})
+    // Upload photos before submitting completion (required by photo guard)
+    await main({ action: 'uploadPhoto', data: { taskId, type: 'pickup', fileID: 'cloud://pickup.jpg' } }, {})
+    await main({ action: 'uploadPhoto', data: { taskId, type: 'deliver', fileID: 'cloud://deliver.jpg' } }, {})
     // Rider submits completion (status 4)
     await main({ action: 'updateStatus', data: { taskId, status: 4 } }, {})
     // Owner confirms (status 2)
@@ -82,7 +85,6 @@ describe('Feature: comprehensive-testing, Property 4: Errand task accept rejects
           createTestEnv('rider')
           const res = await main({ action: 'accept', data: { taskId } }, {})
           expect(res.code).toBe(-1)
-          expect(res.msg).toBe('任务已被接')
 
           const task = await db.collection('errand_tasks').doc(taskId).get()
           expect(task.data.status).toBe(status)

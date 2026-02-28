@@ -7,7 +7,7 @@ const { main } = await import('../../cloudfunctions/express/index.js')
 function setupBase() {
   resetDatabase()
   seedDoc('users', 'u1', { openid: 'owner', name: 'Owner' })
-  seedDoc('users', 'u2', { openid: 'rider', name: 'Rider' })
+  seedDoc('users', 'u2', { openid: 'rider', name: 'Rider', isRider: true })
   seedDoc('stats', 's1', { key: 'global', totalOrders: 0, todayDelivered: 0 })
 }
 
@@ -67,6 +67,8 @@ describe('express cloud function - unit tests', () => {
     const orderId = await createOrder('owner')
     createTestEnv('rider')
     await main({ action: 'accept', data: { orderId } }, {})
+    // Upload pickup photo before transitioning to status 2
+    await main({ action: 'uploadPhoto', data: { orderId, type: 'pickup', fileID: 'cloud://pickup.jpg' } }, {})
     // Move to delivering
     await main({ action: 'updateStatus', data: { orderId, status: 2 } }, {})
     createTestEnv('owner')
@@ -88,7 +90,11 @@ describe('express cloud function - unit tests', () => {
     const orderId = await createOrder('owner')
     createTestEnv('rider')
     await main({ action: 'accept', data: { orderId } }, {})
+    // Upload pickup photo before 1→2
+    await main({ action: 'uploadPhoto', data: { orderId, type: 'pickup', fileID: 'cloud://pickup.jpg' } }, {})
     await main({ action: 'updateStatus', data: { orderId, status: 2 } }, {})
+    // Upload deliver photo before 2→3
+    await main({ action: 'uploadPhoto', data: { orderId, type: 'deliver', fileID: 'cloud://deliver.jpg' } }, {})
     await main({ action: 'updateStatus', data: { orderId, status: 3 } }, {})
     // todayDelivered should have been incremented
     const cloud = createTestEnv('rider')

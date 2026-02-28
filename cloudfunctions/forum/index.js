@@ -3,6 +3,36 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const _ = db.command
 
+// 内容安全检查
+async function checkContent(openid, text, scene) {
+  if (!text || !text.trim()) return true
+  try {
+    const res = await cloud.openapi.security.msgSecCheck({ openid, scene: scene || 3, version: 2, content: text })
+    return res.result && res.result.suggest === 'pass'
+  } catch (e) { console.log('[contentCheck] error', e); return true }
+}
+
+// 留言提醒模板ID
+var MSG_TMPL = 'Xx4pl5WbjptPWfN3zS7Trz2yQV6eukLMDgsj4uXNOH4'
+
+// 发送留言提醒订阅消息
+async function sendMsgSubscribe(toOpenid, userName, remark, page) {
+  try {
+    await cloud.openapi.subscribeMessage.send({
+      touser: toOpenid,
+      templateId: MSG_TMPL,
+      data: {
+        thing1: { value: userName.length > 20 ? userName.substring(0, 17) + '...' : userName },
+        thing2: { value: remark.length > 20 ? remark.substring(0, 17) + '...' : remark }
+      },
+      page: page || '',
+      miniprogramState: 'formal'
+    })
+  } catch (e) {
+    console.log('[subscribe] forum send failed:', e.errCode, e.errMsg)
+  }
+}
+
 exports.main = async (event, context) => {
   const { action, data = {} } = event
   const openid = cloud.getWXContext().OPENID
@@ -35,6 +65,9 @@ exports.main = async (event, context) => {
     case 'create': {
       const { content, images } = data
       if (!content) return { code: -1, msg: 'content required' }
+      if (content.length > 1000) return { code: -1, msg: '内容长度不能超过1000个字符' }
+      const contentSafe = await checkContent(openid, content, 3)
+      if (!contentSafe) return { code: -1, msg: '内容包含违规信息，请修改后重试' }
       const user = await db.collection('users').where({ openid }).get()
       const u = user.data[0] || {}
       const res = await db.collection('forum_posts').add({
@@ -81,6 +114,13 @@ exports.main = async (event, context) => {
               createTime: db.serverDate()
             }
           })
+          // 发送订阅消息
+          await sendMsgSubscribe(
+            post.data.openid,
+            likeName,
+            '赞了你的帖子',
+            '/pages/forum-sub/detail?id=' + data.postId
+          )
         }
       }
       return { code: 0, liked: !liked }
@@ -89,6 +129,9 @@ exports.main = async (event, context) => {
     case 'comment': {
       const { postId, content, replyTo, replyName } = data
       if (!content) return { code: -1, msg: 'content required' }
+      if (content.length > 500) return { code: -1, msg: '评论长度不能超过500个字符' }
+      const commentSafe = await checkContent(openid, content, 2)
+      if (!commentSafe) return { code: -1, msg: '评论包含违规内容，请修改' }
       const user = await db.collection('users').where({ openid }).get()
       const u = user.data[0] || {}
       var commentName = u.name || '匿名'
@@ -125,6 +168,13 @@ exports.main = async (event, context) => {
             createTime: db.serverDate()
           }
         })
+        // 发送订阅消息
+        await sendMsgSubscribe(
+          commentPost.data.openid,
+          commentName,
+          '评论了你的帖子: ' + shortContent,
+          '/pages/forum-sub/detail?id=' + postId
+        )
       }
       // 如果是回复别人的评论，也通知被回复者
       if (replyTo) {
@@ -146,6 +196,13 @@ exports.main = async (event, context) => {
                 createTime: db.serverDate()
               }
             })
+            // 发送订阅消息
+            await sendMsgSubscribe(
+              repliedCmt.data.openid,
+              commentName,
+              '回复了你的评论: ' + replyShort,
+              '/pages/forum-sub/detail?id=' + postId
+            )
           }
         } catch (e) {}
       }

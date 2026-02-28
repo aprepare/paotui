@@ -34,7 +34,7 @@
   "compileType": "miniprogram",
   "cloudfunctionRoot": "cloudfunctions/",
   "libVersion": "3.14.1",
-  "appid": "wx8c7aa4be05058ad8",
+  "appid": "wx17f09b1ce655c60f",
   "projectname": "校园跑腿",
   "miniprogramRoot": "dist/dev/mp-weixin/",
   "condition": {

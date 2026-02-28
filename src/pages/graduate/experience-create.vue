@@ -47,6 +47,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { callCloud, checkLogin, uploadImages } from '@/utils/cloud.js'
+import { requestMessageSubscribe } from '@/utils/subscribe'
 
 const title = ref('')
 const content = ref('')
@@ -75,6 +76,8 @@ const submit = async () => {
   if (!canSubmit.value) return
   if (!checkLogin()) return
   submitting.value = true
+  // 请求订阅消息授权
+  await requestMessageSubscribe()
   uni.showLoading({ title: '发布中...' })
   try {
     var uploadedImages = []

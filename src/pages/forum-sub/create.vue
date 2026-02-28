@@ -36,6 +36,7 @@
 <script setup>
 import { ref } from 'vue'
 import { callCloud, uploadImages, checkLogin } from '@/utils/cloud'
+import { requestMessageSubscribe } from '@/utils/subscribe'
 
 const content = ref('')
 const images = ref([])
@@ -66,6 +67,8 @@ const submit = async () => {
   }
   if (submitting.value) return
   submitting.value = true
+  // 请求订阅消息授权（发帖后可能收到评论/点赞通知）
+  await requestMessageSubscribe()
   let imageIds = []
   if (tempPaths.value.length > 0) {
     uni.showLoading({ title: '上传图片中...' })

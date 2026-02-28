@@ -156,6 +156,7 @@
 <script setup>
 import { ref, reactive, computed } from 'vue'
 import { callCloud, checkLogin } from '@/utils/cloud'
+import { requestOrderSubscribe } from '@/utils/subscribe'
 
 const sizes = [
   { emoji: '📄', name: '小件', price: 2, desc: '信件/小包裹' },
@@ -307,6 +308,10 @@ const submit = async () => {
   if (!form.pickupPoint) { uni.showToast({ title: '请填写取件点', icon: 'none' }); return }
   if (!form.building || !form.room) { uni.showToast({ title: '请填写收货地址', icon: 'none' }); return }
   if (!form.phone) { uni.showToast({ title: '请填写联系电话', icon: 'none' }); return }
+  // Phone format validation (Req 3.2)
+  if (!/^1[3-9]\d{9}$/.test(form.phone)) { uni.showToast({ title: '手机号格式不正确', icon: 'none' }); return }
+  // Tip range validation (Req 5.2)
+  if (customTip.value && (form.tip < 0 || form.tip > 99)) { uni.showToast({ title: '小费金额需在0-99元之间', icon: 'none' }); return }
   // 验证位置坐标
   if (!destLocation.lat || !destLocation.lng) {
     uni.showModal({
@@ -327,6 +332,8 @@ const submit = async () => {
 const doSubmit = async (lat, lng) => {
   if (submitting.value) return
   submitting.value = true
+  // 请求订阅消息授权（用户可拒绝，不影响下单）
+  await requestOrderSubscribe()
   uni.showLoading({ title: '发布中...', mask: true })
   const res = await callCloud('express', 'create', {
     pickupPoint: form.pickupPoint,

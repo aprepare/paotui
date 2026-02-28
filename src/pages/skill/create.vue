@@ -97,8 +97,14 @@ const addImage = () => {
 const submitting = ref(false)
 const submit = async () => {
   if (!checkLogin()) return
-  if (!form.title || !form.price) {
-    uni.showToast({ title: '请填写技能名称和价格', icon: 'none' }); return
+  if (!form.title) {
+    uni.showToast({ title: '请填写技能名称', icon: 'none' }); return
+  }
+  if (!form.price || Number(form.price) <= 0) {
+    uni.showToast({ title: '价格必须大于0', icon: 'none' }); return
+  }
+  if (!form.desc) {
+    uni.showToast({ title: '请填写技能简介', icon: 'none' }); return
   }
   if (!form.contact) {
     uni.showToast({ title: '请填写联系方式', icon: 'none' }); return

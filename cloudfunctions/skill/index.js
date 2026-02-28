@@ -3,6 +3,15 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const _ = db.command
 
+// 内容安全检查
+async function checkContent(openid, text, scene) {
+  if (!text || !text.trim()) return true
+  try {
+    const res = await cloud.openapi.security.msgSecCheck({ openid, scene: scene || 2, version: 2, content: text })
+    return res.result && res.result.suggest === 'pass'
+  } catch (e) { console.log('[contentCheck] error', e); return true }
+}
+
 exports.main = async (event) => {
   const { OPENID } = cloud.getWXContext()
   const { action, data = {} } = event
@@ -19,6 +28,18 @@ exports.main = async (event) => {
 
     case 'create': {
       const { title, category, desc, price, priceUnit, works, contact, contactType } = data
+      if (!title || (typeof title === 'string' && title.trim().length === 0)) {
+        return { code: -1, msg: '请填写技能标题' }
+      }
+      const textToCheck = [title, desc].filter(Boolean).join(' ')
+      const safe = await checkContent(OPENID, textToCheck, 2)
+      if (!safe) return { code: -1, msg: '内容包含违规信息，请修改后重试' }
+      if (!price || Number(price) <= 0) {
+        return { code: -1, msg: '价格必须大于0' }
+      }
+      if (!contact || (typeof contact === 'string' && contact.trim().length === 0)) {
+        return { code: -1, msg: '请填写联系方式' }
+      }
       const user = await db.collection('users').where({ openid: OPENID }).get()
       const userName = user.data.length > 0 ? user.data[0].name : '匿名'
       const res = await db.collection('skills').add({

@@ -114,6 +114,10 @@ const submit = async () => {
     uni.showToast({ title: '请填写标题和价格', icon: 'none' })
     return
   }
+  // Price validation: > 0 (Req 5.3)
+  if (Number(form.price) <= 0) { uni.showToast({ title: '价格必须大于0', icon: 'none' }); return }
+  // Contact required (Req 9.1)
+  if (!form.contact || form.contact.trim().length === 0) { uni.showToast({ title: '请填写联系方式', icon: 'none' }); return }
   if (submitting.value) return
   submitting.value = true
   let imageIds = []

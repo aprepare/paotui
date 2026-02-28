@@ -37,8 +37,13 @@ describe('team cloud function - unit tests', () => {
   })
 
   it('join full activity rejected', async () => {
-    const id = await createActivity(1)
+    const id = await createActivity(2)
+    // Creator already occupies 1 spot, joiner fills it
     createTestEnv('joiner')
+    await main({ action: 'join', data: { activityId: id } }, {})
+    // Third person should be rejected
+    seedDoc('users', 'u3', { openid: 'joiner2', name: 'Joiner2' })
+    createTestEnv('joiner2')
     const res = await main({ action: 'join', data: { activityId: id } }, {})
     expect(res.code).toBe(-1)
     expect(res.msg).toBe('已满员')

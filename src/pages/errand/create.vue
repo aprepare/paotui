@@ -101,6 +101,7 @@
 <script setup>
 import { ref, reactive } from 'vue'
 import { callCloud, checkLogin } from '@/utils/cloud'
+import { requestOrderSubscribe } from '@/utils/subscribe'
 
 const suggestPrices = [5, 8, 10, 15, 20, 30]
 const timeOptions = ['不着急', '1小时内', '30分钟内', '立即需要']
@@ -187,7 +188,11 @@ const submit = async () => {
   if (!form.title) { uni.showToast({ title: '请填写任务标题', icon: 'none' }); return }
   if (!form.desc) { uni.showToast({ title: '请填写任务描述', icon: 'none' }); return }
   if (!form.price || Number(form.price) <= 0) { uni.showToast({ title: '请设置报酬金额', icon: 'none' }); return }
+  // Price upper limit validation (Req 5.1)
+  if (Number(form.price) > 999) { uni.showToast({ title: '报酬金额不能超过999元', icon: 'none' }); return }
   if (!form.phone) { uni.showToast({ title: '请填写联系电话', icon: 'none' }); return }
+  // Phone format validation (Req 3.3)
+  if (!/^1[3-9]\d{9}$/.test(form.phone)) { uni.showToast({ title: '手机号格式不正确', icon: 'none' }); return }
 
   // 验证位置坐标
   if (!destLocation.lat || !destLocation.lng) {
@@ -209,6 +214,8 @@ const submit = async () => {
 const doSubmit = async (lat, lng) => {
   if (submitting.value) return
   submitting.value = true
+  // 请求订阅消息授权
+  await requestOrderSubscribe()
   uni.showLoading({ title: '发布中...', mask: true })
   const res = await callCloud('errand', 'create', {
     title: form.title,

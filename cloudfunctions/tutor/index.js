@@ -3,6 +3,36 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const _ = db.command
 
+// 内容安全检查
+async function checkContent(openid, text, scene) {
+  if (!text || !text.trim()) return true
+  try {
+    const res = await cloud.openapi.security.msgSecCheck({ openid, scene: scene || 2, version: 2, content: text })
+    return res.result && res.result.suggest === 'pass'
+  } catch (e) { console.log('[contentCheck] error', e); return true }
+}
+
+// 留言提醒模板ID
+var MSG_TMPL = 'Xx4pl5WbjptPWfN3zS7Trz2yQV6eukLMDgsj4uXNOH4'
+
+// 发送留言提醒订阅消息
+async function sendMsgSubscribe(toOpenid, userName, remark, page) {
+  try {
+    await cloud.openapi.subscribeMessage.send({
+      touser: toOpenid,
+      templateId: MSG_TMPL,
+      data: {
+        thing1: { value: userName.length > 20 ? userName.substring(0, 17) + '...' : userName },
+        thing2: { value: remark.length > 20 ? remark.substring(0, 17) + '...' : remark }
+      },
+      page: page || '',
+      miniprogramState: 'formal'
+    })
+  } catch (e) {
+    console.log('[subscribe] tutor send failed:', e.errCode, e.errMsg)
+  }
+}
+
 exports.main = async (event) => {
   const { action, data = {} } = event
   const openid = cloud.getWXContext().OPENID
@@ -36,7 +66,14 @@ exports.main = async (event) => {
           .orderBy('createTime', 'desc')
           .limit(50)
           .get()
-        return { code: 0, data: res.data }
+        // 隐藏家长信息，防止前端直接获取
+        const list = (res.data || []).map(function(item) {
+          delete item.parentName
+          delete item.idCard
+          delete item.openid
+          return item
+        })
+        return { code: 0, data: list }
       } catch (e) {
         return { code: 0, data: [] }
       }
@@ -44,8 +81,12 @@ exports.main = async (event) => {
 
     // 发布家教信息
     case 'createTutor': {
-      const { name, school, major, subjects, mode, area, price, experience, desc, studentCard } = data
+      const { name, school, major, subjects, mode, area, price, experience, desc, studentCard, phone, wechat, qq } = data
       if (!name || !subjects || !price) return { code: -1, msg: '请填写必要信息' }
+      if (!phone && !wechat && !qq) return { code: -1, msg: '请至少填写一种联系方式' }
+      const textToCheck = [name, desc, experience].filter(Boolean).join(' ')
+      const safe = await checkContent(openid, textToCheck, 2)
+      if (!safe) return { code: -1, msg: '内容包含违规信息，请修改后重试' }
       const userRes = await db.collection('users').where({ openid }).get()
       const avatar = (userRes.data[0] && userRes.data[0].avatar) || ''
       await db.collection('tutor_posts').add({
@@ -59,6 +100,7 @@ exports.main = async (event) => {
           experience: experience || '', desc: desc || '',
           avatar, verified: false,
           studentCard: studentCard || '',
+          phone: phone || '', wechat: wechat || '', qq: qq || '',
           createTime: db.serverDate()
         }
       })
@@ -67,8 +109,12 @@ exports.main = async (event) => {
 
     // 发布家长需求
     case 'createDemand': {
-      const { subject, title, desc: dDesc, grade, location, schedule, budget, contactName, idCard } = data
+      const { subject, title, desc: dDesc, grade, location, schedule, budget, contactName, idCard, phone, wechat, qq } = data
       if (!subject || !title || !budget) return { code: -1, msg: '请填写必要信息' }
+      if (!phone && !wechat && !qq) return { code: -1, msg: '请至少填写一种联系方式' }
+      const textToCheck = [title, dDesc].filter(Boolean).join(' ')
+      const safe = await checkContent(openid, textToCheck, 2)
+      if (!safe) return { code: -1, msg: '内容包含违规信息，请修改后重试' }
       const uRes = await db.collection('users').where({ openid }).get()
       const uName = contactName || (uRes.data[0] && uRes.data[0].name) || '匿名'
       await db.collection('tutor_posts').add({
@@ -80,6 +126,7 @@ exports.main = async (event) => {
           budget: parseFloat(budget) || 0,
           parentName: uName,
           idCard: idCard || '',
+          phone: phone || '', wechat: wechat || '', qq: qq || '',
           createTime: db.serverDate()
         }
       })
@@ -113,6 +160,13 @@ exports.main = async (event) => {
             read: false, createTime: db.serverDate()
           }
         })
+        // 发送订阅消息
+        await sendMsgSubscribe(
+          post.data.openid,
+          applyName,
+          '应聘了你的家教需求「' + (post.data.title || '') + '」',
+          '/pages/message/index'
+        )
       } catch (e) {}
       return { code: 0 }
     }
@@ -143,6 +197,13 @@ exports.main = async (event) => {
             read: false, createTime: db.serverDate()
           }
         })
+        // 发送订阅消息
+        await sendMsgSubscribe(
+          tPost.data.openid,
+          contactName2,
+          '想联系你关于家教信息',
+          '/pages/message/index'
+        )
       } catch (e) {}
       return { code: 0 }
     }
@@ -182,6 +243,18 @@ exports.main = async (event) => {
         return { code: 0, data: posts }
       } catch (e) {
         return { code: 0, data: [] }
+      }
+    }
+
+    // 获取单条详情
+    case 'getDetail': {
+      const { postId } = data
+      if (!postId) return { code: -1, msg: '缺少参数' }
+      try {
+        const res = await db.collection('tutor_posts').doc(postId).get()
+        return { code: 0, data: res.data || null }
+      } catch (e) {
+        return { code: -1, msg: '信息不存在' }
       }
     }
 

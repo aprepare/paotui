@@ -3,6 +3,36 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const _ = db.command
 
+// 内容安全检查
+async function checkContent(openid, text, scene) {
+  if (!text || !text.trim()) return true
+  try {
+    const res = await cloud.openapi.security.msgSecCheck({ openid, scene: scene || 2, version: 2, content: text })
+    return res.result && res.result.suggest === 'pass'
+  } catch (e) { console.log('[contentCheck] error', e); return true }
+}
+
+// 留言提醒模板ID
+var MSG_TMPL = 'Xx4pl5WbjptPWfN3zS7Trz2yQV6eukLMDgsj4uXNOH4'
+
+// 发送留言提醒订阅消息
+async function sendMsgSubscribe(toOpenid, userName, remark, page) {
+  try {
+    await cloud.openapi.subscribeMessage.send({
+      touser: toOpenid,
+      templateId: MSG_TMPL,
+      data: {
+        thing1: { value: userName.length > 20 ? userName.substring(0, 17) + '...' : userName },
+        thing2: { value: remark.length > 20 ? remark.substring(0, 17) + '...' : remark }
+      },
+      page: page || '',
+      miniprogramState: 'formal'
+    })
+  } catch (e) {
+    console.log('[subscribe] experience send failed:', e.errCode, e.errMsg)
+  }
+}
+
 exports.main = async (event, context) => {
   const { action, data = {} } = event
   const openid = cloud.getWXContext().OPENID
@@ -50,6 +80,9 @@ exports.main = async (event, context) => {
     case 'create': {
       const { title, content, category, school, admitted, images } = data
       if (!title || !content) return { code: -1, msg: '标题和内容不能为空' }
+      const textToCheck = [title, content].filter(Boolean).join(' ')
+      const safe = await checkContent(openid, textToCheck, 3)
+      if (!safe) return { code: -1, msg: '内容包含违规信息，请修改后重试' }
       const user = await db.collection('users').where({ openid }).get()
       const u = user.data[0] || {}
       try {
@@ -100,6 +133,13 @@ exports.main = async (event, context) => {
                 read: false, createTime: db.serverDate()
               }
             })
+            // 发送订阅消息
+            await sendMsgSubscribe(
+              post.data.openid,
+              likeName,
+              '赞了你的经验帖「' + (post.data.title || '') + '」',
+              '/pages/graduate/experience-detail?id=' + data.postId
+            )
           }
         }
         return { code: 0, liked: !liked }
@@ -111,6 +151,8 @@ exports.main = async (event, context) => {
     case 'comment': {
       const { postId, content, replyTo, replyName } = data
       if (!content) return { code: -1, msg: '评论内容不能为空' }
+      const commentSafe = await checkContent(openid, content, 2)
+      if (!commentSafe) return { code: -1, msg: '评论包含违规内容，请修改' }
       const user = await db.collection('users').where({ openid }).get()
       const u = user.data[0] || {}
       var commentName = u.name || '匿名'
@@ -137,6 +179,13 @@ exports.main = async (event, context) => {
               read: false, createTime: db.serverDate()
             }
           })
+          // 发送订阅消息
+          await sendMsgSubscribe(
+            commentPost.data.openid,
+            commentName,
+            '评论了你的经验帖: ' + shortContent,
+            '/pages/graduate/experience-detail?id=' + postId
+          )
         }
         return { code: 0, id: newCmt._id }
       } catch (e) {

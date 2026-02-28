@@ -3,6 +3,38 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const _ = db.command
 
+// 内容安全检查
+async function checkContent(openid, text, scene) {
+  if (!text || !text.trim()) return true
+  try {
+    const res = await cloud.openapi.security.msgSecCheck({ openid, scene: scene || 2, version: 2, content: text })
+    return res.result && res.result.suggest === 'pass'
+  } catch (e) { console.log('[contentCheck] error', e); return true }
+}
+
+// 订阅消息模板ID
+var ORDER_TMPL = 'xlvGM1wbE0FKTpG7rB8ktBsCo1gn_9n0USbqRw48fjI'
+
+// 发送订单状态订阅消息（失败不影响主流程）
+async function sendOrderSubscribe(toOpenid, orderNo, statusText, tips, page) {
+  try {
+    await cloud.openapi.subscribeMessage.send({
+      touser: toOpenid,
+      templateId: ORDER_TMPL,
+      data: {
+        character_string1: { value: orderNo },
+        phrase2: { value: statusText },
+        thing3: { value: tips.length > 20 ? tips.substring(0, 17) + '...' : tips },
+        time4: { value: new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }) }
+      },
+      page: page || '',
+      miniprogramState: 'formal'
+    })
+  } catch (e) {
+    console.log('[subscribe] express send failed:', e.errCode, e.errMsg)
+  }
+}
+
 exports.main = async (event, context) => {
   const { action, data = {} } = event
   const openid = cloud.getWXContext().OPENID
@@ -70,9 +102,26 @@ exports.main = async (event, context) => {
     }
 
     case 'create': {
-      const { pickupPoint, pickupCode, expressCompany, sizeType, building, room, price, tip, remark, destLat, destLng } = data
-      if (!pickupPoint || !building || !room) {
+      const { pickupPoint, pickupCode, expressCompany, sizeType, building, room, phone, price, tip, remark, destLat, destLng } = data
+      if (!pickupPoint || !building) {
         return { code: -1, msg: 'missing required fields' }
+      }
+      if (remark) {
+        const safe = await checkContent(openid, remark, 2)
+        if (!safe) return { code: -1, msg: '备注包含违规内容，请修改' }
+      }
+      // Room validation: non-empty, 1-10 chars (Req 11.2)
+      if (!room || typeof room !== 'string' || room.trim().length < 1 || room.trim().length > 10) {
+        return { code: -1, msg: '房间号不能为空且长度需在1-10个字符之间' }
+      }
+      // Phone validation (Req 3.2)
+      if (phone && !/^1[3-9]\d{9}$/.test(phone)) {
+        return { code: -1, msg: '手机号格式不正确' }
+      }
+      // Tip validation: 0-99 (Req 5.2, 5.4)
+      const tipVal = typeof tip === 'number' ? tip : 0
+      if (tipVal < 0 || tipVal > 99) {
+        return { code: -1, msg: '小费金额需在0-99元之间' }
       }
       const sizeMap = { 0: { text: '小件', class: 'small' }, 1: { text: '大件', class: 'large' }, 2: { text: '超大件', class: 'xlarge' } }
       const size = sizeMap[sizeType] || sizeMap[0]
@@ -86,9 +135,10 @@ exports.main = async (event, context) => {
           sizeText: size.text,
           sizeClass: size.class,
           building,
-          room,
+          room: room.trim(),
+          phone: phone || '',
           price: price || 2,
-          tip: tip || 0,
+          tip: tipVal,
           remark: remark || '',
           status: 0,
           statusText: '待接单',
@@ -112,8 +162,12 @@ exports.main = async (event, context) => {
       const order = await db.collection('express_orders').doc(data.orderId).get()
       if (order.data.status !== 0) return { code: -1, msg: '订单已被接' }
       if (order.data.openid === openid) return { code: -1, msg: '不能接自己发布的单' }
+      // Rider identity check (Req 15.1)
       var acceptUser = await db.collection('users').where({ openid }).get()
-      var acceptName = acceptUser.data.length > 0 ? acceptUser.data[0].name : '骑手'
+      if (acceptUser.data.length === 0 || !acceptUser.data[0].isRider) {
+        return { code: -1, msg: '需要注册骑手才能接单' }
+      }
+      var acceptName = acceptUser.data[0].name || '骑手'
       await db.collection('express_orders').doc(data.orderId).update({
         data: {
           status: 1,
@@ -139,12 +193,49 @@ exports.main = async (event, context) => {
             createTime: db.serverDate()
           }
         })
+        // 发送订阅消息
+        await sendOrderSubscribe(
+          order.data.openid,
+          data.orderId.substring(0, 20),
+          '已接单',
+          acceptName + '正在为您取件',
+          '/pages/express/detail?id=' + data.orderId
+        )
       }
       return { code: 0 }
     }
 
     case 'updateStatus': {
       const { orderId, status } = data
+      if (!orderId) return { code: -1, msg: '缺少订单ID' }
+
+      // Fetch current order to validate transition (Req 6.1, 6.3, 6.4)
+      const currentOrder = await db.collection('express_orders').doc(orderId).get()
+      const currentStatus = currentOrder.data.status
+
+      // Reject terminal states (Req 6.3)
+      if (currentStatus === 3 || currentStatus === 4) {
+        return { code: -1, msg: '当前状态不允许此操作' }
+      }
+      // Reject same-state (Req 6.4)
+      if (currentStatus === status) {
+        return { code: -1, msg: '当前状态不允许此操作' }
+      }
+      // Validate transition (Req 6.1): only 0→1, 1→2, 2→3
+      const validTransitions = { 0: [1], 1: [2], 2: [3] }
+      const allowed = validTransitions[currentStatus]
+      if (!allowed || !allowed.includes(status)) {
+        return { code: -1, msg: '当前状态不允许此操作' }
+      }
+
+      // Photo guards (Req 1.3, 1.4)
+      if (status === 2 && !currentOrder.data.pickupPhoto) {
+        return { code: -1, msg: '请先上传取件照片' }
+      }
+      if (status === 3 && !currentOrder.data.deliverPhoto) {
+        return { code: -1, msg: '请先上传送达照片' }
+      }
+
       const statusMap = {
         0: { text: '待接单', color: '#DD6B20' },
         1: { text: '已接单', color: '#2B6CB0' },
@@ -183,6 +274,14 @@ exports.main = async (event, context) => {
             createTime: db.serverDate()
           }
         })
+        // 发送订阅消息
+        await sendOrderSubscribe(
+          notifyTarget,
+          orderId.substring(0, 20),
+          s.text,
+          '快递单状态已更新',
+          '/pages/express/detail?id=' + orderId
+        )
       }
       return { code: 0 }
     }
@@ -220,6 +319,14 @@ exports.main = async (event, context) => {
             createTime: db.serverDate()
           }
         })
+        // 发送订阅消息
+        await sendOrderSubscribe(
+          cancelTarget,
+          data.orderId.substring(0, 20),
+          '已取消',
+          cancelName + '取消了快递单',
+          '/pages/express/detail?id=' + data.orderId
+        )
       }
       return { code: 0 }
     }

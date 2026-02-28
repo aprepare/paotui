@@ -3,6 +3,15 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const _ = db.command
 
+// 内容安全检查
+async function checkContent(openid, text, scene) {
+  if (!text || !text.trim()) return true
+  try {
+    const res = await cloud.openapi.security.msgSecCheck({ openid, scene: scene || 2, version: 2, content: text })
+    return res.result && res.result.suggest === 'pass'
+  } catch (e) { console.log('[contentCheck] error', e); return true }
+}
+
 exports.main = async (event, context) => {
   const { action, data = {} } = event
   const openid = cloud.getWXContext().OPENID
@@ -46,6 +55,14 @@ exports.main = async (event, context) => {
     case 'create': {
       const { title, type, place, time, max, desc, images } = data
       if (!title || !type) return { code: -1, msg: 'missing fields' }
+      const textToCheck = [title, desc].filter(Boolean).join(' ')
+      const safe = await checkContent(openid, textToCheck, 2)
+      if (!safe) return { code: -1, msg: '内容包含违规信息，请修改后重试' }
+      // Max people validation: integer 2-100 (Req 8.2)
+      const maxVal = Number(max)
+      if (!Number.isInteger(maxVal) || maxVal < 2 || maxVal > 100) {
+        return { code: -1, msg: '最大人数需在2-100之间的整数' }
+      }
       const user = await db.collection('users').where({ openid }).get()
       const userName = user.data.length > 0 ? user.data[0].name : '匿名'
       const res = await db.collection('team_activities').add({
@@ -53,7 +70,7 @@ exports.main = async (event, context) => {
           openid, title, type,
           place: place || '',
           time: time || '',
-          max: Number(max) || 10,
+          max: maxVal,
           current: 1,
           desc: desc || '',
           images: images || [],

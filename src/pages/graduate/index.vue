@@ -67,7 +67,7 @@ const plans = ref([
 
 const showcaseList = ref([
   { id: 1, url: '/static/qrcode-work-wechat.png', label: '自习室打卡' },
-  { id: 2, url: '/static/TeamWork.png', label: '学习小组' },
+  { id: 2, url: '/static/TeamWork.jpg', label: '学习小组' },
   { id: 3, url: '/static/logo.png', label: '上岸喜报' }
 ])
 

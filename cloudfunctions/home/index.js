@@ -54,19 +54,8 @@ exports.main = async (event, context) => {
           all.push(merged[i])
         }
       }
-      // 排序：待接单 > 配送中/进行中 > 已接单 > 已完成，同状态按小费降序
-      // 快递状态：0=待接单, 1=已接单, 2=配送中, 3=已完成, 4=已取消
-      // 跑腿状态：0=待接单, 1=进行中, 2=已完成, 3=已取消
-      var expressPriority = { 0: 0, 2: 1, 1: 2, 3: 3, 4: 4 }
-      var errandPriority = { 0: 0, 1: 1, 2: 3, 3: 4 }
+      // 排序：按创建时间倒序，最新的排最前面
       all.sort(function(a, b) {
-        var pm = a.orderType === 'errand' ? errandPriority : expressPriority
-        var pm2 = b.orderType === 'errand' ? errandPriority : expressPriority
-        var ap = pm[a.status] !== undefined ? pm[a.status] : 5
-        var bp = pm2[b.status] !== undefined ? pm2[b.status] : 5
-        if (ap !== bp) return ap - bp
-        var tipDiff = (b.tip || 0) - (a.tip || 0)
-        if (tipDiff !== 0) return tipDiff
         var ta = a.createTime ? new Date(a.createTime).getTime() : 0
         var tb = b.createTime ? new Date(b.createTime).getTime() : 0
         return tb - ta

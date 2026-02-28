@@ -240,7 +240,7 @@ const showWallet = () => {
   uni.navigateTo({ url: '/pages/mine-sub/wallet' })
 }
 const showFeedback = () => {
-  uni.navigateTo({ url: '/pages/kefu/show?img=' + encodeURIComponent('/static/TeamWork.png') })
+  uni.navigateTo({ url: '/pages/kefu/show?img=' + encodeURIComponent('/static/TeamWork.jpg') })
 }
 const handleLogout = () => {
   uni.showModal({

@@ -5,13 +5,20 @@
 - **Build Tool**: Vite 5.2
 - **Language**: JavaScript (no TypeScript in app code)
 - **Styling**: Scoped CSS in SFCs using `rpx` units (WeChat responsive units). Global theme via CSS custom properties in `App.vue` `:root`.
-- **SCSS**: `src/uni.scss` provides uni-app built-in SCSS variables (not heavily used; most styling is inline scoped CSS).
+- **SCSS**: `src/uni.scss` provides uni-app built-in SCSS variables (not heavily used; most styling is inline scoped CSS). `sass` is a devDependency.
+- **Testing**: Vitest for unit tests (`tests/` directory, `vitest.config.js`). `fast-check` for property-based testing.
 
 ## Backend
-- **WeChat Cloud Functions** (`wx-server-sdk`): Serverless Node.js functions in `cloudfunctions/` directory.
+- **WeChat Cloud Functions** (`wx-server-sdk`): Serverless Node.js functions in `cloudfunctions/` directory. This is the primary backend.
 - **Database**: WeChat Cloud Database (NoSQL, document-based). Accessed via `db.collection()`.
 - **File Storage**: WeChat Cloud Storage for images (avatars, photos).
 - **Auth**: WeChat openid-based. Auto-login on app launch via `wx.cloud.callFunction`. Phone number required for registration (SMS verification, dev code: `000000`).
+- **Printing**: Feie cloud printer integration in `cloudfunctions/food/` for food order receipts. Config stored in `page_config` collection.
+- **Scheduled Functions**: `autoConfirm` cloud function runs on hourly trigger for auto-completing orders.
+
+## Alternative Backend (not primary)
+- **server/**: Express.js + MongoDB backend with Mongoose models, REST API routes, Qiniu file upload, WeChat integration. Not the primary backend; project uses WeChat Cloud Functions instead.
+- **admin/**: Vue 3 + Element Plus web admin panel with Pinia state management and vue-router. Alternative to the in-app admin panel.
 
 ## Primary Target Platform
 - **WeChat Mini Program** (`mp-weixin`). WeChat is the primary target.
@@ -25,7 +32,11 @@
 | `@dcloudio/uni-app` | uni-app core framework |
 | `@dcloudio/vite-plugin-uni` | Vite plugin for uni-app |
 | `vue` 3.4+ | UI framework |
+| `vue-i18n` 9.x | Internationalization (dependency present) |
 | `wx-server-sdk` | WeChat cloud function SDK (backend) |
+| `vitest` | Test runner |
+| `fast-check` | Property-based testing |
+| `sass` | SCSS compilation |
 
 ## Common Commands
 
@@ -38,6 +49,12 @@ npm run build:mp-weixin
 
 # Development (H5 / browser)
 npm run dev:h5
+
+# Run tests (single run)
+npm run test
+
+# Run tests (watch mode)
+npm run test:watch
 ```
 
 Output for WeChat goes to `dist/dev/mp-weixin/` (dev) or `dist/build/mp-weixin/` (prod). Open this directory in WeChat DevTools.
@@ -53,4 +70,5 @@ New collections must be manually created in WeChat DevTools cloud console before
 - Default admin phone: `19922240902`
 - Dev SMS universal code: `000000`
 - After editing `pages.json` or `manifest.json`, may need to restart dev server
-- Sub-packages used for code splitting (carpool, team, graduate, skill, wash, admin, job-sub)
+- Sub-packages used for code splitting (express, errand, order, market, forum-sub, message, mine-sub, kefu, carpool, team, graduate, skill, wash, food, admin, job-sub)
+- Tab bar: 5 tabs (首页, 兼职, 广场, 福利, 我的)

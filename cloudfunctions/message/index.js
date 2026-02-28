@@ -95,6 +95,28 @@ exports.main = async (event, context) => {
       return { code: 0 }
     }
 
+    // 发送订阅消息（微信服务通知）
+    case 'sendSubscribe': {
+      var sub = data
+      if (!sub.toOpenid || !sub.templateId) return { code: -1, msg: 'missing fields' }
+      try {
+        var sendData = {
+          touser: sub.toOpenid,
+          templateId: sub.templateId,
+          data: sub.data || {},
+          miniprogramState: sub.miniprogramState || 'formal'
+        }
+        if (sub.page) sendData.page = sub.page
+        var result = await cloud.openapi.subscribeMessage.send(sendData)
+        console.log('[subscribe] send result:', JSON.stringify(result))
+        return { code: 0, data: result }
+      } catch (e) {
+        // 用户未授权或额度用完，不影响主流程
+        console.log('[subscribe] send failed:', e.errCode, e.errMsg)
+        return { code: 0, msg: 'subscribe send failed: ' + (e.errMsg || e.message) }
+      }
+    }
+
     default:
       return { code: -1, msg: 'unknown action: ' + action }
   }

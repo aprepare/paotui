@@ -3,6 +3,38 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const _ = db.command
 
+// 内容安全检查
+async function checkContent(openid, text, scene) {
+  if (!text || !text.trim()) return true
+  try {
+    const res = await cloud.openapi.security.msgSecCheck({ openid, scene: scene || 2, version: 2, content: text })
+    return res.result && res.result.suggest === 'pass'
+  } catch (e) { console.log('[contentCheck] error', e); return true }
+}
+
+// 订阅消息模板ID
+var ORDER_TMPL = 'xlvGM1wbE0FKTpG7rB8ktBsCo1gn_9n0USbqRw48fjI'
+
+// 发送订单状态订阅消息
+async function sendOrderSubscribe(toOpenid, orderNo, statusText, tips, page) {
+  try {
+    await cloud.openapi.subscribeMessage.send({
+      touser: toOpenid,
+      templateId: ORDER_TMPL,
+      data: {
+        character_string1: { value: orderNo },
+        phrase2: { value: statusText },
+        thing3: { value: tips.length > 20 ? tips.substring(0, 17) + '...' : tips },
+        time4: { value: new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }) }
+      },
+      page: page || '',
+      miniprogramState: 'formal'
+    })
+  } catch (e) {
+    console.log('[subscribe] errand send failed:', e.errCode, e.errMsg)
+  }
+}
+
 exports.main = async (event, context) => {
   const { action, data = {} } = event
   const openid = cloud.getWXContext().OPENID
@@ -71,8 +103,16 @@ exports.main = async (event, context) => {
     }
 
     case 'create': {
-      const { title, desc, fromAddr, toAddr, price, tip, phone, destLat, destLng } = data
+      const { title, desc, fromAddr, toAddr, price, tip, phone, remark, timeRequire, destLat, destLng } = data
       if (!title || !desc) return { code: -1, msg: 'missing fields' }
+      const textToCheck = [title, desc, remark].filter(Boolean).join(' ')
+      const safe = await checkContent(openid, textToCheck, 2)
+      if (!safe) return { code: -1, msg: '内容包含违规信息，请修改后重试' }
+      // Price validation: 1-999 (Req 5.5)
+      const priceVal = typeof price === 'number' ? price : 0
+      if (priceVal <= 0 || priceVal > 999) {
+        return { code: -1, msg: '报酬金额需在1-999元之间' }
+      }
       const user = await db.collection('users').where({ openid }).get()
       const userName = user.data.length > 0 ? user.data[0].name : '匿名'
       const res = await db.collection('errand_tasks').add({
@@ -80,9 +120,11 @@ exports.main = async (event, context) => {
           openid, title, desc,
           fromAddr: fromAddr || '',
           toAddr: toAddr || '',
-          price: price || 5,
+          price: priceVal,
           tip: tip || 0,
           phone: phone || '',
+          remark: remark || '',
+          timeRequire: timeRequire || '',
           publisher: userName,
           status: 0,
           statusText: '待接单',
@@ -103,8 +145,12 @@ exports.main = async (event, context) => {
       const task = await db.collection('errand_tasks').doc(data.taskId).get()
       if (task.data.status !== 0) return { code: -1, msg: '任务已被接' }
       if (task.data.openid === openid) return { code: -1, msg: '不能接自己发布的单' }
+      // Rider identity check (Req 15.2)
       var errandAcceptUser = await db.collection('users').where({ openid }).get()
-      var errandAcceptName = errandAcceptUser.data.length > 0 ? errandAcceptUser.data[0].name : '骑手'
+      if (errandAcceptUser.data.length === 0 || !errandAcceptUser.data[0].isRider) {
+        return { code: -1, msg: '需要注册骑手才能接单' }
+      }
+      var errandAcceptName = errandAcceptUser.data[0].name || '骑手'
       await db.collection('errand_tasks').doc(data.taskId).update({
         data: { status: 1, statusText: '进行中', statusColor: '#38A169', riderId: openid, acceptTime: db.serverDate() }
       })
@@ -124,12 +170,46 @@ exports.main = async (event, context) => {
             createTime: db.serverDate()
           }
         })
+        // 发送订阅消息
+        await sendOrderSubscribe(
+          task.data.openid,
+          data.taskId.substring(0, 20),
+          '已接单',
+          errandAcceptName + '已接您的跑腿任务',
+          '/pages/errand/detail?id=' + data.taskId
+        )
       }
       return { code: 0 }
     }
 
     case 'updateStatus': {
       const { taskId, status } = data
+      if (!taskId) return { code: -1, msg: '缺少任务ID' }
+
+      // Fetch current task to validate transition (Req 6.2)
+      const currentTask = await db.collection('errand_tasks').doc(taskId).get()
+      const currentStatus = currentTask.data.status
+
+      // Reject terminal states (2=已完成, 3=已取消)
+      if (currentStatus === 2 || currentStatus === 3) {
+        return { code: -1, msg: '当前状态不允许此操作' }
+      }
+      // Reject same-state
+      if (currentStatus === status) {
+        return { code: -1, msg: '当前状态不允许此操作' }
+      }
+      // Validate transition: only 0→1, 1→4, 4→2
+      const validTransitions = { 0: [1], 1: [4], 4: [2] }
+      const allowed = validTransitions[currentStatus]
+      if (!allowed || !allowed.includes(status)) {
+        return { code: -1, msg: '当前状态不允许此操作' }
+      }
+
+      // Photo guard: 1→4 requires pickupPhoto + deliverPhoto (Req 2.1, 2.2)
+      if (status === 4 && (!currentTask.data.pickupPhoto || !currentTask.data.deliverPhoto)) {
+        return { code: -1, msg: '请先上传凭证照片' }
+      }
+
       const statusMap = {
         0: { text: '待接单', color: '#DD6B20' },
         1: { text: '进行中', color: '#38A169' },
@@ -162,6 +242,14 @@ exports.main = async (event, context) => {
             createTime: db.serverDate()
           }
         })
+        // 发送订阅消息
+        await sendOrderSubscribe(
+          errandNotifyTarget,
+          taskId.substring(0, 20),
+          s.text,
+          '跑腿任务状态已更新',
+          '/pages/errand/detail?id=' + taskId
+        )
       }
       return { code: 0 }
     }
@@ -197,6 +285,14 @@ exports.main = async (event, context) => {
             createTime: db.serverDate()
           }
         })
+        // 发送订阅消息
+        await sendOrderSubscribe(
+          task.data.riderId,
+          data.taskId.substring(0, 20),
+          '已取消',
+          errandCancelName + '取消了跑腿任务',
+          '/pages/errand/detail?id=' + data.taskId
+        )
       }
       return { code: 0 }
     }

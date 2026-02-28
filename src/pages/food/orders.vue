@@ -2,7 +2,10 @@
   <view class="orders-page">
     <view class="order-card" v-for="o in orders" :key="o._id" @click="goDetail(o)">
       <view class="oc-header">
-        <text class="oc-shop">{{ o.shopName }}</text>
+        <view class="oc-header-left">
+          <text class="oc-shop">{{ o.shopName }}</text>
+          <text class="oc-mode" v-if="o.deliveryMode">{{ o.deliveryMode === 'self_pickup' ? '🏪自取' : '🚴配送' }}</text>
+        </view>
         <text class="oc-status" :class="'st' + o.status">{{ o.statusText || statusMap[o.status] }}</text>
       </view>
       <view class="oc-items">
@@ -37,7 +40,7 @@ import { callCloud } from '@/utils/cloud.js'
 const orders = ref([])
 const loaded = ref(false)
 const hasMore = ref(false)
-const statusMap = { 0: '待接单', 1: '进行中', 2: '已完成', 3: '已取消' }
+const statusMap = { 0: '待确认', 1: '制作中', 2: '配送中', 3: '已完成', 4: '已取消' }
 let page = 1
 
 const loadOrders = async () => {
@@ -52,7 +55,7 @@ const loadOrders = async () => {
 const loadMore = () => { page++; loadOrders() }
 
 const goDetail = (o) => {
-  uni.navigateTo({ url: '/pages/errand/detail?id=' + o._id })
+  uni.navigateTo({ url: '/pages/food/detail?id=' + o._id })
 }
 
 const cancelOrder = (o) => {
@@ -77,7 +80,9 @@ onShow(() => { page = 1; loadOrders() })
 .orders-page { background: #F0F2F5; min-height: 100vh; padding: 20rpx 24rpx; }
 .order-card { background: #fff; border-radius: 20rpx; padding: 24rpx; margin-bottom: 20rpx; box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.04); }
 .oc-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16rpx; }
+.oc-header-left { display: flex; align-items: center; gap: 12rpx; }
 .oc-shop { font-size: 30rpx; font-weight: 700; color: #1A1A2E; }
+.oc-mode { font-size: 22rpx; padding: 2rpx 12rpx; border-radius: 6rpx; background: #EBF8FF; color: #4299E1; }
 .oc-status { font-size: 24rpx; padding: 4rpx 16rpx; border-radius: 8rpx; }
 .oc-status.st0 { background: #FFFAF0; color: #DD6B20; }
 .oc-status.st1 { background: #EBF4FF; color: #2B6CB0; }

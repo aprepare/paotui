@@ -18,15 +18,10 @@
         <view class="divider"></view>
         <view class="form-item">
           <text class="form-label">手机号码</text>
-          <input type="number" placeholder="请输入手机号" v-model="form.phone" maxlength="11"></input>
-        </view>
-        <view class="divider"></view>
-        <view class="form-item sms-row">
-          <text class="form-label">验证码</text>
-          <input type="number" placeholder="请输入验证码" v-model="smsCode" maxlength="6" class="sms-input"></input>
-          <view class="sms-btn" :class="{disabled: !isPhoneValid || countdown > 0}" @click="sendCode">
-            <text>{{ countdown > 0 ? countdown + 's' : '获取验证码' }}</text>
-          </view>
+          <text v-if="form.phone" class="phone-display">{{ form.phone }}</text>
+          <button v-else class="wx-phone-btn" open-type="getPhoneNumber" @getphonenumber="onGetPhoneNumber">
+            <text>📱 微信授权获取</text>
+          </button>
         </view>
         <view class="phone-hint">
           <text class="hint-icon">🔒</text>
@@ -101,7 +96,7 @@
 </template>
 
 <script setup>
-import { reactive, ref, computed } from 'vue'
+import { reactive, ref } from 'vue'
 import { callCloud, uploadImage, checkLogin } from '@/utils/cloud'
 
 const buildingData = {
@@ -118,31 +113,26 @@ const buildingColumns = computed(() => {
 const smsCode = ref('')
 const countdown = ref(0)
 const phoneVerified = ref(false)
-var countdownTimer = null
 
-const isPhoneValid = computed(() => {
-  return /^1[3-9]\d{9}$/.test(form.phone)
-})
-
-const sendCode = async () => {
-  if (countdown.value > 0) return
-  if (!isPhoneValid.value) {
-    uni.showToast({ title: '请先输入正确的11位手机号', icon: 'none' })
+const onGetPhoneNumber = async (e) => {
+  if (e.detail.errMsg !== 'getPhoneNumber:ok') {
+    uni.showToast({ title: '授权已取消', icon: 'none' })
     return
   }
-  var res = await callCloud('user', 'sendSmsCode', { phone: form.phone })
-  if (res.code === 0) {
-    uni.showToast({ title: '验证码已发送', icon: 'success' })
-    countdown.value = 60
-    countdownTimer = setInterval(function() {
-      countdown.value--
-      if (countdown.value <= 0) {
-        clearInterval(countdownTimer)
-        countdownTimer = null
-      }
-    }, 1000)
+  var code = e.detail.code
+  if (!code) {
+    uni.showToast({ title: '获取手机号失败', icon: 'none' })
+    return
+  }
+  uni.showLoading({ title: '获取中...' })
+  var res = await callCloud('user', 'getPhoneByCode', { code: code })
+  uni.hideLoading()
+  if (res.code === 0 && res.data && res.data.phone) {
+    form.phone = res.data.phone
+    phoneVerified.value = true
+    uni.showToast({ title: '手机号获取成功', icon: 'success' })
   } else {
-    uni.showToast({ title: res.msg || '发送失败', icon: 'none' })
+    uni.showToast({ title: res.msg || '获取手机号失败', icon: 'none' })
   }
 }
 
@@ -212,25 +202,8 @@ const submit = async () => {
     return
   }
   if (!form.phone) {
-    uni.showToast({ title: '请输入手机号', icon: 'none' })
+    uni.showToast({ title: '请先授权获取手机号', icon: 'none' })
     return
-  }
-  if (!/^1[3-9]\d{9}$/.test(form.phone)) {
-    uni.showToast({ title: '请输入正确的11位手机号', icon: 'none' })
-    return
-  }
-  // 验证短信验证码
-  if (!phoneVerified.value) {
-    if (!smsCode.value || smsCode.value.length !== 6) {
-      uni.showToast({ title: '请输入6位验证码', icon: 'none' })
-      return
-    }
-    var verifyRes = await callCloud('user', 'verifySmsCode', { phone: form.phone, smsCode: smsCode.value })
-    if (verifyRes.code !== 0) {
-      uni.showToast({ title: verifyRes.msg || '验证码错误', icon: 'none' })
-      return
-    }
-    phoneVerified.value = true
   }
   if (!form.school.trim()) {
     uni.showToast({ title: '请输入学校名称', icon: 'none' })
@@ -291,6 +264,10 @@ const submit = async () => {
 .phone-hint { display: flex; align-items: center; padding: 0 0 20rpx; }
 .hint-icon { font-size: 22rpx; margin-right: 8rpx; }
 .hint-text { font-size: 22rpx; color: #38A169; font-weight: 500; }
+.phone-display { flex: 1; font-size: 30rpx; color: #2D3748; font-weight: 600; }
+.wx-phone-btn { flex: 1; background: linear-gradient(135deg, #07C160, #06AD56); border-radius: 32rpx; padding: 16rpx 0; text-align: center; border: none; margin: 0; line-height: normal; font-size: 26rpx; }
+.wx-phone-btn::after { display: none; }
+.wx-phone-btn text { color: #fff; font-size: 26rpx; font-weight: 600; }
 .picker-value { flex: 1; display: flex; justify-content: space-between; align-items: center; font-size: 28rpx; color: #333; }
 .picker-arrow { font-size: 32rpx; color: #ccc; }
 
@@ -315,9 +292,4 @@ const submit = async () => {
 .submit-btn.disabled { opacity: 0.5; }
 .submit-btn text { color: #fff; font-size: 32rpx; font-weight: bold; }
 
-.sms-row { display: flex; align-items: center; padding: 28rpx 0; }
-.sms-input { flex: 1; font-size: 28rpx; }
-.sms-btn { padding: 12rpx 24rpx; background: linear-gradient(135deg, #FF9800, #F57C00); border-radius: 28rpx; flex-shrink: 0; margin-left: 12rpx; }
-.sms-btn text { color: #fff; font-size: 24rpx; font-weight: 600; white-space: nowrap; }
-.sms-btn.disabled { opacity: 0.5; }
 </style>

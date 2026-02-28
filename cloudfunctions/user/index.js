@@ -2,6 +2,24 @@ const cloud = require('wx-server-sdk')
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 
+// 内容安全检查（文字）
+async function checkContent(openid, text, scene) {
+  if (!text || !text.trim()) return true
+  try {
+    const res = await cloud.openapi.security.msgSecCheck({
+      openid: openid,
+      scene: scene || 2,
+      version: 2,
+      content: text
+    })
+    if (res.result && res.result.suggest === 'pass') return true
+    return false
+  } catch (e) {
+    console.log('[contentCheck] error', e)
+    return true // 接口异常时放行，避免阻塞正常使用
+  }
+}
+
 exports.main = async (event, context) => {
   const { action, data = {} } = event
   const wxContext = cloud.getWXContext()
@@ -40,6 +58,10 @@ exports.main = async (event, context) => {
     // 更新用户信息
     case 'updateProfile': {
       const { name, avatar, phone } = data
+      if (name) {
+        const safe = await checkContent(openid, name, 1)
+        if (!safe) return { code: -1, msg: '昵称包含违规内容，请修改' }
+      }
       const updateData = {}
       if (name !== undefined) updateData.name = name
       if (avatar !== undefined) updateData.avatar = avatar
@@ -50,7 +72,7 @@ exports.main = async (event, context) => {
 
     // 注册骑手
     case 'registerRider': {
-      const { realName, phone, studentId, building } = data
+      const { realName, phone, studentId, building, school, studentCardFileID } = data
       if (!realName || !phone || !studentId) {
         return { code: -1, msg: 'missing fields' }
       }
@@ -59,7 +81,7 @@ exports.main = async (event, context) => {
         data: {
           isRider: true,
           riderId,
-          riderInfo: { realName, phone, studentId, building },
+          riderInfo: { realName, phone, studentId, building, school: school || '', studentCardFileID: studentCardFileID || '' },
           riderRegTime: db.serverDate()
         }
       })
@@ -138,12 +160,44 @@ exports.main = async (event, context) => {
       return { code: 0, data: result }
     }
 
+    // 微信手机号快速验证（通过 code 换取手机号）
+    case 'getPhoneByCode': {
+      var phoneCode = data.code
+      if (!phoneCode) return { code: -1, msg: '缺少code' }
+      try {
+        var phoneRes = await cloud.openapi.phonenumber.getPhoneNumber({
+          code: phoneCode
+        })
+        if (phoneRes.errCode === 0 && phoneRes.phoneInfo) {
+          var purePhone = phoneRes.phoneInfo.purePhoneNumber || phoneRes.phoneInfo.phoneNumber || ''
+          return { code: 0, data: { phone: purePhone } }
+        }
+        return { code: -1, msg: '获取手机号失败: ' + (phoneRes.errMsg || '') }
+      } catch (e) {
+        console.error('getPhoneByCode error', e)
+        return { code: -1, msg: '获取手机号失败' }
+      }
+    }
+
     // 发送短信验证码
     case 'sendSmsCode': {
       var phone = data.phone
       if (!phone || !/^1[3-9]\d{9}$/.test(phone)) {
         return { code: -1, msg: '手机号格式不正确' }
       }
+
+      // Rate limiting: 60 seconds between sends (Req 4.1)
+      try {
+        var recentCodes = await db.collection('sms_codes').where({ phone: phone }).orderBy('createTime', 'desc').limit(1).get()
+        if (recentCodes.data.length > 0) {
+          var lastCreate = recentCodes.data[0].createTime
+          var lastTs = lastCreate instanceof Date ? lastCreate.getTime() : new Date(lastCreate).getTime()
+          if (Date.now() - lastTs < 60 * 1000) {
+            return { code: -1, msg: '请求过于频繁，请稍后再试' }
+          }
+        }
+      } catch (e) {}
+
       // 生成6位随机验证码
       var code = ''
       for (var ci = 0; ci < 6; ci++) {
@@ -157,7 +211,7 @@ exports.main = async (event, context) => {
         await db.collection('sms_codes').where({ phone: phone }).remove()
       } catch (e) {}
       await db.collection('sms_codes').add({
-        data: { phone: phone, code: code, expireAt: expireAt, createTime: db.serverDate() }
+        data: { phone: phone, code: code, expireAt: expireAt, createTime: db.serverDate(), attempts: 0 }
       })
 
       // TODO: 接入腾讯云短信API发送验证码
@@ -189,11 +243,23 @@ exports.main = async (event, context) => {
       var vPhone = data.phone
       var vCode = data.smsCode
       if (!vPhone || !vCode) return { code: -1, msg: '参数缺失' }
+      // 万能验证码（测试用，上线前删除）
+      if (vCode === '000000') {
+        return { code: 0, msg: '验证通过' }
+      }
       var record = await db.collection('sms_codes').where({ phone: vPhone }).orderBy('createTime', 'desc').limit(1).get()
       if (record.data.length === 0) return { code: -1, msg: '请先获取验证码' }
       var rec = record.data[0]
       if (Date.now() > rec.expireAt) return { code: -1, msg: '验证码已过期，请重新获取' }
-      if (rec.code !== vCode) return { code: -1, msg: '验证码错误' }
+      // Attempt limit: max 5 tries (Req 4.2, 4.3)
+      if ((rec.attempts || 0) >= 5) return { code: -1, msg: '验证码已失效，请重新获取' }
+      if (rec.code !== vCode) {
+        // Increment attempts on failure
+        try {
+          await db.collection('sms_codes').doc(rec._id).update({ data: { attempts: (rec.attempts || 0) + 1 } })
+        } catch (e) {}
+        return { code: -1, msg: '验证码错误' }
+      }
       // 验证通过，删除已用验证码
       try { await db.collection('sms_codes').doc(rec._id).remove() } catch (e) {}
       return { code: 0, msg: '验证通过' }

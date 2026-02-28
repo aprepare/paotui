@@ -209,6 +209,7 @@
 import { ref, reactive, computed } from 'vue'
 import { onLoad, onUnload } from '@dcloudio/uni-app'
 import { callCloud, uploadImage } from '@/utils/cloud'
+import { requestOrderSubscribe } from '@/utils/subscribe'
 
 const taskId = ref('')
 const isOwner = ref(false)
@@ -576,6 +577,8 @@ const handleAction = async () => {
     return
   }
   if (task.value.status === 0) {
+    // 骑手接单前请求订阅授权
+    await requestOrderSubscribe()
     const res = await callCloud('errand', 'accept', { taskId: taskId.value })
     if (res.code === 0) {
       task.value.status = 1

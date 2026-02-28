@@ -12,7 +12,7 @@ function setup() {
 
 async function createGoods(title = '二手书', price = 15) {
   createTestEnv('seller')
-  const res = await main({ action: 'create', data: { title, price, category: '书籍' } }, {})
+  const res = await main({ action: 'create', data: { title, price, category: '书籍', contact: '13800138000' } }, {})
   return res.id
 }
 

@@ -145,6 +145,26 @@
               <text class="popup-val price">¥{{ detailData.budget }}/小时</text>
             </view>
           </view>
+          <view class="popup-contact-section" v-if="detailData.phone || detailData.wechat || detailData.qq">
+            <text class="popup-contact-title">📞 联系方式</text>
+            <view class="popup-contact-list">
+              <view class="popup-contact-item" v-if="detailData.phone">
+                <text class="popup-contact-icon">📱</text>
+                <text class="popup-contact-label">手机</text>
+                <text class="popup-contact-val" @click.stop="onCopyContact(detailData.phone)">{{ detailData.phone }}</text>
+              </view>
+              <view class="popup-contact-item" v-if="detailData.wechat">
+                <text class="popup-contact-icon">💬</text>
+                <text class="popup-contact-label">微信</text>
+                <text class="popup-contact-val" @click.stop="onCopyContact(detailData.wechat)">{{ detailData.wechat }}</text>
+              </view>
+              <view class="popup-contact-item" v-if="detailData.qq">
+                <text class="popup-contact-icon">🐧</text>
+                <text class="popup-contact-label">QQ</text>
+                <text class="popup-contact-val" @click.stop="onCopyContact(detailData.qq)">{{ detailData.qq }}</text>
+              </view>
+            </view>
+          </view>
           <view class="popup-parent">
             <text>👤 发布者：{{ detailData.parentName }}</text>
             <text class="popup-time">{{ detailData.postTime }}</text>
@@ -187,6 +207,26 @@
               <text class="popup-val">{{ detailData.experience }}</text>
             </view>
           </view>
+          <view class="popup-contact-section" v-if="detailData.phone || detailData.wechat || detailData.qq">
+            <text class="popup-contact-title">📞 联系方式</text>
+            <view class="popup-contact-list">
+              <view class="popup-contact-item" v-if="detailData.phone">
+                <text class="popup-contact-icon">📱</text>
+                <text class="popup-contact-label">手机</text>
+                <text class="popup-contact-val" @click.stop="onCopyContact(detailData.phone)">{{ detailData.phone }}</text>
+              </view>
+              <view class="popup-contact-item" v-if="detailData.wechat">
+                <text class="popup-contact-icon">💬</text>
+                <text class="popup-contact-label">微信</text>
+                <text class="popup-contact-val" @click.stop="onCopyContact(detailData.wechat)">{{ detailData.wechat }}</text>
+              </view>
+              <view class="popup-contact-item" v-if="detailData.qq">
+                <text class="popup-contact-icon">🐧</text>
+                <text class="popup-contact-label">QQ</text>
+                <text class="popup-contact-val" @click.stop="onCopyContact(detailData.qq)">{{ detailData.qq }}</text>
+              </view>
+            </view>
+          </view>
           <view class="popup-action" @click="onContactTutor(detailData)"><text>联系家教</text></view>
         </view>
       </view>
@@ -196,8 +236,11 @@
 
 <script setup>
 import { ref, computed } from 'vue'
-import { onShow } from '@dcloudio/uni-app'
+import { onLoad, onShow } from '@dcloudio/uni-app'
 import { callCloud, checkLogin } from '@/utils/cloud.js'
+
+// 从消息中心跳转过来时携带的帖子id
+const pendingPostId = ref('')
 
 const activeTab = ref('demand')
 const filters = ['全部', '数学', '英语', '物理', '化学', '语文', '编程']
@@ -268,7 +311,10 @@ const mapTutor = (item, idx) => {
     area: item.area || '',
     price: item.price || 0,
     experience: item.experience || '',
-    verified: item.verified || false
+    verified: item.verified || false,
+    phone: item.phone || '',
+    wechat: item.wechat || '',
+    qq: item.qq || ''
   }
 }
 
@@ -285,7 +331,10 @@ const mapDemand = (item) => {
     schedule: item.schedule || '',
     budget: item.budget || 0,
     parentName: item.parentName || '匿名',
-    postTime: formatTime(item.createTime)
+    postTime: formatTime(item.createTime),
+    phone: item.phone || '',
+    wechat: item.wechat || '',
+    qq: item.qq || ''
   }
 }
 
@@ -302,7 +351,52 @@ const loadData = async () => {
   } else {
     demands.value = defaultDemands
   }
+
+  // 从消息中心跳转过来，自动打开对应帖子详情
+  if (pendingPostId.value) {
+    var pid = pendingPostId.value
+    pendingPostId.value = ''
+    // 先在已加载的列表中查找
+    var foundDemand = demands.value.find(d => d._id === pid || d.id === pid)
+    if (foundDemand) {
+      activeTab.value = 'demand'
+      detailType.value = 'demand'
+      detailData.value = foundDemand
+      showDetail.value = true
+      return
+    }
+    var foundTutor = tutors.value.find(t => t._id === pid || t.id === pid)
+    if (foundTutor) {
+      activeTab.value = 'market'
+      detailType.value = 'tutor'
+      detailData.value = foundTutor
+      showDetail.value = true
+      return
+    }
+    // 列表中没找到，调云函数查单条
+    var detailRes = await callCloud('tutor', 'getDetail', { postId: pid })
+    if (detailRes && detailRes.code === 0 && detailRes.data) {
+      var post = detailRes.data
+      if (post.type === 'demand') {
+        activeTab.value = 'demand'
+        detailType.value = 'demand'
+        detailData.value = mapDemand(post)
+        showDetail.value = true
+      } else {
+        activeTab.value = 'market'
+        detailType.value = 'tutor'
+        detailData.value = mapTutor(post, 0)
+        showDetail.value = true
+      }
+    }
+  }
 }
+
+onLoad((options) => {
+  if (options && options.id) {
+    pendingPostId.value = options.id
+  }
+})
 
 onShow(() => { loadData() })
 
@@ -370,6 +464,13 @@ const onPostTutor = () => {
 const onPostDemand = () => {
   if (!checkLogin()) return
   uni.navigateTo({ url: '/pages/job-sub/tutor-create?type=demand' })
+}
+
+const onCopyContact = (val) => {
+  uni.setClipboardData({
+    data: val,
+    success: () => { uni.showToast({ title: '已复制', icon: 'success' }) }
+  })
 }
 </script>
 
@@ -470,4 +571,12 @@ const onPostDemand = () => {
 .popup-tags { display: flex; gap: 12rpx; margin-bottom: 24rpx; flex-wrap: wrap; }
 .popup-subject-tag { padding: 8rpx 24rpx; border-radius: 20rpx; background: #EBF4FF; }
 .popup-subject-tag text { font-size: 24rpx; color: #2B6CB0; font-weight: 600; }
+/* Contact section in popup */
+.popup-contact-section { margin-bottom: 24rpx; padding: 20rpx; background: #F7FAFC; border-radius: 16rpx; }
+.popup-contact-title { font-size: 26rpx; color: #4A5568; font-weight: 700; display: block; margin-bottom: 16rpx; }
+.popup-contact-list { display: flex; flex-direction: column; gap: 14rpx; }
+.popup-contact-item { display: flex; align-items: center; }
+.popup-contact-icon { font-size: 28rpx; margin-right: 12rpx; }
+.popup-contact-label { font-size: 24rpx; color: #A0AEC0; width: 72rpx; }
+.popup-contact-val { font-size: 26rpx; color: #2B6CB0; font-weight: 600; }
 </style>

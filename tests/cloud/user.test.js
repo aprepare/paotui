@@ -67,17 +67,21 @@ describe('user cloud function - unit tests', () => {
     const verify = await main({ action: 'verifySmsCode', data: { phone: '13800138000', smsCode: code } }, {})
     expect(verify.code).toBe(0)
 
-    // Send again for expired test
-    await main({ action: 'sendSmsCode', data: { phone: '13800138000' } }, {})
-    const codes2 = await db.collection('sms_codes').where({ phone: '13800138000' }).get()
-    // Manually expire it
-    await db.collection('sms_codes').doc(codes2.data[0]._id).update({ data: { expireAt: 0 } })
-    const expired = await main({ action: 'verifySmsCode', data: { phone: '13800138000', smsCode: codes2.data[0].code } }, {})
+    // Seed an expired code directly for expired test
+    seedDoc('sms_codes', 'expired1', {
+      phone: '13800138000', code: '111111',
+      expireAt: 0, createTime: new Date(Date.now() - 120000), attempts: 0
+    })
+    const expired = await main({ action: 'verifySmsCode', data: { phone: '13800138000', smsCode: '111111' } }, {})
     expect(expired.code).toBe(-1)
     expect(expired.msg).toContain('过期')
 
-    // Send again for wrong code test
-    await main({ action: 'sendSmsCode', data: { phone: '13800138000' } }, {})
+    // Seed a valid code for wrong code test
+    try { await db.collection('sms_codes').where({ phone: '13800138000' }).remove() } catch (e) {}
+    seedDoc('sms_codes', 'valid1', {
+      phone: '13800138000', code: '222222',
+      expireAt: Date.now() + 300000, createTime: new Date(Date.now() - 120000), attempts: 0
+    })
     const wrong = await main({ action: 'verifySmsCode', data: { phone: '13800138000', smsCode: '000000' } }, {})
     expect(wrong.code).toBe(-1)
     expect(wrong.msg).toContain('验证码错误')

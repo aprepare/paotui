@@ -193,13 +193,15 @@ exports.main = async (event) => {
       }
     }
 
-    // ========== 创建订单（写入 errand_tasks） ==========
+    // ========== 创建订单（写入 food_orders） ==========
     case 'createOrder': {
       if (!openid) return { code: -1, msg: '未登录' }
-      const { shopId, items, address, phone, remark, userName } = data
+      const { shopId, items, address, phone, remark, userName, deliveryMode = 'delivery' } = data
       if (!shopId || !items || !items.length) return { code: -1, msg: '参数不完整' }
-      if (!address) return { code: -1, msg: '请填写收货地址' }
       if (!phone) return { code: -1, msg: '请填写联系电话' }
+      if (deliveryMode === 'delivery' && (!address || !address.trim())) {
+        return { code: -1, msg: '请填写收货地址' }
+      }
 
       try {
         // 获取商家信息（支持默认商家）
@@ -239,61 +241,37 @@ exports.main = async (event) => {
           itemsTotal += itemPrice * ci.quantity
         }
 
-        const deliveryFee = shop.deliveryFee || 0
+        // 自取模式配送费为 0
+        const deliveryFee = deliveryMode === 'self_pickup' ? 0 : (shop.deliveryFee || 0)
         const totalPrice = itemsTotal + deliveryFee
 
         if (shop.minOrder && itemsTotal < shop.minOrder) {
           return { code: -1, msg: '未达到起送价 ¥' + shop.minOrder }
         }
 
-        // 获取用户名
-        const userRes = await db.collection('users').where({ openid }).get()
-        const publisher = userRes.data.length > 0 ? userRes.data[0].name : (userName || '匿名')
-
-        // 构建商品明细文本
-        const itemLines = orderItems.map(i => i.name + ' x' + i.quantity + ' ¥' + (i.price * i.quantity).toFixed(1))
-        const desc = '【' + shop.name + '】\n' + itemLines.join('\n') +
-          '\n配送费: ¥' + deliveryFee.toFixed(1) +
-          '\n合计: ¥' + totalPrice.toFixed(2) +
-          (remark ? '\n备注: ' + remark : '')
-
-        // 写入 errand_tasks 集合
-        const errandTask = {
+        // 写入 food_orders 集合
+        const foodOrder = {
           openid,
-          type: 'food',
-          title: '外卖代取: ' + shop.name,
-          desc,
-          fromAddr: shop.address || shop.name,
-          toAddr: address,
-          price: deliveryFee,
-          tip: 0,
+          shopId,
+          shopName: shop.name,
+          items: orderItems,
+          itemsTotal,
+          deliveryFee,
+          totalPrice,
+          deliveryMode,
+          address: deliveryMode === 'self_pickup' ? '' : (address || ''),
           phone,
-          publisher,
+          userName: userName || '',
+          remark: remark || '',
           status: 0,
-          statusText: '待接单',
-          statusColor: '#DD6B20',
+          statusText: '待确认',
           riderId: null,
-          destLat: 0,
-          destLng: 0,
-          riderLat: 0,
-          riderLng: 0,
-          riderLocationTime: null,
-          // 外卖专属字段
-          foodInfo: {
-            shopId,
-            shopName: shop.name,
-            items: orderItems,
-            itemsTotal,
-            deliveryFee,
-            totalPrice,
-            userName: userName || '',
-            remark: remark || ''
-          },
+          riderName: null,
+          riderPhone: null,
           createTime: db.serverDate()
         }
 
-        const addRes = await db.collection('errand_tasks').add({ data: errandTask })
-        errandTask._id = addRes._id
+        const addRes = await db.collection('food_orders').add({ data: foodOrder })
 
         // 异步打印小票（不阻塞下单）
         const printData = {
@@ -301,7 +279,8 @@ exports.main = async (event) => {
           items: orderItems,
           deliveryFee,
           totalPrice,
-          address,
+          deliveryMode,
+          address: foodOrder.address,
           phone,
           remark: remark || ''
         }
@@ -314,58 +293,90 @@ exports.main = async (event) => {
       }
     }
 
-    // ========== 我的外卖订单（从 errand_tasks 查询） ==========
+    // ========== 我的外卖订单（从 food_orders 查询） ==========
     case 'myOrders': {
       if (!openid) return { code: -1, msg: '未登录' }
       const { page = 1, pageSize = 20 } = data
       try {
-        const where = { openid, type: 'food' }
-        const total = await db.collection('errand_tasks').where(where).count()
-        const res = await db.collection('errand_tasks').where(where)
+        const where = { openid }
+        const total = await db.collection('food_orders').where(where).count()
+        const res = await db.collection('food_orders').where(where)
           .orderBy('createTime', 'desc')
           .skip((page - 1) * pageSize).limit(pageSize).get()
-        // 转换为前端期望的格式
-        const orders = (res.data || []).map(t => ({
-          _id: t._id,
-          shopName: t.foodInfo ? t.foodInfo.shopName : t.title.replace('外卖代取: ', ''),
-          items: t.foodInfo ? t.foodInfo.items : [],
-          totalPrice: t.foodInfo ? t.foodInfo.totalPrice : t.price,
-          status: t.status,
-          statusText: t.statusText,
-          createTime: t.createTime
-        }))
-        return { code: 0, data: orders, total: total.total }
+        return { code: 0, data: res.data || [], total: total.total }
       } catch (e) {
         return { code: 0, data: [], total: 0 }
       }
     }
 
-    // ========== 订单详情 ==========
+    // ========== 订单详情（从 food_orders 查询） ==========
     case 'orderDetail': {
       const { orderId } = data
       if (!orderId) return { code: -1, msg: '缺少orderId' }
       try {
-        const res = await db.collection('errand_tasks').doc(orderId).get()
+        const res = await db.collection('food_orders').doc(orderId).get()
         return { code: 0, data: res.data }
       } catch (e) {
         return { code: -1, msg: '订单不存在' }
       }
     }
 
-    // ========== 取消订单 ==========
+    // ========== 取消订单（从 food_orders 操作） ==========
     case 'cancelOrder': {
       if (!openid) return { code: -1, msg: '未登录' }
       const { orderId } = data
       try {
-        const orderRes = await db.collection('errand_tasks').doc(orderId).get()
+        const orderRes = await db.collection('food_orders').doc(orderId).get()
         if (orderRes.data.openid !== openid) return { code: -1, msg: '无权操作' }
         if (orderRes.data.status > 1) return { code: -1, msg: '当前状态不可取消' }
-        await db.collection('errand_tasks').doc(orderId).update({
-          data: { status: 3, statusText: '已取消', statusColor: '#E53E3E' }
+        await db.collection('food_orders').doc(orderId).update({
+          data: { status: 4, statusText: '已取消' }
         })
         return { code: 0 }
       } catch (e) {
         return { code: -1, msg: '取消失败' }
+      }
+    }
+
+    // ========== 骑手接单 ==========
+    case 'riderAccept': {
+      if (!openid) return { code: -1, msg: '未登录' }
+      const { orderId, riderName, riderPhone: rpPhone } = data
+      if (!orderId) return { code: -1, msg: '缺少orderId' }
+      try {
+        const orderRes = await db.collection('food_orders').doc(orderId).get()
+        const order = orderRes.data
+        if (order.status !== 2 || order.deliveryMode !== 'delivery') {
+          return { code: -1, msg: '该订单不可接单' }
+        }
+        if (order.riderId) {
+          return { code: -1, msg: '该订单已被接单' }
+        }
+        await db.collection('food_orders').doc(orderId).update({
+          data: { riderId: openid, riderName: riderName || '', riderPhone: rpPhone || '' }
+        })
+        return { code: 0 }
+      } catch (e) {
+        return { code: -1, msg: '接单失败: ' + e.message }
+      }
+    }
+
+    // ========== 骑手完成配送 ==========
+    case 'riderComplete': {
+      if (!openid) return { code: -1, msg: '未登录' }
+      const { orderId: rcId } = data
+      if (!rcId) return { code: -1, msg: '缺少orderId' }
+      try {
+        const orderRes = await db.collection('food_orders').doc(rcId).get()
+        const order = orderRes.data
+        if (order.status !== 2) return { code: -1, msg: '当前状态不可完成' }
+        if (order.riderId !== openid) return { code: -1, msg: '无权操作' }
+        await db.collection('food_orders').doc(rcId).update({
+          data: { status: 3, statusText: '已完成' }
+        })
+        return { code: 0 }
+      } catch (e) {
+        return { code: -1, msg: '操作失败: ' + e.message }
       }
     }
 
@@ -458,46 +469,43 @@ exports.main = async (event) => {
       return { code: 0 }
     }
 
-    // ========== 管理员：外卖订单管理（从 errand_tasks 查询） ==========
+    // ========== 管理员：外卖订单管理（从 food_orders 查询） ==========
     case 'adminOrderList': {
       const { page = 1, pageSize = 20, status: aoStatus } = data
-      const where = { type: 'food' }
+      const where = {}
       if (aoStatus !== undefined && aoStatus !== -1) where.status = aoStatus
       try {
-        const total = await db.collection('errand_tasks').where(where).count()
-        const res = await db.collection('errand_tasks').where(where)
+        const total = await db.collection('food_orders').where(where).count()
+        const res = await db.collection('food_orders').where(where)
           .orderBy('createTime', 'desc').skip((page - 1) * pageSize).limit(pageSize).get()
-        // 转换为前端期望的格式
-        const orders = (res.data || []).map(t => ({
-          _id: t._id,
-          shopName: t.foodInfo ? t.foodInfo.shopName : t.title.replace('外卖代取: ', ''),
-          items: t.foodInfo ? t.foodInfo.items : [],
-          totalPrice: t.foodInfo ? t.foodInfo.totalPrice : t.price,
-          address: t.toAddr,
-          status: t.status,
-          statusText: t.statusText,
-          createTime: t.createTime
-        }))
-        return { code: 0, data: orders, total: total.total }
+        return { code: 0, data: res.data || [], total: total.total }
       } catch (e) {
         return { code: 0, data: [], total: 0 }
       }
     }
 
     case 'updateOrderStatus': {
-      const { orderId: uoId, status: newStatus, statusText: newText } = data
+      const { orderId: uoId, status: newStatus } = data
       if (!uoId) return { code: -1, msg: '缺少orderId' }
-      const statusMap = {
-        0: { text: '待接单', color: '#DD6B20' },
-        1: { text: '进行中', color: '#38A169' },
-        2: { text: '已完成', color: '#A0AEC0' },
-        3: { text: '已取消', color: '#E53E3E' }
+      try {
+        // 获取订单的 deliveryMode 以设置正确的 statusText
+        const orderRes = await db.collection('food_orders').doc(uoId).get()
+        const order = orderRes.data
+        const statusMap = {
+          0: { text: '待确认' },
+          1: { text: '制作中' },
+          2: { text: order.deliveryMode === 'self_pickup' ? '待自取' : '配送中' },
+          3: { text: '已完成' },
+          4: { text: '已取消' }
+        }
+        const s = statusMap[newStatus] || statusMap[0]
+        await db.collection('food_orders').doc(uoId).update({
+          data: { status: newStatus, statusText: s.text }
+        })
+        return { code: 0 }
+      } catch (e) {
+        return { code: -1, msg: '更新失败: ' + e.message }
       }
-      const s = statusMap[newStatus] || statusMap[0]
-      await db.collection('errand_tasks').doc(uoId).update({
-        data: { status: newStatus, statusText: newText || s.text, statusColor: s.color }
-      })
-      return { code: 0 }
     }
 
     // ========== 打印机配置 ==========
@@ -518,28 +526,27 @@ exports.main = async (event) => {
       return { code: 0 }
     }
 
-    // 手动重打
+    // 手动重打（从 food_orders 读取）
     case 'reprintOrder': {
       const { orderId: rpId } = data
       if (!rpId) return { code: -1, msg: '缺少orderId' }
       try {
-        const taskRes = await db.collection('errand_tasks').doc(rpId).get()
-        const task = taskRes.data
-        const fi = task.foodInfo || {}
+        const orderRes = await db.collection('food_orders').doc(rpId).get()
+        const order = orderRes.data
         const printData = {
-          _id: task._id,
-          items: fi.items || [],
-          deliveryFee: fi.deliveryFee || 0,
-          totalPrice: fi.totalPrice || 0,
-          address: task.toAddr || '',
-          phone: task.phone || '',
-          remark: fi.remark || ''
+          _id: order._id,
+          items: order.items || [],
+          deliveryFee: order.deliveryFee || 0,
+          totalPrice: order.totalPrice || 0,
+          deliveryMode: order.deliveryMode || 'delivery',
+          address: order.address || '',
+          phone: order.phone || '',
+          remark: order.remark || ''
         }
-        const shopData = { name: fi.shopName || '', printerSn: '' }
-        // 尝试获取商家打印机SN
-        if (fi.shopId && !fi.shopId.startsWith('default_')) {
+        const shopData = { name: order.shopName || '', printerSn: '' }
+        if (order.shopId && !order.shopId.startsWith('default_')) {
           try {
-            const shopRes = await db.collection('food_shops').doc(fi.shopId).get()
+            const shopRes = await db.collection('food_shops').doc(order.shopId).get()
             shopData.printerSn = shopRes.data.printerSn || ''
           } catch (e) {}
         }

@@ -148,7 +148,7 @@ const onJobTap = (job) => {
 }
 
 const onPublishRecruit = () => {
-  uni.navigateTo({ url: '/pages/kefu/show?img=' + encodeURIComponent('/static/TeamWork.png') })
+  uni.navigateTo({ url: '/pages/kefu/show?img=' + encodeURIComponent('/static/TeamWork.jpg') })
 }
 
 onShow(() => {

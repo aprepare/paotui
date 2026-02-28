@@ -53,6 +53,57 @@
           <textarea class="form-textarea" v-model="tutor.desc" placeholder="介绍你的教学特点和优势" />
         </view>
         <view class="form-row">
+          <text class="form-label">📇 联系方式</text>
+          <text class="form-hint">至少填写一种联系方式，方便家长联系你</text>
+          <view class="contact-group">
+            <view class="contact-card">
+              <view class="contact-header">
+                <text class="contact-icon">📱</text>
+                <text class="contact-title">手机号</text>
+              </view>
+              <input class="contact-input" v-model="tutor.phone" placeholder="方便家长联系你" type="number" />
+              <view class="visibility-row">
+                <text class="visibility-label">公开手机</text>
+                <view class="toggle-group">
+                  <view class="toggle-btn" :class="{active: tutor.phonePublic}" @click="tutor.phonePublic = true"><text>公开</text></view>
+                  <view class="toggle-btn" :class="{active: !tutor.phonePublic}" @click="tutor.phonePublic = false"><text>隐藏</text></view>
+                </view>
+                <text class="visibility-hint">{{ tutor.phonePublic ? '所有人可见' : '需申请查看' }}</text>
+              </view>
+            </view>
+            <view class="contact-card">
+              <view class="contact-header">
+                <text class="contact-icon">💬</text>
+                <text class="contact-title">微信号</text>
+              </view>
+              <input class="contact-input" v-model="tutor.wechat" placeholder="方便家长联系你" />
+              <view class="visibility-row">
+                <text class="visibility-label">公开微信</text>
+                <view class="toggle-group">
+                  <view class="toggle-btn" :class="{active: tutor.wechatPublic}" @click="tutor.wechatPublic = true"><text>公开</text></view>
+                  <view class="toggle-btn" :class="{active: !tutor.wechatPublic}" @click="tutor.wechatPublic = false"><text>隐藏</text></view>
+                </view>
+                <text class="visibility-hint">{{ tutor.wechatPublic ? '所有人可见' : '需申请查看' }}</text>
+              </view>
+            </view>
+            <view class="contact-card">
+              <view class="contact-header">
+                <text class="contact-icon">🐧</text>
+                <text class="contact-title">QQ号</text>
+              </view>
+              <input class="contact-input" v-model="tutor.qq" placeholder="方便家长联系你" type="number" />
+              <view class="visibility-row">
+                <text class="visibility-label">公开QQ</text>
+                <view class="toggle-group">
+                  <view class="toggle-btn" :class="{active: tutor.qqPublic}" @click="tutor.qqPublic = true"><text>公开</text></view>
+                  <view class="toggle-btn" :class="{active: !tutor.qqPublic}" @click="tutor.qqPublic = false"><text>隐藏</text></view>
+                </view>
+                <text class="visibility-hint">{{ tutor.qqPublic ? '所有人可见' : '需申请查看' }}</text>
+              </view>
+            </view>
+          </view>
+        </view>
+        <view class="form-row">
           <text class="form-label">学生证照片 *</text>
           <text class="form-hint">上传学生证用于身份验证</text>
           <view class="upload-area" @click="chooseStudentCard">
@@ -106,6 +157,57 @@
           <input class="form-input" v-model="demand.contactName" placeholder="你的称呼" />
         </view>
         <view class="form-row">
+          <text class="form-label">📇 联系方式</text>
+          <text class="form-hint">至少填写一种联系方式，方便家教联系你</text>
+          <view class="contact-group">
+            <view class="contact-card">
+              <view class="contact-header">
+                <text class="contact-icon">📱</text>
+                <text class="contact-title">手机号</text>
+              </view>
+              <input class="contact-input" v-model="demand.phone" placeholder="方便家教联系你" type="number" />
+              <view class="visibility-row">
+                <text class="visibility-label">公开手机</text>
+                <view class="toggle-group">
+                  <view class="toggle-btn" :class="{active: demand.phonePublic}" @click="demand.phonePublic = true"><text>公开</text></view>
+                  <view class="toggle-btn" :class="{active: !demand.phonePublic}" @click="demand.phonePublic = false"><text>隐藏</text></view>
+                </view>
+                <text class="visibility-hint">{{ demand.phonePublic ? '所有人可见' : '需申请查看' }}</text>
+              </view>
+            </view>
+            <view class="contact-card">
+              <view class="contact-header">
+                <text class="contact-icon">💬</text>
+                <text class="contact-title">微信号</text>
+              </view>
+              <input class="contact-input" v-model="demand.wechat" placeholder="方便家教联系你" />
+              <view class="visibility-row">
+                <text class="visibility-label">公开微信</text>
+                <view class="toggle-group">
+                  <view class="toggle-btn" :class="{active: demand.wechatPublic}" @click="demand.wechatPublic = true"><text>公开</text></view>
+                  <view class="toggle-btn" :class="{active: !demand.wechatPublic}" @click="demand.wechatPublic = false"><text>隐藏</text></view>
+                </view>
+                <text class="visibility-hint">{{ demand.wechatPublic ? '所有人可见' : '需申请查看' }}</text>
+              </view>
+            </view>
+            <view class="contact-card">
+              <view class="contact-header">
+                <text class="contact-icon">🐧</text>
+                <text class="contact-title">QQ号</text>
+              </view>
+              <input class="contact-input" v-model="demand.qq" placeholder="方便家教联系你" type="number" />
+              <view class="visibility-row">
+                <text class="visibility-label">公开QQ</text>
+                <view class="toggle-group">
+                  <view class="toggle-btn" :class="{active: demand.qqPublic}" @click="demand.qqPublic = true"><text>公开</text></view>
+                  <view class="toggle-btn" :class="{active: !demand.qqPublic}" @click="demand.qqPublic = false"><text>隐藏</text></view>
+                </view>
+                <text class="visibility-hint">{{ demand.qqPublic ? '所有人可见' : '需申请查看' }}</text>
+              </view>
+            </view>
+          </view>
+        </view>
+        <view class="form-row">
           <text class="form-label">身份证照片 *</text>
           <text class="form-hint">上传身份证用于身份验证</text>
           <view class="upload-area" @click="chooseIdCard">
@@ -135,8 +237,8 @@ const bannerBg = ref('linear-gradient(135deg, #667eea, #764ba2)')
 const subjectOptions = ['数学', '英语', '物理', '化学', '语文', '编程', '其他']
 const modeOptions = ['线上', '线下', '线上+线下']
 
-const tutor = reactive({ name: '', school: '', major: '', subjects: [], mode: '线上+线下', area: '', price: '', experience: '', desc: '', studentCard: '' })
-const demand = reactive({ subject: '', title: '', desc: '', grade: '', location: '', schedule: '', budget: '', contactName: '', idCard: '' })
+const tutor = reactive({ name: '', school: '', major: '', subjects: [], mode: '线上+线下', area: '', price: '', experience: '', desc: '', studentCard: '', phone: '', wechat: '', qq: '', phonePublic: true, wechatPublic: true, qqPublic: true })
+const demand = reactive({ subject: '', title: '', desc: '', grade: '', location: '', schedule: '', budget: '', contactName: '', idCard: '', phone: '', wechat: '', qq: '', phonePublic: true, wechatPublic: true, qqPublic: true })
 
 const toggleSubject = (s) => {
   var idx = tutor.subjects.indexOf(s)
@@ -174,6 +276,9 @@ const onSubmit = async () => {
     if (!tutor.studentCard) {
       uni.showToast({ title: '请上传学生证照片', icon: 'none' }); return
     }
+    if (!tutor.phone && !tutor.wechat && !tutor.qq) {
+      uni.showToast({ title: '请至少填写一种联系方式', icon: 'none' }); return
+    }
     uni.showLoading({ title: '发布中...' })
     var studentCardUrl = ''
     try { studentCardUrl = await uploadImage(tutor.studentCard, 'tutor') } catch (e) {}
@@ -181,7 +286,9 @@ const onSubmit = async () => {
       name: tutor.name, school: tutor.school, major: tutor.major,
       subjects: tutor.subjects, mode: tutor.mode, area: tutor.area,
       price: tutor.price, experience: tutor.experience, desc: tutor.desc,
-      studentCard: studentCardUrl
+      studentCard: studentCardUrl,
+      phone: tutor.phone, wechat: tutor.wechat, qq: tutor.qq,
+      phonePublic: tutor.phonePublic, wechatPublic: tutor.wechatPublic, qqPublic: tutor.qqPublic
     })
     uni.hideLoading()
     if (res.code === 0) {
@@ -197,6 +304,9 @@ const onSubmit = async () => {
     if (!demand.idCard) {
       uni.showToast({ title: '请上传身份证照片', icon: 'none' }); return
     }
+    if (!demand.phone && !demand.wechat && !demand.qq) {
+      uni.showToast({ title: '请至少填写一种联系方式', icon: 'none' }); return
+    }
     uni.showLoading({ title: '发布中...' })
     var idCardUrl = ''
     try { idCardUrl = await uploadImage(demand.idCard, 'tutor') } catch (e) {}
@@ -205,7 +315,9 @@ const onSubmit = async () => {
       grade: demand.grade, location: demand.location,
       schedule: demand.schedule, budget: demand.budget,
       contactName: demand.contactName,
-      idCard: idCardUrl
+      idCard: idCardUrl,
+      phone: demand.phone, wechat: demand.wechat, qq: demand.qq,
+      phonePublic: demand.phonePublic, wechatPublic: demand.wechatPublic, qqPublic: demand.qqPublic
     })
     uni.hideLoading()
     if (res2.code === 0) {
@@ -235,6 +347,20 @@ const onSubmit = async () => {
 .chip.active { background: #EBF4FF; border-color: #2B6CB0; }
 .chip.active text { color: #2B6CB0; font-weight: 600; }
 .form-hint { font-size: 22rpx; color: #A0AEC0; display: block; margin-bottom: 12rpx; }
+.contact-group { display: flex; flex-direction: column; gap: 20rpx; }
+.contact-card { background: #F7FAFC; border-radius: 16rpx; padding: 24rpx; }
+.contact-header { display: flex; align-items: center; margin-bottom: 16rpx; }
+.contact-icon { font-size: 32rpx; margin-right: 12rpx; flex-shrink: 0; }
+.contact-title { font-size: 26rpx; color: #4A5568; font-weight: 600; }
+.contact-input { width: 100%; background: #fff; border-radius: 12rpx; padding: 0 20rpx; font-size: 28rpx; color: #2D3748; height: 80rpx; line-height: 80rpx; box-sizing: border-box; }
+.visibility-row { display: flex; align-items: center; margin-top: 16rpx; gap: 16rpx; }
+.visibility-label { font-size: 24rpx; color: #718096; flex-shrink: 0; }
+.toggle-group { display: flex; background: #EDF2F7; border-radius: 24rpx; overflow: hidden; }
+.toggle-btn { padding: 8rpx 28rpx; border-radius: 24rpx; }
+.toggle-btn text { font-size: 24rpx; color: #A0AEC0; }
+.toggle-btn.active { background: #fff; box-shadow: 0 2rpx 6rpx rgba(0,0,0,0.08); border: 2rpx solid #4299E1; }
+.toggle-btn.active text { color: #4299E1; font-weight: 600; }
+.visibility-hint { font-size: 22rpx; color: #A0AEC0; flex-shrink: 0; }
 .upload-area { width: 100%; height: 320rpx; border-radius: 16rpx; overflow: hidden; background: #F7FAFC; border: 2rpx dashed #CBD5E0; }
 .upload-area:active { opacity: 0.8; }
 .upload-preview { width: 100%; height: 320rpx; }
