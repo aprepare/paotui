@@ -114,4 +114,36 @@ router.post('/:id/end', auth, async (req, res) => {
   }
 })
 
+// POST /api/team/:id/qrcode - 获取企微专属二维码
+router.post('/:id/qrcode', auth, async (req, res) => {
+  try {
+    const activity = await TeamActivity.findById(req.params.id)
+    if (!activity) return res.json({ code: -1, msg: '活动不存在' })
+    // 校验用户是否是成员
+    const member = await TeamMember.countDocuments({ activityId: req.params.id, openid: req.user.openid })
+    if (member === 0) return res.json({ code: -1, msg: '仅活动成员可获取' })
+    const weworkService = require('../services/weworkService')
+    const state = req.params.id + '_' + req.user.openid
+    const result = await weworkService.createContactQrcode(state)
+    if (result.errcode === 0) {
+      res.json({ code: 0, data: { qr_code: result.qr_code, config_id: result.config_id } })
+    } else {
+      res.json({ code: -1, msg: result.errmsg || '获取二维码失败' })
+    }
+  } catch (err) {
+    res.status(500).json({ code: -1, msg: '服务器错误: ' + err.message })
+  }
+})
+
+// GET /api/team/:id/group-status - 查询群聊状态
+router.get('/:id/group-status', async (req, res) => {
+  try {
+    const activity = await TeamActivity.findById(req.params.id)
+    if (!activity) return res.json({ code: -1, msg: '活动不存在' })
+    res.json({ code: 0, data: { chatId: activity.chatId || '', hasGroup: !!activity.chatId } })
+  } catch (err) {
+    res.status(500).json({ code: -1, msg: '服务器错误' })
+  }
+})
+
 module.exports = router

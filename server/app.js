@@ -8,6 +8,12 @@ const app = express()
 
 // Middleware
 app.use(cors())
+// 微信支付回调需要原始 body 来验证签名
+app.use('/api/payment/notify', express.raw({ type: '*/*' }), (req, res, next) => {
+  // 将 raw buffer 转为 JSON 供路由使用
+  try { req.body = JSON.parse(req.body.toString()) } catch (e) { }
+  next()
+})
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 
@@ -29,6 +35,12 @@ app.use('/api/order', require('./routes/order'))
 app.use('/api/home', require('./routes/home'))
 app.use('/api/skill', require('./routes/skill'))
 app.use('/api/admin', require('./routes/admin'))
+app.use('/api/tutor', require('./routes/tutor'))
+app.use('/api/food', require('./routes/food'))
+app.use('/api/wash', require('./routes/wash'))
+app.use('/api/experience', require('./routes/experience'))
+app.use('/api/wework', require('./routes/wework'))
+app.use('/api/payment', require('./routes/payment'))
 
 // Global error handler
 app.use((err, req, res, next) => {

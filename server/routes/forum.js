@@ -1,5 +1,6 @@
 const router = require('express').Router()
 const auth = require('../middleware/auth')
+const { checkContent } = require('../services/wechat')
 const ForumPost = require('../models/ForumPost')
 const ForumComment = require('../models/ForumComment')
 const User = require('../models/User')
@@ -46,6 +47,8 @@ router.post('/', auth, async (req, res) => {
   try {
     const { content, images } = req.body
     if (!content) return res.json({ code: -1, msg: 'content required' })
+    const safe = await checkContent(req.user.openid, content, 3)
+    if (!safe) return res.json({ code: -1, msg: '内容包含违规信息，请修改后重新发布' })
     const user = await User.findOne({ openid: req.user.openid })
     const post = await ForumPost.create({
       openid: req.user.openid, nickname: user ? user.name || '匿名' : '匿名',
@@ -89,6 +92,8 @@ router.post('/:id/comment', auth, async (req, res) => {
   try {
     const { content, replyTo, replyName } = req.body
     if (!content) return res.json({ code: -1, msg: 'content required' })
+    const safe = await checkContent(req.user.openid, content, 2)
+    if (!safe) return res.json({ code: -1, msg: '评论包含违规内容，请修改' })
     const user = await User.findOne({ openid: req.user.openid })
     const commentName = user ? user.name || '匿名' : '匿名'
     const commentData = {

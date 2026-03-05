@@ -69,7 +69,14 @@ const submit = async () => {
   let imageIds = []
   if (tempPaths.value.length > 0) {
     uni.showLoading({ title: '上传图片中...' })
-    imageIds = await uploadImages(tempPaths.value, 'forum')
+    try {
+      imageIds = await uploadImages(tempPaths.value, 'forum')
+    } catch (e) {
+      uni.hideLoading()
+      submitting.value = false
+      uni.showToast({ title: e.message || '上传失败', icon: 'none' })
+      return
+    }
     uni.hideLoading()
   }
   const res = await callCloud('forum', 'create', {

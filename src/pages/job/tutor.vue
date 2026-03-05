@@ -145,11 +145,43 @@
               <text class="popup-val price">¥{{ detailData.budget }}/小时</text>
             </view>
           </view>
+          <!-- 联系方式 - 需付费查看 -->
+          <view class="popup-contact-section">
+            <text class="popup-contact-title">📞 联系方式</text>
+            <view v-if="contactPaid" class="popup-contact-list">
+              <view class="popup-contact-item" v-if="paidContact.phone">
+                <text class="popup-contact-icon">📱</text>
+                <text class="popup-contact-label">手机</text>
+                <text class="popup-contact-val" @click.stop="onCopyContact(paidContact.phone)">{{ paidContact.phone }}</text>
+              </view>
+              <view class="popup-contact-item" v-if="paidContact.wechat">
+                <text class="popup-contact-icon">💬</text>
+                <text class="popup-contact-label">微信</text>
+                <text class="popup-contact-val" @click.stop="onCopyContact(paidContact.wechat)">{{ paidContact.wechat }}</text>
+              </view>
+              <view class="popup-contact-item" v-if="paidContact.qq">
+                <text class="popup-contact-icon">🐧</text>
+                <text class="popup-contact-label">QQ</text>
+                <text class="popup-contact-val" @click.stop="onCopyContact(paidContact.qq)">{{ paidContact.qq }}</text>
+              </view>
+              <view class="popup-contact-item" v-if="paidContact.parentName">
+                <text class="popup-contact-icon">👤</text>
+                <text class="popup-contact-label">家长</text>
+                <text class="popup-contact-val">{{ paidContact.parentName }}</text>
+              </view>
+              <view class="contact-ta-btn" @click.stop="onApplyDemand(detailData)">
+                <text>联系TA</text>
+              </view>
+            </view>
+            <view v-else class="pay-lock-box" @click.stop="onPayToView(detailData, 'demand')">
+              <text class="pay-lock-icon">🔒</text>
+              <text class="pay-lock-text">支付 ¥0.01 查看联系方式</text>
+            </view>
+          </view>
           <view class="popup-parent">
-            <text>👤 发布者：家长（应聘后可见）</text>
+            <text>👤 发布者：{{ contactPaid && paidContact.parentName ? paidContact.parentName : '付费后可见' }}</text>
             <text class="popup-time">{{ detailData.postTime }}</text>
           </view>
-          <view class="popup-action" @click="onApplyDemand(detailData)"><text>我要应聘</text></view>
         </view>
 
         <!-- 家教自荐详情 -->
@@ -187,7 +219,57 @@
               <text class="popup-val">{{ detailData.experience }}</text>
             </view>
           </view>
-          <view class="popup-action" @click="onContactTutor(detailData)"><text>联系家教</text></view>
+          <!-- 联系方式 - 需付费查看 -->
+          <view class="popup-contact-section">
+            <text class="popup-contact-title">📞 联系方式</text>
+            <view v-if="contactPaid" class="popup-contact-list">
+              <view class="popup-contact-item" v-if="paidContact.phone">
+                <text class="popup-contact-icon">📱</text>
+                <text class="popup-contact-label">手机</text>
+                <text class="popup-contact-val" @click.stop="onCopyContact(paidContact.phone)">{{ paidContact.phone }}</text>
+              </view>
+              <view class="popup-contact-item" v-if="paidContact.wechat">
+                <text class="popup-contact-icon">💬</text>
+                <text class="popup-contact-label">微信</text>
+                <text class="popup-contact-val" @click.stop="onCopyContact(paidContact.wechat)">{{ paidContact.wechat }}</text>
+              </view>
+              <view class="popup-contact-item" v-if="paidContact.qq">
+                <text class="popup-contact-icon">🐧</text>
+                <text class="popup-contact-label">QQ</text>
+                <text class="popup-contact-val" @click.stop="onCopyContact(paidContact.qq)">{{ paidContact.qq }}</text>
+              </view>
+              <view class="contact-ta-btn" @click.stop="onContactTutor(detailData)">
+                <text>联系TA</text>
+              </view>
+            </view>
+            <view v-else class="pay-lock-box" @click.stop="onPayToView(detailData, 'tutor')">
+              <text class="pay-lock-icon">🔒</text>
+              <text class="pay-lock-text">支付 ¥0.01 查看联系方式</text>
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 付费确认弹窗 -->
+    <view class="popup-mask" v-if="showPayPopup" @click="showPayPopup = false">
+      <view class="pay-popup" @click.stop>
+        <view class="popup-close" @click="showPayPopup = false"><text>✕</text></view>
+        <view class="pay-popup-content">
+          <text class="pay-popup-icon">🔐</text>
+          <text class="pay-popup-title">查看联系方式</text>
+          <text class="pay-popup-desc">支付后即可查看{{ payTarget === 'demand' ? '家长' : '家教' }}的完整联系方式（手机/微信/QQ）</text>
+          <view class="pay-popup-price">
+            <text class="pay-popup-currency">¥</text>
+            <text class="pay-popup-amount">0.01</text>
+          </view>
+          <text class="pay-popup-note">同一信息仅需支付一次，之后可重复查看</text>
+          <view class="pay-popup-btn" @click="onConfirmPay">
+            <text>立即支付 ¥0.01</text>
+          </view>
+          <view class="pay-popup-cancel" @click="showPayPopup = false">
+            <text>取消</text>
+          </view>
         </view>
       </view>
     </view>
@@ -196,6 +278,7 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { callCloud, checkLogin } from '@/utils/cloud.js'
 
 const activeTab = ref('market')
 const filters = ['全部', '数学', '英语', '物理', '化学', '语文', '编程']
@@ -233,42 +316,172 @@ const showDetail = ref(false)
 const detailType = ref('')
 const detailData = ref(null)
 
+// 付费相关状态
+const showPayPopup = ref(false)
+const payTarget = ref('')
+const payPostData = ref(null)
+const contactPaid = ref(false)
+const paidContact = ref({ phone: '', wechat: '', qq: '', parentName: '' })
+const payActionType = ref('')
+
+const checkPostPayment = async (postId) => {
+  if (!postId) return
+  contactPaid.value = false
+  paidContact.value = { phone: '', wechat: '', qq: '', parentName: '' }
+  try {
+    var res = await callCloud('tutor', 'checkPayment', { postId })
+    if (res && res.code === 0 && res.paid) {
+      contactPaid.value = true
+      paidContact.value = res.contact || {}
+    }
+  } catch (e) {}
+}
+
 const onTutorTap = (tutor) => {
   detailType.value = 'tutor'
   detailData.value = tutor
   showDetail.value = true
+  if (tutor._id) checkPostPayment(tutor._id)
 }
 
 const onDemandTap = (item) => {
   detailType.value = 'demand'
   detailData.value = item
   showDetail.value = true
+  if (item._id) checkPostPayment(item._id)
 }
 
-const onContactTutor = (tutor) => {
-  showDetail.value = false
+const onPayToView = (data, type) => {
+  if (!checkLogin()) return
+  payPostData.value = data
+  payTarget.value = type
+  payActionType.value = ''
+  showPayPopup.value = true
+}
+
+const onConfirmPay = async () => {
+  if (!checkLogin()) return
+  var postId = payPostData.value && (payPostData.value._id || payPostData.value.id)
+  if (!postId) {
+    uni.showToast({ title: '信息异常', icon: 'none' })
+    return
+  }
+  uni.showLoading({ title: '创建订单中...' })
+  try {
+    var res = await callCloud('tutor', 'createPayOrder', {
+      postId: postId,
+      orderType: 'view_contact'
+    })
+    uni.hideLoading()
+    if (!res || res.code !== 0) {
+      uni.showToast({ title: res && res.msg || '创建订单失败', icon: 'none' })
+      return
+    }
+    if (res.paid) {
+      showPayPopup.value = false
+      contactPaid.value = true
+      paidContact.value = res.contact || {}
+      uni.showToast({ title: '已获取联系方式', icon: 'success' })
+      if (payActionType.value === 'contact') doContactTutor(payPostData.value)
+      else if (payActionType.value === 'apply') doApplyDemand(payPostData.value)
+      return
+    }
+    var payment = res.payment
+    if (!payment) {
+      uni.showToast({ title: '支付参数异常', icon: 'none' })
+      return
+    }
+    wx.requestPayment({
+      ...payment,
+      success: async () => {
+        showPayPopup.value = false
+        uni.showLoading({ title: '获取联系方式...' })
+        await new Promise(r => setTimeout(r, 1000))
+        await checkPostPayment(postId)
+        uni.hideLoading()
+        uni.showToast({ title: '支付成功', icon: 'success' })
+        if (payActionType.value === 'contact') doContactTutor(payPostData.value)
+        else if (payActionType.value === 'apply') doApplyDemand(payPostData.value)
+      },
+      fail: (err) => {
+        if (err.errMsg && err.errMsg.indexOf('cancel') > -1) {
+          uni.showToast({ title: '已取消支付', icon: 'none' })
+        } else {
+          uni.showToast({ title: '支付失败', icon: 'none' })
+        }
+      }
+    })
+  } catch (e) {
+    uni.hideLoading()
+    uni.showToast({ title: '支付异常', icon: 'none' })
+  }
+}
+
+const doContactTutor = async (tutor) => {
+  if (tutor._id) {
+    uni.showLoading({ title: '发送中...' })
+    await callCloud('tutor', 'contact', { postId: tutor._id })
+    uni.hideLoading()
+  }
   uni.showToast({ title: '已发送联系请求', icon: 'success' })
 }
 
+const doApplyDemand = async (item) => {
+  if (item._id) {
+    uni.showLoading({ title: '提交中...' })
+    await callCloud('tutor', 'apply', { postId: item._id })
+    uni.hideLoading()
+  }
+  uni.showToast({ title: '已提交应聘申请', icon: 'success' })
+}
+
+const onContactTutor = (tutor) => {
+  if (!checkLogin()) return
+  if (contactPaid.value) {
+    showDetail.value = false
+    doContactTutor(tutor)
+    return
+  }
+  payPostData.value = tutor
+  payTarget.value = 'tutor'
+  payActionType.value = 'contact'
+  showPayPopup.value = true
+}
+
 const onApplyDemand = (item) => {
-  uni.showModal({
-    title: '确认应聘',
-    content: `确定要应聘「${item.title}」吗？`,
-    success: (res) => {
-      if (res.confirm) {
-        showDetail.value = false
-        uni.showToast({ title: '已提交应聘申请', icon: 'success' })
+  if (!checkLogin()) return
+  if (contactPaid.value) {
+    showDetail.value = false
+    uni.showModal({
+      title: '确认应聘',
+      content: '确定要应聘「' + item.title + '」吗？',
+      success: async (res) => {
+        if (res.confirm) doApplyDemand(item)
       }
-    }
-  })
+    })
+    return
+  }
+  payPostData.value = item
+  payTarget.value = 'demand'
+  payActionType.value = 'apply'
+  showPayPopup.value = true
 }
 
 const onPostTutor = () => {
-  uni.showToast({ title: '发布家教功能即将上线', icon: 'none' })
+  if (!checkLogin()) return
+  uni.navigateTo({ url: '/pages/job-sub/tutor-create?type=tutor' })
 }
 
 const onPostDemand = () => {
-  uni.showToast({ title: '发布需求功能即将上线', icon: 'none' })
+  if (!checkLogin()) return
+  uni.navigateTo({ url: '/pages/job-sub/tutor-create?type=demand' })
+}
+
+const onCopyContact = (val) => {
+  uni.setClipboardData({
+    data: val,
+    success: () => { uni.showToast({ title: '已复制', icon: 'success' }) }
+  })
 }
 </script>
 
@@ -369,4 +582,34 @@ const onPostDemand = () => {
 .popup-tags { display: flex; gap: 12rpx; margin-bottom: 24rpx; flex-wrap: wrap; }
 .popup-subject-tag { padding: 8rpx 24rpx; border-radius: 20rpx; background: #EBF4FF; }
 .popup-subject-tag text { font-size: 24rpx; color: #2B6CB0; font-weight: 600; }
+/* Contact section in popup */
+.popup-contact-section { margin-bottom: 24rpx; padding: 20rpx; background: #F7FAFC; border-radius: 16rpx; }
+.popup-contact-title { font-size: 26rpx; color: #4A5568; font-weight: 700; display: block; margin-bottom: 16rpx; }
+.popup-contact-list { display: flex; flex-direction: column; gap: 14rpx; }
+.popup-contact-item { display: flex; align-items: center; }
+.popup-contact-icon { font-size: 28rpx; margin-right: 12rpx; }
+.popup-contact-label { font-size: 24rpx; color: #A0AEC0; width: 72rpx; }
+.popup-contact-val { font-size: 26rpx; color: #2B6CB0; font-weight: 600; }
+/* Pay Lock Box */
+.pay-lock-box { display: flex; flex-direction: column; align-items: center; padding: 32rpx 20rpx; background: linear-gradient(135deg, #F7FAFC, #EDF2F7); border-radius: 16rpx; cursor: pointer; }
+.pay-lock-icon { font-size: 48rpx; margin-bottom: 12rpx; }
+.pay-lock-text { font-size: 26rpx; color: #4299E1; font-weight: 700; }
+/* Contact TA Button */
+.contact-ta-btn { margin-top: 20rpx; background: linear-gradient(135deg, #4299E1, #2B6CB0); padding: 20rpx; border-radius: 14rpx; text-align: center; box-shadow: 0 6rpx 20rpx rgba(43,108,176,0.25); }
+.contact-ta-btn text { color: #fff; font-size: 28rpx; font-weight: 700; }
+/* Pay Popup */
+.pay-popup { width: 85%; background: #fff; border-radius: 28rpx; padding: 48rpx 36rpx 36rpx; position: relative; animation: payPopIn 0.3s ease-out; margin: auto; }
+@keyframes payPopIn { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.pay-popup-content { display: flex; flex-direction: column; align-items: center; }
+.pay-popup-icon { font-size: 72rpx; margin-bottom: 20rpx; }
+.pay-popup-title { font-size: 36rpx; font-weight: 800; color: #1A1A2E; margin-bottom: 16rpx; }
+.pay-popup-desc { font-size: 26rpx; color: #718096; text-align: center; line-height: 1.6; margin-bottom: 28rpx; }
+.pay-popup-price { display: flex; align-items: baseline; margin-bottom: 16rpx; }
+.pay-popup-currency { font-size: 36rpx; color: #E53E3E; font-weight: 700; margin-right: 4rpx; }
+.pay-popup-amount { font-size: 64rpx; color: #E53E3E; font-weight: 900; }
+.pay-popup-note { font-size: 22rpx; color: #A0AEC0; margin-bottom: 32rpx; }
+.pay-popup-btn { width: 100%; background: linear-gradient(135deg, #48BB78, #38A169); padding: 28rpx; border-radius: 16rpx; text-align: center; box-shadow: 0 8rpx 24rpx rgba(56,161,105,0.3); margin-bottom: 16rpx; }
+.pay-popup-btn text { color: #fff; font-size: 32rpx; font-weight: 700; }
+.pay-popup-cancel { text-align: center; padding: 16rpx; }
+.pay-popup-cancel text { font-size: 28rpx; color: #A0AEC0; }
 </style>

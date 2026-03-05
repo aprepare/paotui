@@ -1,7 +1,6 @@
-// 微信云开发模式
-// 备案完成后可切换回 HTTP 模式，修改 USE_CLOUD = false 并设置 BASE_URL
-const USE_CLOUD = true
-const BASE_URL = 'https://18sc.top/api'  // 备案后启用
+// HTTP 模式 — 已迁移到自建服务器
+const USE_CLOUD = false
+const BASE_URL = 'https://xaioshualan.asia/api'
 
 /**
  * 检查是否已登录（已完善用户信息）
@@ -83,7 +82,8 @@ export function buildUrl(name, action, data = {}) {
       checkFavorite: { path: '/user/favorite/check', method: 'GET' },
       myFavorites: { path: '/user/favorites', method: 'GET' },
       sendSmsCode: { path: '/user/sms/send', method: 'POST' },
-      verifySmsCode: { path: '/user/sms/verify', method: 'POST' }
+      verifySmsCode: { path: '/user/sms/verify', method: 'POST' },
+      getPhoneByCode: { path: '/user/phone-by-code', method: 'POST' }
     },
     express: {
       list: { path: '/express/list', method: 'GET' },
@@ -138,7 +138,10 @@ export function buildUrl(name, action, data = {}) {
       join: { path: `/team/${id}/join`, method: 'POST' },
       leave: { path: `/team/${id}/leave`, method: 'POST' },
       uploadPhotos: { path: `/team/${id}/photo`, method: 'POST' },
-      endActivity: { path: `/team/${id}/end`, method: 'POST' }
+      endActivity: { path: `/team/${id}/end`, method: 'POST' },
+      myTeam: { path: '/team/my', method: 'GET' },
+      getGroupQrcode: { path: `/team/${id}/qrcode`, method: 'POST' },
+      getGroupStatus: { path: `/team/${id}/group-status`, method: 'GET' }
     },
     message: {
       list: { path: '/message/list', method: 'GET' },
@@ -160,7 +163,108 @@ export function buildUrl(name, action, data = {}) {
     skill: {
       list: { path: '/skill/list', method: 'GET' },
       detail: { path: `/skill/${id}`, method: 'GET' },
-      create: { path: '/skill', method: 'POST' }
+      create: { path: '/skill', method: 'POST' },
+      my: { path: '/skill/my', method: 'GET' },
+      unlockContact: { path: `/skill/${id}/unlock`, method: 'POST' }
+    },
+    tutor: {
+      listTutors: { path: '/tutor/list-tutors', method: 'GET' },
+      listDemands: { path: '/tutor/list-demands', method: 'GET' },
+      createTutor: { path: '/tutor/create-tutor', method: 'POST' },
+      createDemand: { path: '/tutor/create-demand', method: 'POST' },
+      getDetail: { path: `/tutor/${id}`, method: 'GET' },
+      apply: { path: `/tutor/${id}/apply`, method: 'POST' },
+      contact: { path: `/tutor/${id}/contact`, method: 'POST' },
+      myPosts: { path: '/tutor/my', method: 'GET' },
+      delete: { path: `/tutor/${id}`, method: 'DELETE' },
+      checkPayment: { path: `/tutor/${id}/check-payment`, method: 'POST' },
+      createPayOrder: { path: `/tutor/${id}/create-pay-order`, method: 'POST' }
+    },
+    food: {
+      listShops: { path: '/food/shops', method: 'GET' },
+      getShopMenu: { path: `/food/shop/${id}/menu`, method: 'GET' },
+      createOrder: { path: '/food/order', method: 'POST' },
+      myOrders: { path: '/food/my-orders', method: 'GET' },
+      orderDetail: { path: `/food/order/${id}`, method: 'GET' },
+      cancelOrder: { path: `/food/order/${id}/cancel`, method: 'POST' },
+      riderAccept: { path: `/food/order/${id}/rider-accept`, method: 'POST' },
+      riderComplete: { path: `/food/order/${id}/rider-complete`, method: 'POST' },
+      adminShopList: { path: '/food/admin/shops', method: 'GET' },
+      addShop: { path: '/food/admin/shop', method: 'POST' },
+      updateShop: { path: `/food/admin/shop/${id}`, method: 'PUT' },
+      deleteShop: { path: `/food/admin/shop/${id}`, method: 'DELETE' },
+      adminItemList: { path: `/food/admin/items/${id}`, method: 'GET' },
+      addItem: { path: '/food/admin/item', method: 'POST' },
+      updateItem: { path: `/food/admin/item/${id}`, method: 'PUT' },
+      deleteItem: { path: `/food/admin/item/${id}`, method: 'DELETE' },
+      adminOrderList: { path: '/food/admin/orders', method: 'GET' },
+      updateOrderStatus: { path: `/food/admin/order/${id}/status`, method: 'PUT' },
+      getPrinterConfig: { path: '/food/admin/printer-config', method: 'GET' },
+      savePrinterConfig: { path: '/food/admin/printer-config', method: 'POST' },
+      reprintOrder: { path: `/food/admin/order/${id}/reprint`, method: 'POST' }
+    },
+    wash: {
+      getProducts: { path: '/wash/products', method: 'GET' },
+      getGroups: { path: '/wash/groups', method: 'GET' },
+      createGroup: { path: '/wash/group', method: 'POST' },
+      joinGroup: { path: `/wash/group/${id}/join`, method: 'POST' },
+      myGroups: { path: '/wash/my-groups', method: 'GET' },
+      createOrder: { path: '/wash/order', method: 'POST' },
+      myOrders: { path: '/wash/my-orders', method: 'GET' },
+      orderDetail: { path: `/wash/order/${id}`, method: 'GET' },
+      cancelOrder: { path: `/wash/order/${id}/cancel`, method: 'POST' },
+      adminOrderList: { path: '/wash/admin/orders', method: 'GET' },
+      updateOrderStatus: { path: `/wash/admin/order/${id}/status`, method: 'PUT' }
+    },
+    experience: {
+      list: { path: '/experience/list', method: 'GET' },
+      detail: { path: `/experience/${id}`, method: 'GET' },
+      create: { path: '/experience', method: 'POST' },
+      like: { path: `/experience/${id}/like`, method: 'POST' },
+      comment: { path: `/experience/${id}/comment`, method: 'POST' },
+      likeComment: { path: `/experience/comment/${id}/like`, method: 'POST' },
+      deleteComment: { path: `/experience/comment/${id}`, method: 'DELETE' },
+      delete: { path: `/experience/${id}`, method: 'DELETE' }
+    },
+    admin: {
+      checkAdmin: { path: '/admin/check-admin', method: 'POST' },
+      dashboard: { path: '/admin/dashboard-mp', method: 'POST' },
+      updateStats: { path: '/admin/update-stats', method: 'POST' },
+      userList: { path: '/admin/user-list', method: 'POST' },
+      userDetail: { path: '/admin/user-detail', method: 'POST' },
+      toggleUserStatus: { path: '/admin/toggle-user-status', method: 'POST' },
+      setUserAdmin: { path: '/admin/set-user-admin', method: 'POST' },
+      expressList: { path: '/admin/express-list', method: 'POST' },
+      cancelExpress: { path: '/admin/cancel-express', method: 'POST' },
+      errandList: { path: '/admin/errand-list', method: 'POST' },
+      cancelErrand: { path: '/admin/cancel-errand', method: 'POST' },
+      forumList: { path: '/admin/forum-list', method: 'POST' },
+      deletePost: { path: '/admin/delete-post', method: 'POST' },
+      marketList: { path: '/admin/market-list', method: 'POST' },
+      deleteGoods: { path: '/admin/delete-goods', method: 'POST' },
+      teamList: { path: '/admin/team-list', method: 'POST' },
+      deleteTeam: { path: '/admin/delete-team', method: 'POST' },
+      carpoolList: { path: '/admin/carpool-list', method: 'POST' },
+      deleteCarpool: { path: '/admin/delete-carpool', method: 'POST' },
+      getPageConfig: { path: '/admin/get-page-config', method: 'POST' },
+      savePageConfig: { path: '/admin/save-page-config', method: 'POST' },
+      getWelfareConfig: { path: '/admin/get-welfare-config', method: 'POST' },
+      saveWelfareConfig: { path: '/admin/save-welfare-config', method: 'POST' },
+      getWelfarePublic: { path: '/admin/get-welfare-public', method: 'POST' },
+      getTabBarConfig: { path: '/admin/get-tabbar-config', method: 'POST' },
+      saveTabBarConfig: { path: '/admin/save-tabbar-config', method: 'POST' },
+      getTabBarPublic: { path: '/admin/get-tabbar-public', method: 'POST' },
+      adminList: { path: '/admin/admin-list', method: 'POST' },
+      addAdmin: { path: '/admin/add-admin', method: 'POST' },
+      removeAdmin: { path: '/admin/remove-admin', method: 'POST' },
+      sendNotice: { path: '/admin/send-notice', method: 'POST' },
+      withdrawList: { path: '/admin/withdraw-list', method: 'POST' },
+      approveWithdraw: { path: '/admin/approve-withdraw', method: 'POST' },
+      rejectWithdraw: { path: '/admin/reject-withdraw', method: 'POST' },
+      washProductList: { path: '/admin/wash-product-list', method: 'POST' },
+      addWashProduct: { path: '/admin/add-wash-product', method: 'POST' },
+      updateWashProduct: { path: '/admin/update-wash-product', method: 'POST' },
+      deleteWashProduct: { path: '/admin/delete-wash-product', method: 'POST' }
     }
   }
 

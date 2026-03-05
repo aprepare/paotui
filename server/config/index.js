@@ -13,5 +13,14 @@ module.exports = {
     sk: process.env.QINIU_SK || '',
     bucket: process.env.QINIU_BUCKET || '',
     domain: process.env.QINIU_DOMAIN || ''
-  }
+  },
+  wework: {
+    corpid: process.env.WEWORK_CORPID || '',
+    agentid: process.env.WEWORK_AGENTID || '',
+    corpsecret: process.env.WEWORK_CORPSECRET || '',
+    token: process.env.WEWORK_TOKEN || '',
+    encodingAESKey: process.env.WEWORK_ENCODING_AES_KEY || '',
+    staffUserId: process.env.WEWORK_STAFF_USERID || ''
+  },
+  domain: process.env.DOMAIN || 'https://xaioshualan.asia'
 }

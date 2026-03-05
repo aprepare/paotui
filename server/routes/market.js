@@ -1,5 +1,6 @@
 const router = require('express').Router()
 const auth = require('../middleware/auth')
+const { checkContent } = require('../services/wechat')
 const MarketGoods = require('../models/MarketGoods')
 const User = require('../models/User')
 
@@ -45,6 +46,9 @@ router.post('/', auth, async (req, res) => {
   try {
     const { title, desc, price, category, images, deliveryType, contact, contactPublic } = req.body
     if (!title || !price) return res.json({ code: -1, msg: 'missing fields' })
+    const textToCheck = (title || '') + ' ' + (desc || '')
+    const safe = await checkContent(req.user.openid, textToCheck, 4)
+    if (!safe) return res.json({ code: -1, msg: '内容包含违规信息，请修改后重新发布' })
     const user = await User.findOne({ openid: req.user.openid })
     const userName = user ? user.name || '匿名' : '匿名'
     const deliveryText = deliveryType === 1 ? '包配送' : '自提'

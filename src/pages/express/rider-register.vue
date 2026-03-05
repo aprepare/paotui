@@ -19,8 +19,8 @@
         <view class="form-item">
           <text class="form-label">手机号码</text>
           <text v-if="form.phone" class="phone-display">{{ form.phone }}</text>
-          <button v-else class="wx-phone-btn" open-type="getPhoneNumber" @getphonenumber="onGetPhoneNumber">
-            <text>📱 微信授权获取</text>
+          <button v-else class="phone-btn" open-type="getPhoneNumber" @getphonenumber="onGetPhoneNumber">
+            <text>📱 手机号快捷获取</text>
           </button>
         </view>
         <view class="phone-hint">
@@ -202,7 +202,7 @@ const submit = async () => {
     return
   }
   if (!form.phone) {
-    uni.showToast({ title: '请先授权获取手机号', icon: 'none' })
+    uni.showToast({ title: '请先获取手机号', icon: 'none' })
     return
   }
   if (!form.school.trim()) {
@@ -265,9 +265,9 @@ const submit = async () => {
 .hint-icon { font-size: 22rpx; margin-right: 8rpx; }
 .hint-text { font-size: 22rpx; color: #38A169; font-weight: 500; }
 .phone-display { flex: 1; font-size: 30rpx; color: #2D3748; font-weight: 600; }
-.wx-phone-btn { flex: 1; background: linear-gradient(135deg, #07C160, #06AD56); border-radius: 32rpx; padding: 16rpx 0; text-align: center; border: none; margin: 0; line-height: normal; font-size: 26rpx; }
-.wx-phone-btn::after { display: none; }
-.wx-phone-btn text { color: #fff; font-size: 26rpx; font-weight: 600; }
+.phone-btn { flex: 1; background: linear-gradient(135deg, #4299E1, #2B6CB0); border-radius: 32rpx; padding: 16rpx 0; text-align: center; border: none; margin: 0; line-height: normal; font-size: 26rpx; }
+.phone-btn::after { display: none; }
+.phone-btn text { color: #fff; font-size: 26rpx; font-weight: 600; }
 .picker-value { flex: 1; display: flex; justify-content: space-between; align-items: center; font-size: 28rpx; color: #333; }
 .picker-arrow { font-size: 32rpx; color: #ccc; }
 

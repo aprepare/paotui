@@ -16,9 +16,22 @@ function moveFile(file, folder) {
   return '/uploads/' + folder + '/' + fname
 }
 
-router.post('/image', auth, upload.single('file'), (req, res) => {
+router.post('/image', auth, upload.single('file'), async (req, res) => {
   try {
     if (!req.file) return res.json({ code: -1, msg: '未选择文件' })
+    // 图片安全检测
+    try {
+      const fs = require('fs')
+      const { imgSecCheck } = require('../services/wechat')
+      const buffer = fs.readFileSync(req.file.path)
+      const safe = await imgSecCheck(buffer)
+      if (!safe) {
+        fs.unlinkSync(req.file.path)
+        return res.json({ code: -1, msg: '图片包含违规内容，请更换' })
+      }
+    } catch (e) {
+      console.warn('[imgSecCheck] skip:', e.message)
+    }
     const folder = req.query.folder || 'images'
     const url = moveFile(req.file, folder)
     res.json({ code: 0, data: { url, key: url } })

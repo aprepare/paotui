@@ -15,7 +15,7 @@
             <image v-if="avatarUrl" :src="avatarUrl" class="avatar-img" />
             <text v-else class="avatar-placeholder">🧑</text>
           </view>
-          <text class="avatar-tip">点击获取微信头像</text>
+          <text class="avatar-tip">点击获取头像</text>
           <text class="arrow">›</text>
         </button>
       </view>
@@ -23,22 +23,22 @@
       <!-- 昵称 -->
       <view class="form-item">
         <text class="form-label">昵称</text>
-        <input type="nickname" v-model="nickname" placeholder="点击获取微信昵称" placeholder-style="color:#A0AEC0" class="form-input"></input>
+        <input type="nickname" v-model="nickname" placeholder="点击获取昵称" placeholder-style="color:#A0AEC0" class="form-input"></input>
       </view>
       <view class="divider"></view>
-      <!-- 手机号（微信授权） -->
+      <!-- 手机号（快捷登录） -->
       <view class="form-item">
         <text class="form-label">手机号</text>
         <text v-if="phone" class="phone-display">{{ phone }}</text>
-        <button v-else class="wx-phone-btn" open-type="getPhoneNumber" @getphonenumber="onGetPhoneNumber">
-          <text>📱 微信授权获取手机号</text>
+        <button v-else class="phone-btn" open-type="getPhoneNumber" @getphonenumber="onGetPhoneNumber">
+          <text>📱 手机号快捷登录</text>
         </button>
       </view>
     </view>
 
     <view class="tip-card">
       <text class="tip-icon">💡</text>
-      <text class="tip-text">点击「微信授权获取手机号」一键绑定，无需输入验证码</text>
+      <text class="tip-text">点击「手机号快捷登录」一键绑定，无需输入验证码</text>
     </view>
 
     <view class="submit-btn" @click="saveProfile">
@@ -65,7 +65,7 @@ if (stored && stored.name) {
   phone.value = stored.phone || ''
   avatarUrl.value = stored.avatar || ''
 } else {
-  nickname.value = '微信用户'
+  nickname.value = '校园用户'
 }
 
 const onChooseAvatar = (e) => {
@@ -105,7 +105,7 @@ const saveProfile = async () => {
     return
   }
   if (!phone.value) {
-    uni.showToast({ title: '请先授权获取手机号', icon: 'none' })
+    uni.showToast({ title: '请先获取手机号', icon: 'none' })
     return
   }
   if (saving.value) return
@@ -161,9 +161,9 @@ const saveProfile = async () => {
 .avatar-tip { flex: 1; font-size: 26rpx; color: #A0AEC0; }
 .arrow { font-size: 32rpx; color: #CBD5E0; }
 .phone-display { flex: 1; font-size: 30rpx; color: #2D3748; font-weight: 600; }
-.wx-phone-btn { flex: 1; background: linear-gradient(135deg, #07C160, #06AD56); border-radius: 32rpx; padding: 18rpx 0; text-align: center; border: none; margin: 0; line-height: normal; }
-.wx-phone-btn::after { display: none; }
-.wx-phone-btn text { color: #fff; font-size: 26rpx; font-weight: 600; }
+.phone-btn { flex: 1; background: linear-gradient(135deg, #4299E1, #2B6CB0); border-radius: 32rpx; padding: 18rpx 0; text-align: center; border: none; margin: 0; line-height: normal; }
+.phone-btn::after { display: none; }
+.phone-btn text { color: #fff; font-size: 26rpx; font-weight: 600; }
 .tip-card { display: flex; align-items: flex-start; margin: 24rpx 28rpx; padding: 20rpx; background: #EBF4FF; border-radius: 12rpx; }
 .tip-icon { font-size: 28rpx; margin-right: 12rpx; flex-shrink: 0; }
 .tip-text { font-size: 24rpx; color: #2B6CB0; line-height: 36rpx; }

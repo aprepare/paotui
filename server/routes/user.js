@@ -73,6 +73,11 @@ router.get('/profile', auth, async (req, res) => {
 router.put('/profile', auth, async (req, res) => {
   try {
     const { name, avatar, phone } = req.body
+    if (name) {
+      const { checkContent } = require('../services/wechat')
+      const safe = await checkContent(req.user.openid, name, 1)
+      if (!safe) return res.json({ code: -1, msg: '昵称包含违规内容，请修改' })
+    }
     const updateData = {}
     if (name !== undefined) updateData.name = name
     if (avatar !== undefined) updateData.avatar = avatar
@@ -236,6 +241,33 @@ router.post('/sms/verify', auth, async (req, res) => {
     res.json({ code: 0, msg: '验证通过' })
   } catch (err) {
     res.status(500).json({ code: -1, msg: '服务器错误' })
+  }
+})
+
+// POST /api/user/phone-by-code
+router.post('/phone-by-code', auth, async (req, res) => {
+  try {
+    const { code } = req.body
+    if (!code) return res.json({ code: -1, msg: '缺少code' })
+    const result = await wechatService.getPhoneNumber(code)
+    res.json({ code: 0, data: { phone: result.phone } })
+  } catch (err) {
+    console.error('getPhoneByCode error:', err.message)
+    res.json({ code: -1, msg: 'Error: ' + err.message })
+  }
+})
+// POST /api/user/getWallet
+router.post('/getWallet', auth, async (req, res) => {
+  try {
+    const UserWallet = require('../models/UserWallet')
+    let wallet = await UserWallet.findOne({ openid: req.user.openid })
+    if (!wallet) {
+      wallet = await UserWallet.create({ openid: req.user.openid, balance: 0, totalIncome: 0 })
+    }
+    res.json({ code: 0, data: wallet })
+  } catch (err) {
+    console.error('getWallet error:', err)
+    res.status(500).json({ code: -1, msg: '获取钱包失败' })
   }
 })
 
