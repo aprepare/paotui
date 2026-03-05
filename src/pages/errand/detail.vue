@@ -144,35 +144,7 @@
       </view>
     </view>
 
-    <!-- 企业微信拉群（发布者或接单人可见，已接单后） -->
-    <view class="info-card" v-if="task.status >= 1 && task.status <= 2 && (isOwner || isRider)">
-      <text class="card-title">💬 沟通群聊</text>
-      <view class="wechat-card" @click="showQrcode = true">
-        <view class="wechat-icon-wrap">
-          <text class="wechat-icon">🏢</text>
-        </view>
-        <view class="wechat-info">
-          <text class="wechat-title">添加企业微信，拉你进沟通群</text>
-          <text class="wechat-desc">点击查看二维码 · 扫码添加后自动邀请入群</text>
-        </view>
-        <text class="wechat-arrow">›</text>
-      </view>
-    </view>
-
-    <!-- 企业微信二维码弹窗 -->
-    <view class="qr-mask" v-if="showQrcode" @click="showQrcode = false">
-      <view class="qr-popup" @click.stop>
-        <view class="qr-close" @click="showQrcode = false"><text>✕</text></view>
-        <text class="qr-title">扫码添加企业微信</text>
-        <text class="qr-subtitle">添加后将自动邀请您进入任务沟通群</text>
-        <image class="qr-image" src="/static/qrcode-work-wechat.png" mode="aspectFit" />
-        <view class="qr-copy-row">
-          <text class="qr-wechat-id">企业微信号：{{ workWechatId }}</text>
-          <view class="qr-copy-btn" @click="copyWechatId"><text>复制</text></view>
-        </view>
-        <text class="qr-tip">长按二维码可保存到相册</text>
-      </view>
-    </view>
+    <!-- 隐藏原先纯静态没对接的小跑腿群活码 -->
 
     <!-- 非骑手提示注册 -->
     <view class="rider-register-bar" v-if="!isRider && !isOwner && task.status === 0">

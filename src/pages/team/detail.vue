@@ -49,7 +49,7 @@
     <!-- 企业微信进群引导（已加入的成员可见） -->
     <view class="section" v-if="isJoined && team.status !== 'ended' && team.status !== 'expired'">
       <text class="section-label">💬 加入组队群聊</text>
-      <view class="wechat-card" @click="showQrcode = true">
+      <view class="wechat-card" @click="handleShowQrcode">
         <view class="wechat-icon-wrap">
           <text class="wechat-icon">🏢</text>
         </view>
@@ -67,7 +67,8 @@
         <view class="qr-close" @click="showQrcode = false"><text>✕</text></view>
         <text class="qr-title">扫码添加企业微信</text>
         <text class="qr-subtitle">添加后将自动邀请您进入组队群聊</text>
-        <image class="qr-image" src="/static/qrcode-work-wechat.png" mode="aspectFit" />
+        <image class="qr-image" :src="qrcodeUrl" mode="aspectFit" v-if="qrcodeUrl" />
+        <view class="qr-image qr-loading" v-else><text>正在获取专属二维码...</text></view>
         <view class="qr-copy-row">
           <text class="qr-wechat-id">企业微信号：{{ workWechatId }}</text>
           <view class="qr-copy-btn" @click="copyWechatId"><text>复制</text></view>
@@ -82,7 +83,7 @@
         <view class="end-btn" @click="onEndActivity"><text>结束活动</text></view>
       </view>
       <view v-else-if="isJoined" class="bottom-actions">
-        <view class="wechat-group-btn" @click="showQrcode = true"><text>加微信进群</text></view>
+        <view class="wechat-group-btn" @click="handleShowQrcode"><text>加微信进群</text></view>
         <view class="leave-btn" @click="onLeave"><text>退出组队</text></view>
       </view>
       <view v-else-if="team.current < team.max">
@@ -111,13 +112,29 @@ const members = ref([])
 const isJoined = ref(false)
 const isExpired = ref(false)
 const showQrcode = ref(false)
-const workWechatId = ref('your_work_wechat_id') // 替换成你的企业微信号
+const qrcodeUrl = ref('')
+const workWechatId = ref('WangJie') // 替换成您的企业微信号
 
 const copyWechatId = () => {
   uni.setClipboardData({
     data: workWechatId.value,
     success: () => { uni.showToast({ title: '已复制微信号', icon: 'success' }) }
   })
+}
+
+const handleShowQrcode = async () => {
+  showQrcode.value = true
+  if (!qrcodeUrl.value) {
+    uni.showLoading({ title: '获取中' })
+    const res = await callCloud('team', 'getGroupQrcode', { id: team.value._id })
+    uni.hideLoading()
+    if (res.code === 0 && res.data && res.data.qr_code) {
+      qrcodeUrl.value = res.data.qr_code
+    } else {
+      uni.showToast({ title: res.msg || '获取二维码失败', icon: 'none' })
+      showQrcode.value = false
+    }
+  }
 }
 
 onLoad(async (query) => {
