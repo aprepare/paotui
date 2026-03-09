@@ -3,7 +3,10 @@
     <view class="search-bar">
       <view class="search-input">
         <text class="search-icon">🔍</text>
-        <input placeholder="搜索技能服务" v-model="keyword" @confirm="loadData"></input>
+        <input placeholder="搜索技能服务" v-model="keyword" confirm-type="search" @confirm="loadData"></input>
+        <view class="search-action" @click="loadData">
+          <text>搜索</text>
+        </view>
       </view>
     </view>
     <view class="category-bar">
@@ -54,9 +57,9 @@ import MsgNotify from '@/components/MsgNotify.vue'
 
 const keyword = ref('')
 const currentCat = ref(0)
-const categories = ref(['全部', 'PS/设计', '视频剪辑', '编程开发', '翻译写作', '音乐舞蹈', '摄影', '其他'])
-const colorPool = ['linear-gradient(135deg, #F687B3, #D53F8C)', 'linear-gradient(135deg, #63B3ED, #2B6CB0)', 'linear-gradient(135deg, #68D391, #38A169)', 'linear-gradient(135deg, #F6AD55, #DD6B20)', 'linear-gradient(135deg, #B794F4, #805AD5)', 'linear-gradient(135deg, #4FD1C5, #319795)']
-const emojiPool = ['🎨', '🎬', '💻', '✍️', '🎵', '📷', '🎯', '🛠️']
+const categories = ref(['全部', '游戏陪玩', 'PS/设计', '视频剪辑', '编程开发', '翻译写作', '音乐舞蹈', '摄影', '其他'])
+const colorPool = ['linear-gradient(135deg, #F56565, #C53030)', 'linear-gradient(135deg, #F687B3, #D53F8C)', 'linear-gradient(135deg, #63B3ED, #2B6CB0)', 'linear-gradient(135deg, #68D391, #38A169)', 'linear-gradient(135deg, #F6AD55, #DD6B20)', 'linear-gradient(135deg, #B794F4, #805AD5)', 'linear-gradient(135deg, #4FD1C5, #319795)']
+const emojiPool = ['🎮', '🎨', '🎬', '💻', '✍️', '🎵', '📷', '🎯', '🛠️']
 
 const skillList = ref([])
 
@@ -89,9 +92,11 @@ const goCreate = () => { uni.navigateTo({ url: '/pages/skill/create' }) }
 <style scoped>
 .skill-page { background: #F0F2F5; min-height: 100vh; padding-bottom: 120rpx; }
 .search-bar { padding: 20rpx 24rpx; }
-.search-input { display: flex; align-items: center; background: #fff; border-radius: 40rpx; padding: 16rpx 24rpx; box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.06); }
+.search-input { display: flex; align-items: center; background: #fff; border-radius: 40rpx; padding: 12rpx 16rpx 12rpx 24rpx; box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.06); }
 .search-icon { margin-right: 12rpx; font-size: 28rpx; }
-.search-input input { flex: 1; font-size: 28rpx; }
+.search-input input { flex: 1; font-size: 28rpx; height: 60rpx; line-height: 60rpx; }
+.search-action { background: linear-gradient(135deg, #F687B3, #D53F8C); padding: 10rpx 24rpx; border-radius: 30rpx; margin-left: 12rpx; }
+.search-action text { color: #fff; font-size: 24rpx; font-weight: bold; }
 .category-bar { display: flex; padding: 0 24rpx 20rpx; gap: 12rpx; overflow-x: auto; white-space: nowrap; }
 .cat-item { padding: 10rpx 24rpx; background: #fff; border-radius: 30rpx; font-size: 24rpx; color: #666; flex-shrink: 0; }
 .cat-item.active { background: linear-gradient(135deg, #F687B3, #D53F8C); color: #fff; }

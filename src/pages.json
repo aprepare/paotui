@@ -1,171 +1,643 @@
 {
 	"pages": [
-		{ "path": "pages/index/index", "style": { "navigationBarTitleText": "校园跑腿", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white", "enablePullDownRefresh": true, "backgroundTextStyle": "dark" } },
-		{ "path": "pages/welfare/index", "style": { "navigationBarTitleText": "校园福利", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } },
-		{ "path": "pages/forum/index", "style": { "navigationBarTitleText": "校园广场", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } },
-		{ "path": "pages/mine/index", "style": { "navigationBarTitleText": "我的", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } },
-		{ "path": "pages/job/index", "style": { "navigationBarTitleText": "校园兼职", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } },
-		{ "path": "pages/login/index", "style": { "navigationBarTitleText": "登录", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } }
+		{
+			"path": "pages/index/index",
+			"style": {
+				"navigationBarTitleText": "燕大小树懒",
+				"navigationBarBackgroundColor": "#2B6CB0",
+				"navigationBarTextStyle": "white",
+				"enablePullDownRefresh": true,
+				"backgroundTextStyle": "dark"
+			}
+		},
+		{
+			"path": "pages/welfare/index",
+			"style": {
+				"navigationBarTitleText": "校园福利",
+				"navigationBarBackgroundColor": "#2B6CB0",
+				"navigationBarTextStyle": "white"
+			}
+		},
+		{
+			"path": "pages/forum/index",
+			"style": {
+				"navigationBarTitleText": "校园广场",
+				"navigationBarBackgroundColor": "#2B6CB0",
+				"navigationBarTextStyle": "white"
+			}
+		},
+		{
+			"path": "pages/mine/index",
+			"style": {
+				"navigationBarTitleText": "我的",
+				"navigationBarBackgroundColor": "#2B6CB0",
+				"navigationBarTextStyle": "white"
+			}
+		},
+		{
+			"path": "pages/job/index",
+			"style": {
+				"navigationBarTitleText": "校园兼职",
+				"navigationBarBackgroundColor": "#2B6CB0",
+				"navigationBarTextStyle": "white"
+			}
+		},
+		{
+			"path": "pages/login/index",
+			"style": {
+				"navigationBarTitleText": "登录",
+				"navigationBarBackgroundColor": "#2B6CB0",
+				"navigationBarTextStyle": "white"
+			}
+		}
 	],
 	"subPackages": [
 		{
 			"root": "pages/express",
 			"pages": [
-				{ "path": "index", "style": { "navigationBarTitleText": "代取快递", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white", "enablePullDownRefresh": true, "backgroundTextStyle": "dark" } },
-				{ "path": "create", "style": { "navigationBarTitleText": "发布快递单", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } },
-				{ "path": "detail", "style": { "navigationBarTitleText": "快递详情", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } },
-				{ "path": "rider-register", "style": { "navigationBarTitleText": "骑手注册", "navigationBarBackgroundColor": "#DD6B20", "navigationBarTextStyle": "white" } },
-				{ "path": "building-orders", "style": { "navigationBarTitleText": "楼栋订单", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } }
+				{
+					"path": "index",
+					"style": {
+						"navigationBarTitleText": "代取快递",
+						"navigationBarBackgroundColor": "#2B6CB0",
+						"navigationBarTextStyle": "white",
+						"enablePullDownRefresh": true,
+						"backgroundTextStyle": "dark"
+					}
+				},
+				{
+					"path": "create",
+					"style": {
+						"navigationBarTitleText": "发布快递单",
+						"navigationBarBackgroundColor": "#2B6CB0",
+						"navigationBarTextStyle": "white"
+					}
+				},
+				{
+					"path": "detail",
+					"style": {
+						"navigationBarTitleText": "快递详情",
+						"navigationBarBackgroundColor": "#2B6CB0",
+						"navigationBarTextStyle": "white"
+					}
+				},
+				{
+					"path": "rider-register",
+					"style": {
+						"navigationBarTitleText": "骑手注册",
+						"navigationBarBackgroundColor": "#DD6B20",
+						"navigationBarTextStyle": "white"
+					}
+				},
+				{
+					"path": "building-orders",
+					"style": {
+						"navigationBarTitleText": "楼栋订单",
+						"navigationBarBackgroundColor": "#2B6CB0",
+						"navigationBarTextStyle": "white"
+					}
+				}
 			]
 		},
 		{
 			"root": "pages/errand",
 			"pages": [
-				{ "path": "index", "style": { "navigationBarTitleText": "万能跑腿", "navigationBarBackgroundColor": "#DD6B20", "navigationBarTextStyle": "white", "enablePullDownRefresh": true, "backgroundTextStyle": "dark" } },
-				{ "path": "create", "style": { "navigationBarTitleText": "发布任务", "navigationBarBackgroundColor": "#DD6B20", "navigationBarTextStyle": "white" } },
-				{ "path": "detail", "style": { "navigationBarTitleText": "任务详情", "navigationBarBackgroundColor": "#DD6B20", "navigationBarTextStyle": "white" } }
+				{
+					"path": "index",
+					"style": {
+						"navigationBarTitleText": "万能跑腿",
+						"navigationBarBackgroundColor": "#DD6B20",
+						"navigationBarTextStyle": "white",
+						"enablePullDownRefresh": true,
+						"backgroundTextStyle": "dark"
+					}
+				},
+				{
+					"path": "create",
+					"style": {
+						"navigationBarTitleText": "发布任务",
+						"navigationBarBackgroundColor": "#DD6B20",
+						"navigationBarTextStyle": "white"
+					}
+				},
+				{
+					"path": "detail",
+					"style": {
+						"navigationBarTitleText": "任务详情",
+						"navigationBarBackgroundColor": "#DD6B20",
+						"navigationBarTextStyle": "white"
+					}
+				}
 			]
 		},
 		{
 			"root": "pages/order",
 			"pages": [
-				{ "path": "all", "style": { "navigationBarTitleText": "全部订单", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } },
-				{ "path": "create", "style": { "navigationBarTitleText": "发布跑腿", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } },
-				{ "path": "detail", "style": { "navigationBarTitleText": "订单详情", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } },
-				{ "path": "list", "style": { "navigationBarTitleText": "关于我的", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } }
+				{
+					"path": "all",
+					"style": {
+						"navigationBarTitleText": "全部订单",
+						"navigationBarBackgroundColor": "#2B6CB0",
+						"navigationBarTextStyle": "white"
+					}
+				},
+				{
+					"path": "create",
+					"style": {
+						"navigationBarTitleText": "发布跑腿",
+						"navigationBarBackgroundColor": "#2B6CB0",
+						"navigationBarTextStyle": "white"
+					}
+				},
+				{
+					"path": "detail",
+					"style": {
+						"navigationBarTitleText": "订单详情",
+						"navigationBarBackgroundColor": "#2B6CB0",
+						"navigationBarTextStyle": "white"
+					}
+				},
+				{
+					"path": "list",
+					"style": {
+						"navigationBarTitleText": "关于我的",
+						"navigationBarBackgroundColor": "#2B6CB0",
+						"navigationBarTextStyle": "white"
+					}
+				}
 			]
 		},
 		{
 			"root": "pages/market",
 			"pages": [
-				{ "path": "index", "style": { "navigationBarTitleText": "二手市场", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } },
-				{ "path": "create", "style": { "navigationBarTitleText": "发布商品", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } },
-				{ "path": "detail", "style": { "navigationBarTitleText": "商品详情", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } },
-				{ "path": "my", "style": { "navigationBarTitleText": "我的商品", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } }
+				{
+					"path": "index",
+					"style": {
+						"navigationBarTitleText": "二手市场",
+						"navigationBarBackgroundColor": "#2B6CB0",
+						"navigationBarTextStyle": "white"
+					}
+				},
+				{
+					"path": "create",
+					"style": {
+						"navigationBarTitleText": "发布商品",
+						"navigationBarBackgroundColor": "#2B6CB0",
+						"navigationBarTextStyle": "white"
+					}
+				},
+				{
+					"path": "detail",
+					"style": {
+						"navigationBarTitleText": "商品详情",
+						"navigationBarBackgroundColor": "#2B6CB0",
+						"navigationBarTextStyle": "white"
+					}
+				},
+				{
+					"path": "my",
+					"style": {
+						"navigationBarTitleText": "我的商品",
+						"navigationBarBackgroundColor": "#2B6CB0",
+						"navigationBarTextStyle": "white"
+					}
+				}
 			]
 		},
 		{
 			"root": "pages/forum-sub",
 			"pages": [
-				{ "path": "create", "style": { "navigationBarTitleText": "发布帖子", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } },
-				{ "path": "detail", "style": { "navigationBarTitleText": "帖子详情", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } },
-				{ "path": "my", "style": { "navigationBarTitleText": "我的帖子", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } }
+				{
+					"path": "create",
+					"style": {
+						"navigationBarTitleText": "发布帖子",
+						"navigationBarBackgroundColor": "#2B6CB0",
+						"navigationBarTextStyle": "white"
+					}
+				},
+				{
+					"path": "detail",
+					"style": {
+						"navigationBarTitleText": "帖子详情",
+						"navigationBarBackgroundColor": "#2B6CB0",
+						"navigationBarTextStyle": "white"
+					}
+				},
+				{
+					"path": "my",
+					"style": {
+						"navigationBarTitleText": "我的帖子",
+						"navigationBarBackgroundColor": "#2B6CB0",
+						"navigationBarTextStyle": "white"
+					}
+				}
 			]
 		},
 		{
 			"root": "pages/message",
 			"pages": [
-				{ "path": "index", "style": { "navigationBarTitleText": "消息中心", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } }
+				{
+					"path": "index",
+					"style": {
+						"navigationBarTitleText": "消息中心",
+						"navigationBarBackgroundColor": "#2B6CB0",
+						"navigationBarTextStyle": "white"
+					}
+				}
 			]
 		},
 		{
 			"root": "pages/mine-sub",
 			"pages": [
-				{ "path": "favorites", "style": { "navigationBarTitleText": "我的收藏", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } },
-				{ "path": "services", "style": { "navigationBarTitleText": "更多服务", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } },
-				{ "path": "wallet", "style": { "navigationBarTitleText": "我的钱包", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } },
-				{ "path": "withdraw", "style": { "navigationBarTitleText": "提现", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } }
+				{
+					"path": "favorites",
+					"style": {
+						"navigationBarTitleText": "我的收藏",
+						"navigationBarBackgroundColor": "#2B6CB0",
+						"navigationBarTextStyle": "white"
+					}
+				},
+				{
+					"path": "services",
+					"style": {
+						"navigationBarTitleText": "更多服务",
+						"navigationBarBackgroundColor": "#2B6CB0",
+						"navigationBarTextStyle": "white"
+					}
+				},
+				{
+					"path": "wallet",
+					"style": {
+						"navigationBarTitleText": "我的钱包",
+						"navigationBarBackgroundColor": "#2B6CB0",
+						"navigationBarTextStyle": "white"
+					}
+				},
+				{
+					"path": "withdraw",
+					"style": {
+						"navigationBarTitleText": "提现",
+						"navigationBarBackgroundColor": "#2B6CB0",
+						"navigationBarTextStyle": "white"
+					}
+				}
 			]
 		},
 		{
 			"root": "pages/kefu",
 			"pages": [
-				{ "path": "show", "style": { "navigationBarTitleText": "客服", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } }
+				{
+					"path": "show",
+					"style": {
+						"navigationBarTitleText": "客服",
+						"navigationBarBackgroundColor": "#2B6CB0",
+						"navigationBarTextStyle": "white"
+					}
+				}
 			]
 		},
 		{
 			"root": "pages/carpool",
 			"pages": [
-				{ "path": "index", "style": { "navigationBarTitleText": "校园拼车", "navigationBarBackgroundColor": "#38A169", "navigationBarTextStyle": "white" } },
-				{ "path": "create", "style": { "navigationBarTitleText": "发起拼车", "navigationBarBackgroundColor": "#38A169", "navigationBarTextStyle": "white" } },
-				{ "path": "detail", "style": { "navigationBarTitleText": "拼车详情", "navigationBarBackgroundColor": "#38A169", "navigationBarTextStyle": "white" } }
+				{
+					"path": "index",
+					"style": {
+						"navigationBarTitleText": "校园拼车",
+						"navigationBarBackgroundColor": "#38A169",
+						"navigationBarTextStyle": "white"
+					}
+				},
+				{
+					"path": "create",
+					"style": {
+						"navigationBarTitleText": "发起拼车",
+						"navigationBarBackgroundColor": "#38A169",
+						"navigationBarTextStyle": "white"
+					}
+				},
+				{
+					"path": "detail",
+					"style": {
+						"navigationBarTitleText": "拼车详情",
+						"navigationBarBackgroundColor": "#38A169",
+						"navigationBarTextStyle": "white"
+					}
+				}
 			]
 		},
 		{
 			"root": "pages/team",
 			"pages": [
-				{ "path": "index", "style": { "navigationBarTitleText": "校园组队", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } },
-				{ "path": "detail", "style": { "navigationBarTitleText": "组队详情", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } },
-				{ "path": "create", "style": { "navigationBarTitleText": "发起组队", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } },
-				{ "path": "list", "style": { "navigationBarTitleText": "组队列表", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white", "enablePullDownRefresh": true, "backgroundTextStyle": "dark" } }
+				{
+					"path": "index",
+					"style": {
+						"navigationBarTitleText": "校园组队",
+						"navigationBarBackgroundColor": "#2B6CB0",
+						"navigationBarTextStyle": "white"
+					}
+				},
+				{
+					"path": "detail",
+					"style": {
+						"navigationBarTitleText": "组队详情",
+						"navigationBarBackgroundColor": "#2B6CB0",
+						"navigationBarTextStyle": "white"
+					}
+				},
+				{
+					"path": "create",
+					"style": {
+						"navigationBarTitleText": "发起组队",
+						"navigationBarBackgroundColor": "#2B6CB0",
+						"navigationBarTextStyle": "white"
+					}
+				},
+				{
+					"path": "list",
+					"style": {
+						"navigationBarTitleText": "组队列表",
+						"navigationBarBackgroundColor": "#2B6CB0",
+						"navigationBarTextStyle": "white",
+						"enablePullDownRefresh": true,
+						"backgroundTextStyle": "dark"
+					}
+				}
 			]
 		},
 		{
 			"root": "pages/graduate",
 			"pages": [
-				{ "path": "index", "style": { "navigationBarTitleText": "考研服务", "navigationBarBackgroundColor": "#38A169", "navigationBarTextStyle": "white" } },
-				{ "path": "checkin", "style": { "navigationBarTitleText": "学习打卡", "navigationBarBackgroundColor": "#38A169", "navigationBarTextStyle": "white" } },
-				{ "path": "schedule", "style": { "navigationBarTitleText": "课程表", "navigationBarBackgroundColor": "#38A169", "navigationBarTextStyle": "white" } },
-				{ "path": "resources", "style": { "navigationBarTitleText": "资料包", "navigationBarBackgroundColor": "#38A169", "navigationBarTextStyle": "white" } },
-				{ "path": "experience", "style": { "navigationBarTitleText": "经验帖", "navigationBarBackgroundColor": "#38A169", "navigationBarTextStyle": "white" } },
-				{ "path": "experience-detail", "style": { "navigationBarTitleText": "经验详情", "navigationBarBackgroundColor": "#38A169", "navigationBarTextStyle": "white" } },
-				{ "path": "experience-create", "style": { "navigationBarTitleText": "发布经验", "navigationBarBackgroundColor": "#38A169", "navigationBarTextStyle": "white" } }
+				{
+					"path": "index",
+					"style": {
+						"navigationBarTitleText": "考研服务",
+						"navigationBarBackgroundColor": "#38A169",
+						"navigationBarTextStyle": "white"
+					}
+				},
+				{
+					"path": "checkin",
+					"style": {
+						"navigationBarTitleText": "学习打卡",
+						"navigationBarBackgroundColor": "#38A169",
+						"navigationBarTextStyle": "white"
+					}
+				},
+				{
+					"path": "schedule",
+					"style": {
+						"navigationBarTitleText": "课程表",
+						"navigationBarBackgroundColor": "#38A169",
+						"navigationBarTextStyle": "white"
+					}
+				},
+				{
+					"path": "resources",
+					"style": {
+						"navigationBarTitleText": "资料包",
+						"navigationBarBackgroundColor": "#38A169",
+						"navigationBarTextStyle": "white"
+					}
+				},
+				{
+					"path": "experience",
+					"style": {
+						"navigationBarTitleText": "经验帖",
+						"navigationBarBackgroundColor": "#38A169",
+						"navigationBarTextStyle": "white"
+					}
+				},
+				{
+					"path": "experience-detail",
+					"style": {
+						"navigationBarTitleText": "经验详情",
+						"navigationBarBackgroundColor": "#38A169",
+						"navigationBarTextStyle": "white"
+					}
+				},
+				{
+					"path": "experience-create",
+					"style": {
+						"navigationBarTitleText": "发布经验",
+						"navigationBarBackgroundColor": "#38A169",
+						"navigationBarTextStyle": "white"
+					}
+				}
 			]
 		},
 		{
 			"root": "pages/skill",
 			"pages": [
-				{ "path": "index", "style": { "navigationBarTitleText": "技能出租", "navigationBarBackgroundColor": "#D53F8C", "navigationBarTextStyle": "white" } },
-				{ "path": "create", "style": { "navigationBarTitleText": "发布技能", "navigationBarBackgroundColor": "#D53F8C", "navigationBarTextStyle": "white" } },
-				{ "path": "detail", "style": { "navigationBarTitleText": "技能详情", "navigationBarBackgroundColor": "#D53F8C", "navigationBarTextStyle": "white" } }
+				{
+					"path": "index",
+					"style": {
+						"navigationBarTitleText": "技能出租",
+						"navigationBarBackgroundColor": "#D53F8C",
+						"navigationBarTextStyle": "white"
+					}
+				},
+				{
+					"path": "create",
+					"style": {
+						"navigationBarTitleText": "发布技能",
+						"navigationBarBackgroundColor": "#D53F8C",
+						"navigationBarTextStyle": "white"
+					}
+				},
+				{
+					"path": "detail",
+					"style": {
+						"navigationBarTitleText": "技能详情",
+						"navigationBarBackgroundColor": "#D53F8C",
+						"navigationBarTextStyle": "white"
+					}
+				}
 			]
 		},
 		{
 			"root": "pages/wash",
 			"pages": [
-				{ "path": "index", "style": { "navigationBarTitleText": "洗鞋团购", "navigationBarBackgroundColor": "#DD6B20", "navigationBarTextStyle": "white" } }
+				{
+					"path": "index",
+					"style": {
+						"navigationBarTitleText": "洗鞋团购",
+						"navigationBarBackgroundColor": "#DD6B20",
+						"navigationBarTextStyle": "white"
+					}
+				}
 			]
 		},
 		{
 			"root": "pages/food",
 			"pages": [
-				{ "path": "index", "style": { "navigationBarTitleText": "福利外卖", "navigationBarBackgroundColor": "#DD6B20", "navigationBarTextStyle": "white" } },
-				{ "path": "menu", "style": { "navigationBarTitleText": "点餐", "navigationBarBackgroundColor": "#DD6B20", "navigationBarTextStyle": "white" } },
-				{ "path": "confirm", "style": { "navigationBarTitleText": "确认订单", "navigationBarBackgroundColor": "#DD6B20", "navigationBarTextStyle": "white" } },
-				{ "path": "orders", "style": { "navigationBarTitleText": "外卖订单", "navigationBarBackgroundColor": "#DD6B20", "navigationBarTextStyle": "white" } },
-				{ "path": "detail", "style": { "navigationBarTitleText": "订单详情", "navigationBarBackgroundColor": "#DD6B20", "navigationBarTextStyle": "white" } }
+				{
+					"path": "index",
+					"style": {
+						"navigationBarTitleText": "福利外卖",
+						"navigationBarBackgroundColor": "#DD6B20",
+						"navigationBarTextStyle": "white"
+					}
+				},
+				{
+					"path": "menu",
+					"style": {
+						"navigationBarTitleText": "点餐",
+						"navigationBarBackgroundColor": "#DD6B20",
+						"navigationBarTextStyle": "white"
+					}
+				},
+				{
+					"path": "confirm",
+					"style": {
+						"navigationBarTitleText": "确认订单",
+						"navigationBarBackgroundColor": "#DD6B20",
+						"navigationBarTextStyle": "white"
+					}
+				},
+				{
+					"path": "orders",
+					"style": {
+						"navigationBarTitleText": "外卖订单",
+						"navigationBarBackgroundColor": "#DD6B20",
+						"navigationBarTextStyle": "white"
+					}
+				},
+				{
+					"path": "detail",
+					"style": {
+						"navigationBarTitleText": "订单详情",
+						"navigationBarBackgroundColor": "#DD6B20",
+						"navigationBarTextStyle": "white"
+					}
+				}
 			]
 		},
 		{
 			"root": "pages/admin",
 			"pages": [
-				{ "path": "index", "style": { "navigationBarTitleText": "管理后台", "navigationBarBackgroundColor": "#1A1A2E", "navigationBarTextStyle": "white" } }
+				{
+					"path": "index",
+					"style": {
+						"navigationBarTitleText": "管理后台",
+						"navigationBarBackgroundColor": "#1A1A2E",
+						"navigationBarTextStyle": "white"
+					}
+				}
 			]
 		},
 		{
 			"root": "pages/job-sub",
 			"pages": [
-				{ "path": "tutor", "style": { "navigationBarTitleText": "家教信息", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } },
-				{ "path": "campus", "style": { "navigationBarTitleText": "校内兼职", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } },
-				{ "path": "anaya", "style": { "navigationBarTitleText": "阿那亚兼职", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } },
-				{ "path": "arcadia", "style": { "navigationBarTitleText": "阿尔卡迪亚兼职", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } },
-				{ "path": "seasonal", "style": { "navigationBarTitleText": "寒暑假兼职", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } },
-				{ "path": "all", "style": { "navigationBarTitleText": "全部兼职", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } },
-				{ "path": "tutor-create", "style": { "navigationBarTitleText": "发布家教", "navigationBarBackgroundColor": "#2B6CB0", "navigationBarTextStyle": "white" } }
+				{
+					"path": "tutor",
+					"style": {
+						"navigationBarTitleText": "家教信息",
+						"navigationBarBackgroundColor": "#2B6CB0",
+						"navigationBarTextStyle": "white"
+					}
+				},
+				{
+					"path": "campus",
+					"style": {
+						"navigationBarTitleText": "校内兼职",
+						"navigationBarBackgroundColor": "#2B6CB0",
+						"navigationBarTextStyle": "white"
+					}
+				},
+				{
+					"path": "anaya",
+					"style": {
+						"navigationBarTitleText": "阿那亚兼职",
+						"navigationBarBackgroundColor": "#2B6CB0",
+						"navigationBarTextStyle": "white"
+					}
+				},
+				{
+					"path": "arcadia",
+					"style": {
+						"navigationBarTitleText": "阿尔卡迪亚兼职",
+						"navigationBarBackgroundColor": "#2B6CB0",
+						"navigationBarTextStyle": "white"
+					}
+				},
+				{
+					"path": "seasonal",
+					"style": {
+						"navigationBarTitleText": "寒暑假兼职",
+						"navigationBarBackgroundColor": "#2B6CB0",
+						"navigationBarTextStyle": "white"
+					}
+				},
+				{
+					"path": "all",
+					"style": {
+						"navigationBarTitleText": "全部兼职",
+						"navigationBarBackgroundColor": "#2B6CB0",
+						"navigationBarTextStyle": "white"
+					}
+				},
+				{
+					"path": "tutor-create",
+					"style": {
+						"navigationBarTitleText": "发布家教",
+						"navigationBarBackgroundColor": "#2B6CB0",
+						"navigationBarTextStyle": "white"
+					}
+				}
 			]
 		}
 	],
 	"globalStyle": {
-		"navigationBarTextStyle": "white",
-		"navigationBarTitleText": "校园跑腿",
-		"navigationBarBackgroundColor": "#2B6CB0",
-		"backgroundColor": "#F0F2F5"
+		"navigationBarTextStyle": "black",
+		"navigationBarTitleText": "燕大小树懒",
+		"navigationBarBackgroundColor": "#FFFFFF",
+		"backgroundColor": "#F8F8F8"
 	},
 	"permission": {
-		"scope.userLocation": { "desc": "用于展示当前位置和骑手距离" }
+		"scope.userLocation": {
+			"desc": "用于展示当前位置和骑手距离"
+		}
 	},
-	"requiredPrivateInfos": ["getLocation", "chooseLocation"],
+	"requiredPrivateInfos": [
+		"getLocation",
+		"chooseLocation"
+	],
 	"tabBar": {
 		"color": "#A0AEC0",
 		"selectedColor": "#2B6CB0",
 		"borderStyle": "black",
 		"backgroundColor": "#ffffff",
 		"list": [
-			{ "pagePath": "pages/index/index", "text": "首页", "iconPath": "static/tab/run.png", "selectedIconPath": "static/tab/run-active.png" },
-			{ "pagePath": "pages/job/index", "text": "兼职", "iconPath": "static/tab/market.png", "selectedIconPath": "static/tab/market-active.png" },
-			{ "pagePath": "pages/forum/index", "text": "广场", "iconPath": "static/tab/forum.png", "selectedIconPath": "static/tab/forum-active.png" },
-			{ "pagePath": "pages/welfare/index", "text": "福利", "iconPath": "static/tab/team.png", "selectedIconPath": "static/tab/team-active.png" },
-			{ "pagePath": "pages/mine/index", "text": "我的", "iconPath": "static/tab/mine.png", "selectedIconPath": "static/tab/mine-active.png" }
+			{
+				"pagePath": "pages/index/index",
+				"text": "首页",
+				"iconPath": "static/tab/run.png",
+				"selectedIconPath": "static/tab/run-active.png"
+			},
+			{
+				"pagePath": "pages/job/index",
+				"text": "兼职",
+				"iconPath": "static/tab/market.png",
+				"selectedIconPath": "static/tab/market-active.png"
+			},
+			{
+				"pagePath": "pages/forum/index",
+				"text": "广场",
+				"iconPath": "static/tab/forum.png",
+				"selectedIconPath": "static/tab/forum-active.png"
+			},
+			{
+				"pagePath": "pages/welfare/index",
+				"text": "福利",
+				"iconPath": "static/tab/team.png",
+				"selectedIconPath": "static/tab/team-active.png"
+			},
+			{
+				"pagePath": "pages/mine/index",
+				"text": "我的",
+				"iconPath": "static/tab/mine.png",
+				"selectedIconPath": "static/tab/mine-active.png"
+			}
 		]
 	}
 }

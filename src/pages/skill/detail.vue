@@ -57,14 +57,29 @@
           <text>复制</text>
         </view>
       </view>
-      <view v-else class="contact-locked" @click="unlockContact">
-        <text class="lock-icon">🔒</text>
-        <view class="lock-info">
-          <text class="lock-text">联系方式已隐藏</text>
-          <text class="lock-price">支付 ¥1 查看联系方式</text>
+      <view v-else class="contact-locked-section">
+        <view class="lock-header">
+          <text class="lock-icon">🔒</text>
+          <view class="lock-info">
+            <text class="lock-text">联系方式已隐藏</text>
+            <text class="lock-price">支付 ¥1 查看联系方式</text>
+          </view>
         </view>
-        <view class="unlock-btn">
-          <text>立即解锁</text>
+        <view class="pay-options">
+          <view class="pay-item" :class="{active: payType === 'wechat'}" @click="payType = 'wechat'">
+            <text class="pay-icon">💚</text>
+            <text class="pay-name">微信支付</text>
+          </view>
+          <view class="pay-item" :class="{active: payType === 'wallet'}" @click="payType = 'wallet'">
+            <text class="pay-icon">💰</text>
+            <view class="pay-name-row">
+              <text class="pay-name">钱包余额</text>
+              <text class="pay-balance">¥{{ walletBalance }}</text>
+            </view>
+          </view>
+        </view>
+        <view class="unlock-btn" @click="unlockContact">
+          <text>立即解锁 ¥1</text>
         </view>
       </view>
     </view>
@@ -86,15 +101,23 @@
 
 <script setup>
 import { ref } from 'vue'
-import { onLoad } from '@dcloudio/uni-app'
+import { onLoad, onShow } from '@dcloudio/uni-app'
 import { callCloud, checkLogin } from '@/utils/cloud'
 
 const avatarBg = 'linear-gradient(135deg, #F687B3, #D53F8C)'
 const skill = ref({ title: '', publisher: '', price: 0, priceUnit: '次', desc: '', category: '', views: 0, works: [], contact: '', contactType: '微信', unlocked: false })
 const favorited = ref(false)
 var skillId = ''
+const payType = ref('wechat')
+const walletBalance = ref('0.00')
+
+const loadWalletBalance = async () => {
+  var res = await callCloud('user', 'getWallet')
+  if (res.code === 0 && res.data) walletBalance.value = (res.data.balance || 0).toFixed(2)
+}
 
 onLoad((opts) => { if (opts && opts.id) { skillId = opts.id; loadDetail(opts.id) } })
+onShow(() => { loadWalletBalance() })
 
 const loadDetail = async (id) => {
   const res = await callCloud('skill', 'detail', { id })
@@ -114,25 +137,66 @@ const loadDetail = async (id) => {
   if (favRes.code === 0) favorited.value = favRes.favorited
 }
 
-const unlockContact = () => {
+const unlockContact = async () => {
   if (!checkLogin()) return
-  uni.showModal({
-    title: '付费查看联系方式',
-    content: '将从钱包余额扣除 ¥1，确认解锁？',
-    success: async (res) => {
-      if (res.confirm) {
-        uni.showLoading({ title: '解锁中...' })
-        const r = await callCloud('skill', 'unlockContact', { id: skillId })
-        uni.hideLoading()
-        if (r.code === 0) {
-          skill.value.contact = r.data.contact
-          skill.value.contactType = r.data.contactType
-          skill.value.unlocked = true
-          uni.showToast({ title: '解锁成功', icon: 'success' })
+  if (payType.value === 'wallet') {
+    // 钱包支付
+    uni.showModal({
+      title: '付费查看联系方式',
+      content: '将从钱包余额扣除 ¥1，确认解锁？',
+      success: async (res) => {
+        if (res.confirm) {
+          uni.showLoading({ title: '解锁中...' })
+          const r = await callCloud('skill', 'unlockContact', { id: skillId, payType: 'wallet' })
+          uni.hideLoading()
+          if (r.code === 0) {
+            skill.value.contact = r.data.contact
+            skill.value.contactType = r.data.contactType
+            skill.value.unlocked = true
+            uni.showToast({ title: '解锁成功', icon: 'success' })
+            loadWalletBalance()
+          } else {
+            uni.showModal({ title: '解锁失败', content: r.msg || '请稍后重试', showCancel: false })
+          }
         }
       }
+    })
+  } else {
+    // 微信支付
+    uni.showLoading({ title: '创建订单...' })
+    const r = await callCloud('skill', 'unlockContact', { id: skillId, payType: 'wechat' })
+    uni.hideLoading()
+    if (r.code === 0 && r.data && r.data.contact) {
+      // 已解锁过，直接返回
+      skill.value.contact = r.data.contact
+      skill.value.contactType = r.data.contactType
+      skill.value.unlocked = true
+      uni.showToast({ title: '已解锁', icon: 'success' })
+    } else if (r.code === 0 && r.payment) {
+      wx.requestPayment({
+        ...r.payment,
+        success: async () => {
+          // 支付成功后重新加载
+          const detail = await callCloud('skill', 'detail', { id: skillId })
+          if (detail.code === 0) {
+            skill.value.contact = detail.data.contact || ''
+            skill.value.contactType = detail.data.contactType || '微信'
+            skill.value.unlocked = true
+          }
+          uni.showToast({ title: '解锁成功', icon: 'success' })
+        },
+        fail: (err) => {
+          if (err.errMsg && err.errMsg.indexOf('cancel') > -1) {
+            uni.showToast({ title: '已取消支付', icon: 'none' })
+          } else {
+            uni.showToast({ title: '支付失败', icon: 'none' })
+          }
+        }
+      })
+    } else {
+      uni.showModal({ title: '解锁失败', content: r.msg || '请稍后重试', showCancel: false })
     }
-  })
+  }
 }
 
 const previewImage = (index) => {
@@ -192,15 +256,22 @@ const contactSkiller = () => {
 .contact-value { flex: 1; font-size: 28rpx; color: #2D3748; font-weight: 600; }
 .copy-btn { padding: 10rpx 24rpx; background: #FFF5F7; border-radius: 20rpx; }
 .copy-btn text { font-size: 24rpx; color: #D53F8C; font-weight: 600; }
-.contact-locked { display: flex; align-items: center; background: #F7FAFC; border-radius: 12rpx; padding: 24rpx; }
-.contact-locked:active { background: #EDF2F7; }
+.contact-locked-section { background: #F7FAFC; border-radius: 12rpx; padding: 24rpx; }
+.lock-header { display: flex; align-items: center; margin-bottom: 20rpx; }
 .lock-icon { font-size: 40rpx; margin-right: 16rpx; }
 .lock-info { flex: 1; }
 .lock-text { font-size: 26rpx; color: #718096; display: block; }
 .lock-price { font-size: 22rpx; color: #A0AEC0; margin-top: 4rpx; display: block; }
-.unlock-btn { padding: 12rpx 28rpx; background: linear-gradient(135deg, #F687B3, #D53F8C); border-radius: 24rpx; box-shadow: 0 4rpx 12rpx rgba(213,63,140,0.25); }
+.pay-options { display: flex; gap: 16rpx; margin-bottom: 20rpx; }
+.pay-item { flex: 1; background: #fff; border-radius: 16rpx; padding: 20rpx; display: flex; align-items: center; gap: 12rpx; border: 2rpx solid #e0e0e0; }
+.pay-item.active { border-color: #D53F8C; background: #FFF5F7; }
+.pay-icon { font-size: 32rpx; }
+.pay-name { font-size: 24rpx; color: #333; font-weight: 600; }
+.pay-name-row { display: flex; flex-direction: column; }
+.pay-balance { font-size: 20rpx; color: #999; margin-top: 2rpx; }
+.unlock-btn { padding: 20rpx 28rpx; background: linear-gradient(135deg, #F687B3, #D53F8C); border-radius: 24rpx; box-shadow: 0 4rpx 12rpx rgba(213,63,140,0.25); text-align: center; }
 .unlock-btn:active { transform: scale(0.95); }
-.unlock-btn text { font-size: 24rpx; color: #fff; font-weight: 700; }
+.unlock-btn text { font-size: 28rpx; color: #fff; font-weight: 700; }
 .bottom-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; display: flex; align-items: center; padding: 16rpx 24rpx 36rpx; box-shadow: 0 -4rpx 12rpx rgba(0,0,0,0.06); }
 .bottom-left { display: flex; gap: 32rpx; margin-right: 24rpx; }
 .bottom-icon-item { display: flex; flex-direction: column; align-items: center; }

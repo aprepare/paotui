@@ -1,6 +1,12 @@
 const router = require('express').Router()
 const TutorPayOrder = require('../models/TutorPayOrder')
 const TutorPayment = require('../models/TutorPayment')
+const ExpressOrder = require('../models/ExpressOrder')
+const ErrandTask = require('../models/ErrandTask')
+const SkillUnlock = require('../models/SkillUnlock')
+const Skill = require('../models/Skill')
+const UserWallet = require('../models/UserWallet')
+const WalletRecord = require('../models/WalletRecord')
 const { decryptNotifyResource } = require('../services/wxpay')
 
 /**
@@ -41,35 +47,68 @@ router.post('/notify', async (req, res) => {
             return res.status(400).json({ code: 'FAIL', message: '缺少订单号' })
         }
 
-        // 查找订单
-        const order = await TutorPayOrder.findOne({ outTradeNo })
-        if (!order) {
-            console.error('[payment notify] 订单不存在:', outTradeNo)
-            // 仍然返回成功，避免微信重复通知
-            return res.json({ code: 'SUCCESS', message: '成功' })
-        }
+        // 查找并处理订单
+        if (outTradeNo.startsWith('tutor_')) {
+            const order = await TutorPayOrder.findOne({ outTradeNo })
+            if (!order) return res.json({ code: 'SUCCESS', message: '成功' })
+            if (order.status === 'paid') return res.json({ code: 'SUCCESS', message: '成功' })
 
-        // 防止重复处理
-        if (order.status === 'paid') {
-            return res.json({ code: 'SUCCESS', message: '成功' })
-        }
+            await TutorPayOrder.updateOne(
+                { _id: order._id },
+                { $set: { status: 'paid', payTime: new Date(), transactionId: orderInfo.transaction_id || '' } }
+            )
 
-        // 更新订单状态
-        await TutorPayOrder.updateOne(
-            { _id: order._id },
-            { $set: { status: 'paid', payTime: new Date(), transactionId: orderInfo.transaction_id || '' } }
-        )
+            const existingPayment = await TutorPayment.findOne({ openid: order.openid, postId: order.postId })
+            if (!existingPayment) {
+                await TutorPayment.create({
+                    openid: order.openid,
+                    postId: order.postId,
+                    outTradeNo,
+                    totalFee: order.totalFee,
+                    createTime: new Date()
+                })
+            }
+        } else if (outTradeNo.startsWith('express_')) {
+            const order = await ExpressOrder.findOne({ outTradeNo })
+            if (!order) return res.json({ code: 'SUCCESS', message: '成功' })
+            if (order.status >= 0) return res.json({ code: 'SUCCESS', message: '成功' }) // 已经不是待支付状态
 
-        // 创建付费记录
-        const existingPayment = await TutorPayment.findOne({ openid: order.openid, postId: order.postId })
-        if (!existingPayment) {
-            await TutorPayment.create({
-                openid: order.openid,
-                postId: order.postId,
-                outTradeNo,
-                totalFee: order.totalFee,
-                createTime: new Date()
-            })
+            await ExpressOrder.updateOne(
+                { _id: order._id },
+                { $set: { status: 0, statusText: '待接单', statusColor: '#DD6B20' } }
+            )
+        } else if (outTradeNo.startsWith('errand_')) {
+            const task = await ErrandTask.findOne({ outTradeNo })
+            if (!task) return res.json({ code: 'SUCCESS', message: '成功' })
+            if (task.status >= 0) return res.json({ code: 'SUCCESS', message: '成功' }) // 已经不是待支付状态
+
+            await ErrandTask.updateOne(
+                { _id: task._id },
+                { $set: { status: 0, statusText: '待接单', statusColor: '#DD6B20' } }
+            )
+        } else if (outTradeNo.startsWith('skill_')) {
+            const unlock = await SkillUnlock.findOne({ outTradeNo })
+            if (!unlock) return res.json({ code: 'SUCCESS', message: '成功' })
+            if (unlock.paid) return res.json({ code: 'SUCCESS', message: '成功' })
+            await SkillUnlock.updateOne({ _id: unlock._id }, { $set: { paid: true } })
+            // 给技能发布者入账
+            const skill = await Skill.findById(unlock.skillId)
+            if (skill) {
+                const amount = unlock.amount || 1
+                await UserWallet.updateOne(
+                    { openid: skill.openid },
+                    { $inc: { balance: amount, totalIncome: amount }, $set: { updateTime: new Date() } },
+                    { upsert: true }
+                )
+                await WalletRecord.create({
+                    openid: skill.openid, type: 'income', amount,
+                    title: '技能被解锁收入: ' + (skill.title || '').substring(0, 20),
+                    orderId: unlock.skillId, orderType: 'skill_unlock',
+                    status: 1, statusText: '已到账', createTime: new Date()
+                })
+            }
+        } else {
+            console.warn('[payment notify] 未知订单前缀:', outTradeNo)
         }
 
         console.log('[payment notify] 订单处理成功:', outTradeNo)

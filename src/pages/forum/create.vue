@@ -4,7 +4,7 @@
       <textarea v-model="content" placeholder="分享你的校园生活..." maxlength="1000" auto-height :focus="true" />
       <text class="word-count">{{ content.length }}/1000</text>
     </view>
-    <view class="img-section" v-if="images.length > 0 || true">
+    <view class="img-section">
       <view class="img-grid">
         <view v-for="(img, i) in tempPaths" :key="i" class="img-item">
           <image class="img-thumb" :src="img" mode="aspectFill" />
@@ -27,8 +27,8 @@
         <text># 话题</text>
       </view>
     </view>
-    <view class="submit-btn" @click="submit">
-      <text>发布</text>
+    <view class="submit-btn" :class="{disabled: submitting}" @click="submit">
+      <text>{{ submitting ? '发布中...' : '发布' }}</text>
     </view>
   </view>
 </template>
@@ -87,6 +87,8 @@ const submit = async () => {
   if (res.code === 0) {
     uni.showToast({ title: '发布成功！', icon: 'success' })
     setTimeout(() => uni.navigateBack(), 1500)
+  } else {
+    uni.showToast({ title: res.msg || '发布失败，请重试', icon: 'none' })
   }
 }
 </script>
@@ -109,4 +111,5 @@ const submit = async () => {
 .tool-item text { font-size: 26rpx; color: #666; }
 .submit-btn { margin: 20rpx 24rpx 40rpx; background: linear-gradient(135deg, #4A90D9, #357ABD); border-radius: 48rpx; padding: 24rpx; text-align: center; }
 .submit-btn text { color: #fff; font-size: 30rpx; font-weight: bold; }
+.submit-btn.disabled { opacity: 0.6; pointer-events: none; }
 </style>

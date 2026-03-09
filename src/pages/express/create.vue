@@ -146,6 +146,24 @@
       <text class="notice-text">4. 恶劣天气配送时效可能延长，请谅解</text>
     </view>
 
+    <!-- 支付方式 -->
+    <view class="form-section">
+      <text class="section-title">💳 支付方式</text>
+      <view class="pay-options">
+        <view class="pay-item" :class="{active: payType === 'wechat'}" @click="payType = 'wechat'">
+          <text class="pay-icon">💚</text>
+          <text class="pay-name">微信支付</text>
+        </view>
+        <view class="pay-item" :class="{active: payType === 'wallet'}" @click="payType = 'wallet'">
+          <text class="pay-icon">💰</text>
+          <view class="pay-name-row">
+            <text class="pay-name">钱包余额</text>
+            <text class="pay-balance">¥{{ walletBalance }}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
     <!-- 提交按钮 -->
     <view class="submit-btn" :class="{disabled: submitting}" @tap="submit">
       <text>{{ submitting ? '发布中...' : '发布订单 · ¥' + totalPrice }}</text>
@@ -155,6 +173,7 @@
 
 <script setup>
 import { ref, reactive, computed } from 'vue'
+import { onShow } from '@dcloudio/uni-app'
 import { callCloud, checkLogin } from '@/utils/cloud'
 import { requestOrderSubscribe } from '@/utils/subscribe'
 
@@ -191,6 +210,14 @@ const form = reactive({
 const destLocation = reactive({ name: '', address: '', lat: 0, lng: 0 })
 
 const totalPrice = computed(() => currentSize.value.price + (form.tip || 0))
+const payType = ref('wechat')
+const walletBalance = ref('0.00')
+
+const loadWalletBalance = async () => {
+  var res = await callCloud('user', 'getWallet')
+  if (res.code === 0 && res.data) walletBalance.value = (res.data.balance || 0).toFixed(2)
+}
+onShow(() => { loadWalletBalance() })
 
 const selectSize = (i) => { selectedSize.value = i }
 const selectTip = (t) => { customTip.value = false; form.tip = t }
@@ -347,13 +374,35 @@ const doSubmit = async (lat, lng) => {
     remark: form.remark,
     phone: form.phone,
     destLat: lat,
-    destLng: lng
+    destLng: lng,
+    payType: payType.value
   })
   submitting.value = false
   uni.hideLoading()
   if (res.code === 0) {
-    uni.showToast({ title: '发布成功！', icon: 'success' })
-    setTimeout(() => { uni.navigateBack() }, 1500)
+    if (res.walletPaid) {
+      // 钱包支付成功
+      uni.showToast({ title: '发布成功！已从钱包扣款', icon: 'success' })
+      setTimeout(() => { uni.navigateBack() }, 1500)
+    } else if (res.payment) {
+      wx.requestPayment({
+        ...res.payment,
+        success: () => {
+          uni.showToast({ title: '发布成功！', icon: 'success' })
+          setTimeout(() => { uni.navigateBack() }, 1500)
+        },
+        fail: (err) => {
+          if (err.errMsg && err.errMsg.indexOf('cancel') > -1) {
+            uni.showToast({ title: '已取消支付', icon: 'none' })
+          } else {
+            uni.showToast({ title: '支付失败', icon: 'none' })
+          }
+        }
+      })
+    } else {
+      uni.showToast({ title: '发布成功！', icon: 'success' })
+      setTimeout(() => { uni.navigateBack() }, 1500)
+    }
   } else {
     uni.showToast({ title: res.msg || '发布失败', icon: 'none' })
   }
@@ -426,6 +475,14 @@ const doSubmit = async (lat, lng) => {
 .time-notice { background: #FFF8E1; border-radius: 12rpx; padding: 20rpx; margin-bottom: 28rpx; }
 .notice-title { font-size: 26rpx; font-weight: bold; color: #F57C00; display: block; margin-bottom: 12rpx; }
 .notice-text { font-size: 22rpx; color: #795548; display: block; line-height: 36rpx; }
+
+.pay-options { display: flex; gap: 16rpx; }
+.pay-item { flex: 1; background: #fff; border-radius: 16rpx; padding: 24rpx; display: flex; align-items: center; gap: 16rpx; border: 2rpx solid #e0e0e0; box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.04); }
+.pay-item.active { border-color: #4A90D9; background: #E3F2FD; }
+.pay-icon { font-size: 36rpx; }
+.pay-name { font-size: 26rpx; color: #333; font-weight: 600; }
+.pay-name-row { display: flex; flex-direction: column; }
+.pay-balance { font-size: 22rpx; color: #999; margin-top: 4rpx; }
 
 .submit-btn { position: fixed; bottom: 40rpx; left: 24rpx; right: 24rpx; background: linear-gradient(135deg, #4A90D9, #357ABD); border-radius: 48rpx; padding: 28rpx; text-align: center; box-shadow: 0 8rpx 24rpx rgba(74,144,217,0.4); }
 .submit-btn.disabled { opacity: 0.5; pointer-events: none; }

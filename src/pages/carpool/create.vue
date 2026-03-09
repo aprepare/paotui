@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <view class="create-carpool">
     <!-- 路线信息 -->
     <view class="form-section">
@@ -81,8 +81,8 @@
     </view>
 
     <!-- 提交按钮 -->
-    <view class="submit-btn" @click="submit">
-      <text>发布拼车信息</text>
+    <view class="submit-btn" :class="{disabled: submitting}" @click="submit">
+      <text>{{ submitting ? '发布中...' : '发布拼车信息' }}</text>
     </view>
   </view>
 </template>
@@ -181,6 +181,8 @@ const submit = async () => {
   if (res.code === 0) {
     uni.showToast({ title: '发布成功！', icon: 'success' })
     setTimeout(() => { uni.navigateBack() }, 1500)
+  } else {
+    uni.showToast({ title: res.msg || '发布失败，请重试', icon: 'none' })
   }
 }
 </script>
@@ -216,4 +218,5 @@ const submit = async () => {
 
 .submit-btn { position: fixed; bottom: 40rpx; left: 24rpx; right: 24rpx; background: linear-gradient(135deg, #43A047, #2E7D32); border-radius: 48rpx; padding: 28rpx; text-align: center; box-shadow: 0 8rpx 24rpx rgba(67,160,71,0.4); }
 .submit-btn text { color: #fff; font-size: 32rpx; font-weight: bold; }
+.submit-btn.disabled { opacity: 0.6; pointer-events: none; }
 </style>

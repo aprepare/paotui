@@ -155,4 +155,21 @@ router.delete('/comment/:id', auth, async (req, res) => {
   }
 })
 
+// POST /api/forum/comment/:id/like
+router.post('/comment/:id/like', auth, async (req, res) => {
+  try {
+    const cmt = await ForumComment.findById(req.params.id)
+    if (!cmt) return res.json({ code: -1, msg: '记录不存在' })
+    const liked = cmt.likedBy && cmt.likedBy.includes(req.user.openid)
+    if (liked) {
+      await ForumComment.updateOne({ _id: req.params.id }, { $inc: { likes: -1 }, $pull: { likedBy: req.user.openid } })
+    } else {
+      await ForumComment.updateOne({ _id: req.params.id }, { $inc: { likes: 1 }, $push: { likedBy: req.user.openid } })
+    }
+    res.json({ code: 0, liked: !liked })
+  } catch (err) {
+    res.status(500).json({ code: -1, msg: '服务器错误' })
+  }
+})
+
 module.exports = router

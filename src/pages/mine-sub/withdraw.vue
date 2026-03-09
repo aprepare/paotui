@@ -31,8 +31,8 @@
 
     <!-- 提现按钮 -->
     <view class="submit-bar">
-      <view class="submit-btn" :class="{disabled: !canSubmit}" @click="onSubmit">
-        <text>确认提现</text>
+      <view class="submit-btn" :class="{disabled: !canSubmit || submitting}" @click="onSubmit">
+        <text>{{ submitting ? '提交中...' : '确认提现' }}</text>
       </view>
     </view>
   </view>
@@ -60,11 +60,12 @@ const loadBalance = async () => {
   }
 }
 
+const submitting = ref(false)
 const onSubmit = () => {
-  if (!canSubmit.value) {
+  if (!canSubmit.value || submitting.value) {
     if (parseFloat(amount.value) < 1) {
       uni.showToast({ title: '最低提现1元', icon: 'none' })
-    } else {
+    } else if (!submitting.value) {
       uni.showToast({ title: '余额不足', icon: 'none' })
     }
     return
@@ -74,12 +75,19 @@ const onSubmit = () => {
     content: '提现 ¥' + parseFloat(amount.value).toFixed(2) + ' 到微信零钱？',
     success: async (modalRes) => {
       if (modalRes.confirm) {
-        var res = await callCloud('user', 'applyWithdraw', { amount: parseFloat(amount.value) })
-        if (res.code === 0) {
-          uni.showToast({ title: '提现申请已提交', icon: 'success' })
-          setTimeout(function() { uni.navigateBack() }, 1500)
-        } else {
-          uni.showToast({ title: res.msg || '提现失败', icon: 'none' })
+        submitting.value = true
+        try {
+          var res = await callCloud('user', 'applyWithdraw', { amount: parseFloat(amount.value) })
+          if (res.code === 0) {
+            uni.showToast({ title: '提现申请已提交', icon: 'success' })
+            setTimeout(function() { uni.navigateBack() }, 1500)
+          } else {
+            uni.showToast({ title: res.msg || '提现失败', icon: 'none' })
+          }
+        } catch (e) {
+          uni.showToast({ title: '提现失败，请重试', icon: 'none' })
+        } finally {
+          submitting.value = false
         }
       }
     }

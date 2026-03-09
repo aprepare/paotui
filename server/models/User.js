@@ -15,6 +15,7 @@ const userSchema = new mongoose.Schema({
   },
   riderRegTime: Date,
   level: { type: String, default: '' },
+  disabled: { type: Boolean, default: false },
   createTime: { type: Date, default: Date.now }
 })
 

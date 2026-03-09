@@ -18,6 +18,24 @@ router.get('/list', async (req, res) => {
   }
 })
 
+// GET /api/team/my - 获取我参与的或发布的（必须在 /:id 之前）
+router.get('/my', auth, async (req, res) => {
+  try {
+    const { page = 1, pageSize = 20 } = req.query
+    const members = await TeamMember.find({ openid: req.user.openid }).select('activityId')
+    const actIds = members.map(m => m.activityId)
+    const data = await TeamActivity.find({
+      $or: [
+        { openid: req.user.openid },
+        { _id: { $in: actIds } }
+      ]
+    }).sort({ createTime: -1 }).skip((Number(page) - 1) * Number(pageSize)).limit(Number(pageSize))
+    res.json({ code: 0, data })
+  } catch (err) {
+    res.status(500).json({ code: -1, msg: '服务器错误' })
+  }
+})
+
 // GET /api/team/:id
 router.get('/:id', async (req, res) => {
   try {
@@ -114,23 +132,58 @@ router.post('/:id/end', auth, async (req, res) => {
   }
 })
 
-// POST /api/team/:id/qrcode - 获取企微专属二维码
+// POST /api/team/:id/qrcode - 获取二维码（智能判断：已是好友返回进群码，否则返回加好友码）
 router.post('/:id/qrcode', auth, async (req, res) => {
   try {
     const activity = await TeamActivity.findById(req.params.id)
     if (!activity) return res.json({ code: -1, msg: '活动不存在' })
-    // 校验用户是否是成员
-    const member = await TeamMember.countDocuments({ activityId: req.params.id, openid: req.user.openid })
-    if (member === 0) return res.json({ code: -1, msg: '仅活动成员可获取' })
+    const member = await TeamMember.findOne({ activityId: req.params.id, openid: req.user.openid })
+    if (!member) return res.json({ code: -1, msg: '仅活动成员可获取' })
     const weworkService = require('../services/weworkService')
-    const state = req.params.id + '_' + req.user.openid
+
+    // 判断是否已是企微好友
+    if (member.isWeworkFriend) {
+      // 已是好友 → 返回进群二维码
+      try {
+        // 先检查活动是否已有进群配置
+        if (activity.joinWayConfigId) {
+          const joinWayRes = await weworkService.getGroupJoinWay(activity.joinWayConfigId)
+          if (joinWayRes.errcode === 0 && joinWayRes.join_way && joinWayRes.join_way.qr_code) {
+            return res.json({ code: 0, data: { qr_code: joinWayRes.join_way.qr_code, type: 'group' } })
+          }
+        }
+        // 没有缓存的进群配置，需要创建
+        let chatId = activity.chatId
+        if (chatId) {
+          const state = member._id.toString()
+          const result = await weworkService.createGroupJoinWay(
+            [chatId], state,
+            { autoCreateRoom: true, roomBaseName: activity.title || '组队群' }
+          )
+          if (result.errcode === 0 && result.config_id) {
+            await TeamActivity.updateOne({ _id: req.params.id }, { $set: { joinWayConfigId: result.config_id } })
+            const joinWayRes = await weworkService.getGroupJoinWay(result.config_id)
+            if (joinWayRes.errcode === 0 && joinWayRes.join_way && joinWayRes.join_way.qr_code) {
+              return res.json({ code: 0, data: { qr_code: joinWayRes.join_way.qr_code, type: 'group' } })
+            }
+          }
+        }
+        // 进群码生成失败，降级为联系我二维码
+      } catch (e) {
+        console.error('[qrcode group error]', e.message)
+      }
+    }
+
+    // 未添加好友 或 进群码生成失败 → 返回「联系我」二维码
+    const state = member._id.toString()
     const result = await weworkService.createContactQrcode(state)
     if (result.errcode === 0) {
-      res.json({ code: 0, data: { qr_code: result.qr_code, config_id: result.config_id } })
+      res.json({ code: 0, data: { qr_code: result.qr_code, config_id: result.config_id, type: 'contact' } })
     } else {
       res.json({ code: -1, msg: result.errmsg || '获取二维码失败' })
     }
   } catch (err) {
+    console.error('[qrcode error]', err.message)
     res.status(500).json({ code: -1, msg: '服务器错误: ' + err.message })
   }
 })
@@ -141,6 +194,60 @@ router.get('/:id/group-status', async (req, res) => {
     const activity = await TeamActivity.findById(req.params.id)
     if (!activity) return res.json({ code: -1, msg: '活动不存在' })
     res.json({ code: 0, data: { chatId: activity.chatId || '', hasGroup: !!activity.chatId } })
+  } catch (err) {
+    res.status(500).json({ code: -1, msg: '服务器错误' })
+  }
+})
+
+// GET /api/team/:id/group-list - 管理员获取企微客户群列表（用于绑定群到活动）
+router.get('/:id/group-list', auth, async (req, res) => {
+  try {
+    const activity = await TeamActivity.findById(req.params.id)
+    if (!activity) return res.json({ code: -1, msg: '活动不存在' })
+    if (activity.openid !== req.user.openid) return res.json({ code: -1, msg: '仅活动发起人可操作' })
+    const weworkService = require('../services/weworkService')
+    const listRes = await weworkService.getGroupChatList()
+    if (listRes.errcode === 0 && listRes.group_chat_list) {
+      // 获取每个群的详情（群名）
+      const groups = []
+      for (const g of listRes.group_chat_list.slice(0, 20)) {
+        try {
+          const token = await weworkService.getAccessToken()
+          const axios = require('axios')
+          const detailRes = await axios.post(
+            `https://qyapi.weixin.qq.com/cgi-bin/externalcontact/groupchat/get?access_token=${token}`,
+            { chat_id: g.chat_id, need_name: 1 }
+          )
+          if (detailRes.data.errcode === 0) {
+            groups.push({
+              chat_id: g.chat_id,
+              name: detailRes.data.group_chat.name || '未命名群',
+              member_count: (detailRes.data.group_chat.member_list || []).length
+            })
+          }
+        } catch (e) { /* skip */ }
+      }
+      res.json({ code: 0, data: { groups } })
+    } else {
+      res.json({ code: -1, msg: listRes.errmsg || '获取群列表失败' })
+    }
+  } catch (err) {
+    console.error('[group-list error]', err.message)
+    res.status(500).json({ code: -1, msg: '服务器错误' })
+  }
+})
+
+// POST /api/team/:id/bind-group - 管理员将一个客户群绑定到活动
+router.post('/:id/bind-group', auth, async (req, res) => {
+  try {
+    const activity = await TeamActivity.findById(req.params.id)
+    if (!activity) return res.json({ code: -1, msg: '活动不存在' })
+    if (activity.openid !== req.user.openid) return res.json({ code: -1, msg: '仅活动发起人可操作' })
+    const { chatId } = req.body
+    if (!chatId) return res.json({ code: -1, msg: '请选择一个群' })
+    // 清除旧的进群配置缓存
+    await TeamActivity.updateOne({ _id: req.params.id }, { $set: { chatId, joinWayConfigId: '' } })
+    res.json({ code: 0, msg: '群聊已绑定到该活动' })
   } catch (err) {
     res.status(500).json({ code: -1, msg: '服务器错误' })
   }

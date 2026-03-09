@@ -1,15 +1,15 @@
-﻿<template>
+<template>
   <view class="create-goods">
     <view class="upload-section">
       <text class="section-title">📷 商品图片</text>
       <view class="img-grid">
-        <view v-for="(img, i) in images" :key="i" class="img-item">
-          <text class="img-placeholder">{{ img }}</text>
+        <view v-for="(path, i) in tempPaths" :key="i" class="img-item">
+          <image :src="path" mode="aspectFill" class="img-preview" />
           <view class="img-del" @click="removeImage(i)">×</view>
         </view>
-        <view v-if="images.length < 9" class="img-add" @click="addImage">
+        <view v-if="tempPaths.length < 9" class="img-add" @click="addImage">
           <text class="add-icon">+</text>
-          <text class="add-text">{{ images.length }}/9</text>
+          <text class="add-text">{{ tempPaths.length }}/9</text>
         </view>
       </view>
     </view>
@@ -77,8 +77,8 @@
         </view>
       </view>
     </view>
-    <view class="submit-btn" @click="submit">
-      <text>发布商品</text>
+    <view class="submit-btn" :class="{disabled: submitting}" @click="submit">
+      <text>{{ submitting ? '发布中...' : '发布商品' }}</text>
     </view>
   </view>
 </template>
@@ -120,26 +120,34 @@ const submit = async () => {
   if (!form.contact || form.contact.trim().length === 0) { uni.showToast({ title: '请填写联系方式', icon: 'none' }); return }
   if (submitting.value) return
   submitting.value = true
-  let imageIds = []
-  if (tempPaths.value.length > 0) {
-    uni.showLoading({ title: '上传图片中...' })
-    imageIds = await uploadImages(tempPaths.value, 'market')
+  try {
+    let imageIds = []
+    if (tempPaths.value.length > 0) {
+      uni.showLoading({ title: '上传图片中...' })
+      imageIds = await uploadImages(tempPaths.value, 'market')
+      uni.hideLoading()
+    }
+    const res = await callCloud('market', 'create', {
+      title: form.title,
+      price: form.price,
+      category: form.category || '其他',
+      desc: form.desc,
+      images: imageIds,
+      deliveryType: form.deliveryType,
+      contact: form.contact,
+      contactPublic: form.contactPublic
+    })
+    if (res.code === 0) {
+      uni.showToast({ title: '发布成功！', icon: 'success' })
+      setTimeout(() => uni.navigateBack(), 1500)
+    } else {
+      uni.showToast({ title: res.msg || '发布失败，请重试', icon: 'none' })
+    }
+  } catch (e) {
     uni.hideLoading()
-  }
-  const res = await callCloud('market', 'create', {
-    title: form.title,
-    price: form.price,
-    category: form.category || '其他',
-    desc: form.desc,
-    images: imageIds,
-    deliveryType: form.deliveryType,
-    contact: form.contact,
-    contactPublic: form.contactPublic
-  })
-  submitting.value = false
-  if (res.code === 0) {
-    uni.showToast({ title: '发布成功！', icon: 'success' })
-    setTimeout(() => uni.navigateBack(), 1500)
+    uni.showToast({ title: '发布失败，请重试', icon: 'none' })
+  } finally {
+    submitting.value = false
   }
 }
 </script>
@@ -179,4 +187,6 @@ const submit = async () => {
 .word-count { font-size: 22rpx; color: #999; text-align: right; display: block; margin-top: 8rpx; }
 .submit-btn { position: fixed; bottom: 40rpx; left: 24rpx; right: 24rpx; background: linear-gradient(135deg, #4A90D9, #357ABD); border-radius: 48rpx; padding: 28rpx; text-align: center; box-shadow: 0 8rpx 24rpx rgba(74,144,217,0.4); }
 .submit-btn text { color: #fff; font-size: 32rpx; font-weight: bold; }
+.submit-btn.disabled { opacity: 0.6; pointer-events: none; }
+.img-preview { width: 100%; height: 100%; border-radius: 12rpx; }
 </style>

@@ -6,4 +6,6 @@ const statSchema = new mongoose.Schema({
   totalOrders: { type: Number, default: 0 }
 })
 
+statSchema.index({ key: 1 }, { unique: true })
+
 module.exports = mongoose.model('Stat', statSchema, 'stats')

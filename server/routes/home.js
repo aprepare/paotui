@@ -63,11 +63,22 @@ router.get('/latest-orders', async (req, res) => {
 })
 
 // GET /api/home/page-config
+// 返回首页展示所需的精简配置：
+// - heroImage: 顶部形象图
+// - banners: 轮播配置
+// - actions: 快捷操作
 router.get('/page-config', async (req, res) => {
   try {
-    let config = await PageConfig.findOne({ page: 'home' })
-    if (!config) config = { page: 'home', sections: [] }
-    res.json({ code: 0, data: config })
+    const doc = await PageConfig.findOne({ page: 'home' })
+    const cfg = doc && doc.config ? doc.config : (doc || {})
+
+    const data = {
+      heroImage: cfg.heroImage || '/static/kuaidi.jpg',
+      banners: Array.isArray(cfg.banners) ? cfg.banners : [],
+      actions: Array.isArray(cfg.actions) ? cfg.actions : []
+    }
+
+    res.json({ code: 0, data })
   } catch (err) {
     res.status(500).json({ code: -1, msg: '服务器错误' })
   }

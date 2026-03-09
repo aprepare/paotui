@@ -72,8 +72,17 @@
               <text class="popup-val">{{ detailJob.company }}</text>
             </view>
           </view>
-          <view class="popup-tip">
-            <text>📌 详细信息即将上线，敬请期待</text>
+          <view class="popup-desc-section">
+            <view class="popup-desc-header">
+              <text class="popup-desc-icon">📋</text>
+              <text class="popup-desc-title">工作详情</text>
+            </view>
+            <text class="popup-desc-text">{{ detailJob.description }}</text>
+          </view>
+
+          <view class="popup-contact-btn" @click="onContactKefu">
+            <text class="popup-contact-icon">💬</text>
+            <text class="popup-contact-text">联系客服获取详细信息</text>
           </view>
         </view>
       </view>
@@ -97,19 +106,19 @@ const categories = [
 ]
 
 const jobs = ref([
-  { id: 1, title: '电子厂暑期工', company: '富士康科技', location: '开发区工业园', time: '两班倒 综合工时', pay: '¥5500-7000/月', emoji: '🏭', bg: 'linear-gradient(135deg, #667eea, #764ba2)', hot: true, tag: '工厂' },
-  { id: 2, title: '食品厂包装工', company: '达利食品', location: '经济开发区', time: '白班 08:00-17:00', pay: '¥4500-5500/月', emoji: '📦', bg: 'linear-gradient(135deg, #a1c4fd, #c2e9fb)', hot: false, tag: '工厂' },
-  { id: 3, title: '服装厂质检员', company: '纺织工业园', location: '工业园区', time: '白班制', pay: '¥4000-5000/月', emoji: '👔', bg: 'linear-gradient(135deg, #89f7fe, #66a6ff)', hot: false, tag: '工厂' },
-  { id: 4, title: '火锅店暑期服务员', company: '海底捞', location: '市中心商圈', time: '排班制', pay: '¥4500/月+餐补', emoji: '🍲', bg: 'linear-gradient(135deg, #f5576c, #ff6a88)', hot: true, tag: '餐饮' },
-  { id: 5, title: '奶茶店寒假工', company: '喜茶', location: '万达广场', time: '排班制', pay: '¥18/小时', emoji: '🧋', bg: 'linear-gradient(135deg, #a18cd1, #fbc2eb)', hot: false, tag: '餐饮' },
-  { id: 6, title: '西餐厅假期兼职', company: '必胜客', location: '大学城商业街', time: '午/晚餐时段', pay: '¥16/小时', emoji: '🍕', bg: 'linear-gradient(135deg, #ffecd2, #fcb69f)', hot: false, tag: '餐饮' },
-  { id: 7, title: '快递分拣员', company: '顺丰速运', location: '物流园区', time: '夜班 20:00-06:00', pay: '¥200/天', emoji: '📮', bg: 'linear-gradient(135deg, #4facfe, #00f2fe)', hot: true, tag: '物流' },
-  { id: 8, title: '仓库理货员', company: '京东物流', location: '电商产业园', time: '白班/夜班可选', pay: '¥180/天', emoji: '🏗️', bg: 'linear-gradient(135deg, #43e97b, #38f9d7)', hot: false, tag: '物流' },
-  { id: 9, title: '商场促销员', company: '万达百货', location: '万达广场', time: '周末/节假日', pay: '¥150/天+提成', emoji: '🛍️', bg: 'linear-gradient(135deg, #f093fb, #f5576c)', hot: false, tag: '促销' },
-  { id: 10, title: '手机卖场导购', company: '华为体验店', location: '步行街', time: '排班制', pay: '¥160/天+提成', emoji: '📱', bg: 'linear-gradient(135deg, #fbc2eb, #a6c1ee)', hot: true, tag: '促销' },
-  { id: 11, title: '景区检票员', company: '旅游景区', location: '本地景区', time: '旺季全天', pay: '¥140/天', emoji: '🎫', bg: 'linear-gradient(135deg, #d4fc79, #96e6a1)', hot: false, tag: '景区' },
-  { id: 12, title: '景区讲解员', company: '文旅集团', location: '本地景区', time: '排班制', pay: '¥180/天', emoji: '🗣️', bg: 'linear-gradient(135deg, #fddb92, #d1fdff)', hot: true, tag: '景区' },
-  { id: 13, title: '暑期游泳教练助理', company: '市体育馆', location: '体育中心', pay: '¥150/天', time: '暑期 09:00-17:00', emoji: '🏊', bg: 'linear-gradient(135deg, #fa709a, #fee140)', hot: false, tag: '其他' }
+  { id: 1, title: '电子厂暑期工', company: '富士康科技', location: '开发区工业园', time: '两班倒 综合工时', pay: '¥5500-7000/月', emoji: '🏭', bg: 'linear-gradient(135deg, #667eea, #764ba2)', hot: true, tag: '工厂', description: '从事电子产线产品的插件、组装及测试，有加班补贴及综合工时制度，包吃住。' },
+  { id: 2, title: '食品厂包装工', company: '达利食品', location: '经济开发区', time: '白班 08:00-17:00', pay: '¥4500-5500/月', emoji: '📦', bg: 'linear-gradient(135deg, #a1c4fd, #c2e9fb)', hot: false, tag: '工厂', description: '负责食品生产线末端的装袋、封口及装箱工作，对卫生要求高，需要办理健康证。' },
+  { id: 3, title: '服装厂质检员', company: '纺织工业园', location: '工业园区', time: '白班制', pay: '¥4000-5000/月', emoji: '👔', bg: 'linear-gradient(135deg, #89f7fe, #66a6ff)', hot: false, tag: '工厂', description: '对加工好的服装进行线头修剪和质量检查，找出残次品，要求视力好、做事细心。' },
+  { id: 4, title: '火锅店暑期服务员', company: '海底捞', location: '市中心商圈', time: '排班制', pay: '¥4500/月+餐补', emoji: '🍲', bg: 'linear-gradient(135deg, #f5576c, #ff6a88)', hot: true, tag: '餐饮', description: '负责餐厅桌面清理、传菜及顾客服务，提供优质的就餐体验，员工氛围好，包吃。' },
+  { id: 5, title: '奶茶店寒假工', company: '喜茶', location: '万达广场', time: '排班制', pay: '¥18/小时', emoji: '🧋', bg: 'linear-gradient(135deg, #a18cd1, #fbc2eb)', hot: false, tag: '餐饮', description: '负责饮品配料制作、前台收银以及店面卫生打扫，能适应快节奏工作。' },
+  { id: 6, title: '西餐厅假期兼职', company: '必胜客', location: '大学城商业街', time: '午/晚餐时段', pay: '¥16/小时', emoji: '🍕', bg: 'linear-gradient(135deg, #ffecd2, #fcb69f)', hot: false, tag: '餐饮', description: '主要负责迎宾、送餐以及餐桌清洁工作，带薪培训，时间段灵活可选。' },
+  { id: 7, title: '快递分拣员', company: '顺丰速运', location: '物流园区', time: '夜班 20:00-06:00', pay: '¥200/天', emoji: '📮', bg: 'linear-gradient(135deg, #4facfe, #00f2fe)', hot: true, tag: '物流', description: '夜班的快递分拣工作，按照区片及编号对包裹进行快速分类装车，体能要求较高。' },
+  { id: 8, title: '仓库理货员', company: '京东物流', location: '电商产业园', time: '白班/夜班可选', pay: '¥180/天', emoji: '🏗️', bg: 'linear-gradient(135deg, #43e97b, #38f9d7)', hot: false, tag: '物流', description: '通过PDA扫码设备在大型仓库内进行货物的上架和拣货配送，需要一定的方向感和体力。' },
+  { id: 9, title: '商场促销员', company: '万达百货', location: '万达广场', time: '周末/节假日', pay: '¥150/天+提成', emoji: '🛍️', bg: 'linear-gradient(135deg, #f093fb, #f5576c)', hot: false, tag: '促销', description: '在商场内向顾客推销指定品牌的商品，解答顾客疑问，达成销售任务，锻炼交际能力。' },
+  { id: 10, title: '手机卖场导购', company: '华为体验店', location: '步行街', time: '排班制', pay: '¥160/天+提成', emoji: '📱', bg: 'linear-gradient(135deg, #fbc2eb, #a6c1ee)', hot: true, tag: '促销', description: '接待进店顾客，介绍最新款手机及数码产品的功能亮点，促成销售业绩达成。' },
+  { id: 11, title: '景区检票员', company: '旅游景区', location: '本地景区', time: '旺季全天', pay: '¥140/天', emoji: '🎫', bg: 'linear-gradient(135deg, #d4fc79, #96e6a1)', hot: false, tag: '景区', description: '在景区入口负责对游客门票进行核销和检票，维持入园秩序。' },
+  { id: 12, title: '景区讲解员', company: '文旅集团', location: '本地景区', time: '排班制', pay: '¥180/天', emoji: '🗣️', bg: 'linear-gradient(135deg, #fddb92, #d1fdff)', hot: true, tag: '景区', description: '带领游客游览景区，生动讲解历史背景及景点特色，应对游客基本咨询及突发情况处理。' },
+  { id: 13, title: '暑期游泳教练助理', company: '市体育馆', location: '体育中心', pay: '¥150/天', time: '暑期 09:00-17:00', emoji: '🏊', bg: 'linear-gradient(135deg, #fa709a, #fee140)', hot: false, tag: '其他', description: '配合主教练进行少儿游泳教学工作，监督学员水上安全，收拾整理浮板等教学辅助器具。' }
 ])
 
 const filteredJobs = computed(() => {
@@ -135,6 +144,11 @@ const detailJob = ref(null)
 const onJobTap = (job) => {
   detailJob.value = job
   showDetail.value = true
+}
+
+const onContactKefu = () => {
+  showDetail.value = false
+  uni.navigateTo({ url: '/pages/kefu/show?img=' + encodeURIComponent('/static/TeamWork.jpg') })
 }
 </script>
 
@@ -191,6 +205,13 @@ const onJobTap = (job) => {
 .popup-label { font-size: 22rpx; color: #A0AEC0; display: block; margin-bottom: 6rpx; }
 .popup-val { font-size: 28rpx; color: #2D3748; font-weight: 600; display: block; }
 .popup-val.price { color: #E53E3E; font-weight: 800; }
-.popup-tip { background: #FFFAF0; border-radius: 12rpx; padding: 20rpx; width: 100%; text-align: center; }
-.popup-tip text { font-size: 24rpx; color: #DD6B20; }
+.popup-desc-section { width: 100%; background: #F7FAFC; border-radius: 16rpx; padding: 24rpx; margin-bottom: 24rpx; }
+.popup-desc-header { display: flex; align-items: center; margin-bottom: 12rpx; }
+.popup-desc-icon { font-size: 28rpx; margin-right: 8rpx; }
+.popup-desc-title { font-size: 28rpx; font-weight: 700; color: #1A1A2E; }
+.popup-desc-text { font-size: 26rpx; color: #4A5568; line-height: 1.7; }
+.popup-contact-btn { width: 100%; padding: 24rpx; border-radius: 16rpx; background: linear-gradient(135deg, #4299E1, #2B6CB0); display: flex; align-items: center; justify-content: center; box-shadow: 0 6rpx 20rpx rgba(43,108,176,0.3); }
+.popup-contact-btn:active { opacity: 0.85; transform: scale(0.98); }
+.popup-contact-icon { font-size: 32rpx; margin-right: 10rpx; }
+.popup-contact-text { font-size: 28rpx; color: #fff; font-weight: 700; }
 </style>

@@ -29,6 +29,7 @@ const expressOrderSchema = new mongoose.Schema({
   riderLat: Number,
   riderLng: Number,
   riderLocationTime: Date,
+  outTradeNo: String,
   createTime: { type: Date, default: Date.now }
 })
 

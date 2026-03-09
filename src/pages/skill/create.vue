@@ -80,7 +80,7 @@
 import { ref, reactive } from 'vue'
 import { callCloud, uploadImages, checkLogin } from '@/utils/cloud'
 
-const categories = ['PS/设计', '视频剪辑', '编程开发', '翻译写作', '音乐舞蹈', '摄影', '其他']
+const categories = ['游戏陪玩', 'PS/设计', '视频剪辑', '编程开发', '翻译写作', '音乐舞蹈', '摄影', '其他']
 const priceUnits = ['小时', '次', '件', '天']
 const images = ref([])
 const tempPaths = ref([])

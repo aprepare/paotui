@@ -15,6 +15,7 @@ const teamActivitySchema = new mongoose.Schema({
   tag: { type: String, default: '' },
   owner: { type: String, default: '' },
   chatId: { type: String, default: '' },
+  joinWayConfigId: { type: String, default: '' },
   createTime: { type: Date, default: Date.now }
 })
 

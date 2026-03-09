@@ -36,14 +36,12 @@
         <text class="feed-title">热门兼职</text>
         <text class="feed-more" @click="onMoreTap">更多 ›</text>
       </view>
-      <swiper class="feed-swiper" vertical autoplay circular :interval="3000" :duration="600" indicator-dots indicator-color="rgba(43,108,176,0.2)" indicator-active-color="#2B6CB0">
+      <swiper class="feed-swiper" :autoplay="true" :circular="true" :interval="3000" :duration="500" :indicator-dots="true" indicator-color="rgba(43,108,176,0.25)" indicator-active-color="#2B6CB0">
         <swiper-item v-for="job in jobList" :key="job.id">
           <view class="feed-card" @click="onJobTap(job)">
             <view class="feed-img" :style="{background: job.bg}">
               <text class="feed-img-emoji">{{ job.emoji }}</text>
-              <view class="feed-tag" v-if="job.hot">
-                <text>🔥 热招</text>
-              </view>
+              <view class="feed-tag" v-if="job.hot"><text>🔥 热招</text></view>
             </view>
             <view class="feed-info">
               <text class="feed-job-title">{{ job.title }}</text>
@@ -53,9 +51,7 @@
               </view>
               <view class="feed-bottom">
                 <text class="feed-pay">{{ job.pay }}</text>
-                <view class="feed-apply-btn">
-                  <text>查看详情</text>
-                </view>
+                <view class="feed-apply-btn"><text>查看详情</text></view>
               </view>
             </view>
           </view>
@@ -82,8 +78,16 @@
               <text class="popup-val price">{{ detailJob.pay }}</text>
             </view>
           </view>
-          <view class="popup-tip">
-            <text>📌 详细信息即将上线，敬请期待</text>
+          <view class="popup-desc-section">
+            <view class="popup-desc-header">
+              <text class="popup-desc-icon">📋</text>
+              <text class="popup-desc-title">工作详情</text>
+            </view>
+            <text class="popup-desc-text">{{ detailJob.description }}</text>
+          </view>
+          <view class="popup-contact-btn" @click="onContactKefu">
+            <text class="popup-contact-icon">💬</text>
+            <text class="popup-contact-text">联系客服获取详细信息</text>
           </view>
         </view>
       </view>
@@ -107,12 +111,12 @@ const categories = ref([
 ])
 
 const jobList = ref([
-  { id: 1, title: '周末家教 数学辅导', company: '家长直招', location: '线上/线下均可', pay: '¥120/小时', emoji: '📐', bg: 'linear-gradient(135deg, #a18cd1, #fbc2eb)', hot: true },
-  { id: 2, title: '图书馆整理员', company: '校图书馆', location: '图书馆三楼', pay: '¥20/小时', emoji: '📖', bg: 'linear-gradient(135deg, #89f7fe, #66a6ff)', hot: false },
-  { id: 3, title: '咖啡店周末兼职', company: '瑞幸咖啡', location: '北门商圈', pay: '¥130/天', emoji: '☕', bg: 'linear-gradient(135deg, #ffecd2, #fcb69f)', hot: true },
-  { id: 4, title: '校园配送骑手', company: '校园跑腿平台', location: '全校范围', pay: '¥5-15/单', emoji: '🚴', bg: 'linear-gradient(135deg, #a1c4fd, #c2e9fb)', hot: false },
-  { id: 5, title: '暑期游泳教练助理', company: '校游泳馆', location: '体育中心', pay: '¥150/天', emoji: '🏊', bg: 'linear-gradient(135deg, #d4fc79, #96e6a1)', hot: true },
-  { id: 6, title: '社团活动摄影师', company: '学生会', location: '学生活动中心', pay: '¥200/场', emoji: '📸', bg: 'linear-gradient(135deg, #fbc2eb, #a6c1ee)', hot: false }
+  { id: 1, title: '周末家教 数学辅导', company: '家长直招', location: '线上/线下均可', pay: '¥120/小时', emoji: '📐', bg: 'linear-gradient(135deg, #a18cd1, #fbc2eb)', hot: true, description: '辅导初中/高中数学，巩固基础知识，讲解解题思路，提升理科逻辑思维能力。时间灵活，线上线下均可。' },
+  { id: 2, title: '图书馆整理员', company: '校图书馆', location: '图书馆三楼', pay: '¥20/小时', emoji: '📖', bg: 'linear-gradient(135deg, #89f7fe, #66a6ff)', hot: false, description: '负责图书馆三楼书籍的分类整理、上架归位及环境维护，需要细心耐心，能够按照图书编号准确归类。' },
+  { id: 3, title: '咖啡店周末兼职', company: '瑞幸咖啡', location: '北门商圈', pay: '¥130/天', emoji: '☕', bg: 'linear-gradient(135deg, #ffecd2, #fcb69f)', hot: true, description: '主要负责点单、饮品制作辅助以及店内卫生清洁。不需要经验，店长会带薪培训，周末优先排班。' },
+  { id: 4, title: '校园配送骑手', company: '小树懒配送平台', location: '全校范围', pay: '¥5-15/单', emoji: '🚴', bg: 'linear-gradient(135deg, #a1c4fd, #c2e9fb)', hot: false, description: '负责校内快递、餐饮、外卖等包裹的取送服务，时间非常自由，多劳多得，适合空余时间较多的同学。' },
+  { id: 5, title: '暑期游泳教练助理', company: '校游泳馆', location: '体育中心', pay: '¥150/天', emoji: '🏊', bg: 'linear-gradient(135deg, #d4fc79, #96e6a1)', hot: true, description: '协助主教练进行学员的救生观察、器材整理以及基础动作辅导，要求自身有一定的游泳基础并有责任心。' },
+  { id: 6, title: '社团活动摄影师', company: '学生会', location: '学生活动中心', pay: '¥200/场', emoji: '📸', bg: 'linear-gradient(135deg, #fbc2eb, #a6c1ee)', hot: false, description: '负责大型社团活动的现场拍摄与后期选片修片。要求自备相机，擅长捕捉活动精彩瞬间。' }
 ])
 
 const onCatTap = (cat) => {
@@ -151,6 +155,11 @@ const onPublishRecruit = () => {
   uni.navigateTo({ url: '/pages/kefu/show?img=' + encodeURIComponent('/static/TeamWork.jpg') })
 }
 
+const onContactKefu = () => {
+  showDetail.value = false
+  uni.navigateTo({ url: '/pages/kefu/show?img=' + encodeURIComponent('/static/TeamWork.jpg') })
+}
+
 onShow(() => {
   uni.hideTabBar({ animation: false })
   })
@@ -183,18 +192,18 @@ onShow(() => {
 .feed-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20rpx; }
 .feed-title { font-size: 32rpx; font-weight: 700; color: #1A1A2E; letter-spacing: 1rpx; }
 .feed-more { font-size: 24rpx; color: #2B6CB0; font-weight: 600; }
-.feed-swiper { height: 560rpx; }
-.feed-card { background: #fff; border-radius: 20rpx; overflow: hidden; margin: 0 4rpx 16rpx; box-shadow: 0 4rpx 16rpx rgba(0,0,0,0.06), 0 1rpx 4rpx rgba(0,0,0,0.04); }
-.feed-img { height: 280rpx; display: flex; align-items: center; justify-content: center; position: relative; }
+.feed-swiper { height: 400rpx; border-radius: 20rpx; overflow: hidden; }
+.feed-card { width: 100%; height: 400rpx; background: #fff; border-radius: 20rpx; overflow: hidden; box-shadow: 0 4rpx 16rpx rgba(0,0,0,0.06); display: flex; flex-direction: column; }
+.feed-img { height: 240rpx; display: flex; align-items: center; justify-content: center; position: relative; flex-shrink: 0; }
 .feed-img-emoji { font-size: 88rpx; }
 .feed-tag { position: absolute; top: 16rpx; left: 16rpx; background: rgba(255,255,255,0.92); padding: 6rpx 18rpx; border-radius: 20rpx; backdrop-filter: blur(4px); }
 .feed-tag text { font-size: 22rpx; color: #E53E3E; font-weight: 700; }
-.feed-info { padding: 20rpx 24rpx 24rpx; }
+.feed-info { padding: 20rpx 24rpx 24rpx; flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
 .feed-job-title { font-size: 30rpx; font-weight: 700; color: #1A1A2E; display: block; }
-.feed-company { font-size: 24rpx; color: #718096; margin-top: 6rpx; display: block; }
-.feed-meta-row { margin-top: 8rpx; }
+.feed-company { font-size: 24rpx; color: #718096; margin-top: 4rpx; display: block; }
+.feed-meta-row { margin-top: 4rpx; }
 .feed-location { font-size: 22rpx; color: #A0AEC0; }
-.feed-bottom { display: flex; justify-content: space-between; align-items: center; margin-top: 14rpx; }
+.feed-bottom { display: flex; justify-content: space-between; align-items: center; margin-top: 10rpx; }
 .feed-pay { font-size: 32rpx; color: #E53E3E; font-weight: 800; }
 .feed-apply-btn { padding: 10rpx 28rpx; border-radius: 24rpx; background: linear-gradient(135deg, #4299E1, #2B6CB0); box-shadow: 0 4rpx 12rpx rgba(43,108,176,0.25); }
 .feed-apply-btn text { font-size: 22rpx; color: #fff; font-weight: 700; }
@@ -222,6 +231,13 @@ onShow(() => {
 .popup-label { font-size: 22rpx; color: #A0AEC0; display: block; margin-bottom: 6rpx; }
 .popup-val { font-size: 28rpx; color: #2D3748; font-weight: 600; display: block; }
 .popup-val.price { color: #E53E3E; font-weight: 800; }
-.popup-tip { background: #FFFAF0; border-radius: 12rpx; padding: 20rpx; width: 100%; text-align: center; }
-.popup-tip text { font-size: 24rpx; color: #DD6B20; }
+.popup-desc-section { width: 100%; background: #F7FAFC; border-radius: 16rpx; padding: 24rpx; margin-bottom: 24rpx; }
+.popup-desc-header { display: flex; align-items: center; margin-bottom: 12rpx; }
+.popup-desc-icon { font-size: 28rpx; margin-right: 8rpx; }
+.popup-desc-title { font-size: 28rpx; font-weight: 700; color: #1A1A2E; }
+.popup-desc-text { font-size: 26rpx; color: #4A5568; line-height: 1.7; }
+.popup-contact-btn { width: 100%; padding: 24rpx; border-radius: 16rpx; background: linear-gradient(135deg, #4299E1, #2B6CB0); display: flex; align-items: center; justify-content: center; box-shadow: 0 6rpx 20rpx rgba(43,108,176,0.3); }
+.popup-contact-btn:active { opacity: 0.85; transform: scale(0.98); }
+.popup-contact-icon { font-size: 32rpx; margin-right: 10rpx; }
+.popup-contact-text { font-size: 28rpx; color: #fff; font-weight: 700; }
 </style>

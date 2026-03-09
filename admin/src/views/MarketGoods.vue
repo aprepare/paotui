@@ -1,22 +1,28 @@
 <template>
   <div>
     <h2>二手市场管理</h2>
-    <el-button type="primary" style="margin:16px 0" @click="loadData">刷新</el-button>
-    <el-table :data="list" v-loading="loading" border stripe>
-      <el-table-column prop="_id" label="ID" width="220" show-overflow-tooltip />
+    <el-row :gutter="16" style="margin:16px 0">
+      <el-col :span="5">
+        <el-input v-model="keyword" placeholder="搜索标题/发布者" clearable @clear="loadData" @keyup.enter="loadData" />
+      </el-col>
+      <el-col :span="2"><el-button type="primary" @click="loadData">搜索</el-button></el-col>
+      <el-col :span="3"><el-button type="danger" :disabled="!selected.length" @click="batchDelete">批量删除({{ selected.length }})</el-button></el-col>
+    </el-row>
+    <el-table :data="list" v-loading="loading" border stripe @selection-change="s => selected = s">
+      <el-table-column type="selection" width="40" />
       <el-table-column prop="title" label="标题" width="160" show-overflow-tooltip />
-      <el-table-column prop="price" label="价格" width="80" />
+      <el-table-column label="价格" width="80"><template #default="{ row }">¥{{ row.price }}</template></el-table-column>
       <el-table-column prop="category" label="分类" width="100" />
       <el-table-column prop="views" label="浏览" width="70" />
       <el-table-column prop="wants" label="想要" width="70" />
       <el-table-column prop="publisher" label="发布者" width="100" />
-      <el-table-column prop="createTime" label="创建时间" width="180">
-        <template #default="{ row }">{{ formatTime(row.createTime) }}</template>
+      <el-table-column prop="createTime" label="创建时间" width="170">
+        <template #default="{ row }">{{ fmtTime(row.createTime) }}</template>
       </el-table-column>
-      <el-table-column label="操作" width="160" fixed="right">
+      <el-table-column label="操作" width="140" fixed="right">
         <template #default="{ row }">
-          <el-button size="small" @click="openEdit(row)">编辑</el-button>
-          <el-button size="small" type="danger" @click="handleDelete(row)">删除</el-button>
+          <el-button size="small" link type="warning" @click="openEdit(row)">编辑</el-button>
+          <el-button size="small" link type="danger" @click="handleDelete(row)">删除</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -42,21 +48,17 @@ import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../api/index'
 
-const list = ref([])
-const loading = ref(false)
-const page = ref(1)
-const pageSize = ref(20)
-const total = ref(0)
-const editVisible = ref(false)
-const editForm = ref({})
-const editId = ref('')
-
-function formatTime(t) { return t ? new Date(t).toLocaleString('zh-CN') : '' }
+const list = ref([]), loading = ref(false), page = ref(1), pageSize = ref(20), total = ref(0)
+const keyword = ref(''), selected = ref([])
+const editVisible = ref(false), editForm = ref({}), editId = ref('')
+const fmtTime = t => t ? new Date(t).toLocaleString('zh-CN') : ''
 
 async function loadData() {
   loading.value = true
   try {
-    const { data } = await api.get('/admin/market-goods', { params: { page: page.value, pageSize: pageSize.value } })
+    const params = { page: page.value, pageSize: pageSize.value }
+    if (keyword.value) params.keyword = keyword.value
+    const { data } = await api.get('/admin/market-goods', { params })
     if (data.code === 0) { list.value = data.data; total.value = data.total }
   } finally { loading.value = false }
 }
@@ -69,16 +71,19 @@ function openEdit(row) {
 
 async function handleEdit() {
   await api.put(`/admin/market-goods/${editId.value}`, editForm.value)
-  ElMessage.success('已更新')
-  editVisible.value = false
-  loadData()
+  ElMessage.success('已更新'); editVisible.value = false; loadData()
 }
 
 async function handleDelete(row) {
   await ElMessageBox.confirm('确认删除该商品？', '警告', { type: 'warning' })
   await api.delete(`/admin/market-goods/${row._id}`)
-  ElMessage.success('已删除')
-  loadData()
+  ElMessage.success('已删除'); loadData()
+}
+
+async function batchDelete() {
+  await ElMessageBox.confirm(`确认删除选中的 ${selected.value.length} 个商品？`, '警告', { type: 'warning' })
+  await Promise.all(selected.value.map(r => api.delete(`/admin/market-goods/${r._id}`)))
+  ElMessage.success('批量删除完成'); loadData()
 }
 
 onMounted(loadData)

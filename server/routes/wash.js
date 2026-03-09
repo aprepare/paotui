@@ -1,5 +1,6 @@
 const router = require('express').Router()
 const auth = require('../middleware/auth')
+const adminAuth = require('../middleware/adminAuth')
 const WashProduct = require('../models/WashProduct')
 const WashGroup = require('../models/WashGroup')
 const WashOrder = require('../models/WashOrder')
@@ -184,10 +185,11 @@ router.get('/my-orders', auth, async (req, res) => {
 })
 
 // GET /api/wash/order/:id
-router.get('/order/:id', async (req, res) => {
+router.get('/order/:id', auth, async (req, res) => {
     try {
         const order = await WashOrder.findById(req.params.id)
         if (!order) return res.json({ code: -1, msg: '订单不存在' })
+        if (order.openid !== req.user.openid) return res.json({ code: -1, msg: '无权查看该订单' })
         res.json({ code: 0, data: order })
     } catch (err) {
         res.json({ code: -1, msg: '订单不存在' })
@@ -216,7 +218,7 @@ router.post('/order/:id/cancel', auth, async (req, res) => {
 
 // ========== 管理员 ==========
 // GET /api/wash/admin/orders
-router.get('/admin/orders', async (req, res) => {
+router.get('/admin/orders', adminAuth, async (req, res) => {
     try {
         const { page = 1, pageSize = 20, status } = req.query
         const where = {}
@@ -231,7 +233,7 @@ router.get('/admin/orders', async (req, res) => {
 })
 
 // PUT /api/wash/admin/order/:id/status
-router.put('/admin/order/:id/status', async (req, res) => {
+router.put('/admin/order/:id/status', adminAuth, async (req, res) => {
     try {
         const { status: newStatus } = req.body
         const statusMap = { 0: '待处理', 1: '处理中', 2: '已完成', 3: '已取消' }

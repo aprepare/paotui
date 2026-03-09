@@ -4,7 +4,9 @@ const teamMemberSchema = new mongoose.Schema({
   activityId: String,
   openid: String,
   name: { type: String, default: '' },
-  joinTime: { type: Date, default: Date.now }
+  joinTime: { type: Date, default: Date.now },
+  externalUserId: { type: String, default: '' },
+  isWeworkFriend: { type: Boolean, default: false }
 })
 
 teamMemberSchema.index({ activityId: 1 })

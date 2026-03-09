@@ -144,8 +144,48 @@ function decryptNotifyResource(resource) {
     return JSON.parse(decrypted.toString('utf8'))
 }
 
+/**
+ * 申请退款
+ * @param {string} outTradeNo 商户订单号
+ * @param {string} outRefundNo 商户退款单号
+ * @param {number} totalFee 订单总金额（分）
+ * @param {number} refundFee 退款金额（分）
+ */
+async function refundOrder(outTradeNo, outRefundNo, totalFee, refundFee) {
+    const url = '/v3/refund/domestic/refunds'
+    const absoluteUrl = 'https://api.mch.weixin.qq.com' + url
+
+    const params = {
+        out_trade_no: outTradeNo,
+        out_refund_no: outRefundNo,
+        amount: {
+            refund: refundFee,
+            total: totalFee,
+            currency: 'CNY'
+        }
+    }
+
+    const payloadStr = JSON.stringify(params)
+    const authHeader = buildAuthorization('POST', url, payloadStr)
+
+    try {
+        const res = await axios.post(absoluteUrl, payloadStr, {
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'Authorization': authHeader
+            }
+        })
+        return res.data
+    } catch (err) {
+        console.error('[wxpay] 退款请求失败:', err.response ? err.response.data : err.message)
+        throw new Error('微信退款接口请求失败: ' + (err.response ? JSON.stringify(err.response.data) : err.message))
+    }
+}
+
 module.exports = {
     getWxPay,
     createJSAPIOrder,
-    decryptNotifyResource
+    decryptNotifyResource,
+    refundOrder
 }

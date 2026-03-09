@@ -1,5 +1,6 @@
 const router = require('express').Router()
 const auth = require('../middleware/auth')
+const adminAuth = require('../middleware/adminAuth')
 const crypto = require('crypto')
 const axios = require('axios')
 const FoodShop = require('../models/FoodShop')
@@ -180,18 +181,22 @@ router.post('/order', auth, async (req, res) => {
         let itemsTotal = 0
         const orderItems = []
         for (const ci of items) {
-            let itemName = ci.name || '未知菜品'
-            let itemPrice = ci.price || 0
-            let itemImage = ci.image || ''
-            if (!ci.itemId.startsWith('di_')) {
-                try {
-                    const item = await FoodItem.findById(ci.itemId)
-                    if (item) { itemName = item.name; itemPrice = item.price; itemImage = item.image || '' }
-                } catch (e) { }
+            if (!ci.itemId || !ci.quantity || ci.quantity <= 0) continue
+            let itemName, itemPrice, itemImage = ''
+            if (ci.itemId.startsWith('di_')) {
+                const menu = defaultMenus[shopId]
+                const defaultItem = menu && menu.items.find(i => i._id === ci.itemId)
+                if (!defaultItem) return res.json({ code: -1, msg: '菜品不存在: ' + ci.itemId })
+                itemName = defaultItem.name; itemPrice = defaultItem.price; itemImage = defaultItem.image || ''
+            } else {
+                const item = await FoodItem.findById(ci.itemId)
+                if (!item) return res.json({ code: -1, msg: '菜品不存在: ' + ci.itemId })
+                itemName = item.name; itemPrice = item.price; itemImage = item.image || ''
             }
             orderItems.push({ itemId: ci.itemId, name: itemName, price: itemPrice, image: itemImage, quantity: ci.quantity })
             itemsTotal += itemPrice * ci.quantity
         }
+        if (orderItems.length === 0) return res.json({ code: -1, msg: '订单中没有有效商品' })
 
         const deliveryFee = deliveryMode === 'self_pickup' ? 0 : (shop.deliveryFee || 0)
         const totalPrice = itemsTotal + deliveryFee
@@ -228,10 +233,11 @@ router.get('/my-orders', auth, async (req, res) => {
 })
 
 // GET /api/food/order/:id
-router.get('/order/:id', async (req, res) => {
+router.get('/order/:id', auth, async (req, res) => {
     try {
         const order = await FoodOrder.findById(req.params.id)
         if (!order) return res.json({ code: -1, msg: '订单不存在' })
+        if (order.openid !== req.user.openid) return res.json({ code: -1, msg: '无权查看该订单' })
         res.json({ code: 0, data: order })
     } catch (err) {
         res.json({ code: -1, msg: '订单不存在' })
@@ -285,7 +291,7 @@ router.post('/order/:id/rider-complete', auth, async (req, res) => {
 // ========== 管理员接口 ==========
 
 // GET /api/food/admin/shops
-router.get('/admin/shops', async (req, res) => {
+router.get('/admin/shops', adminAuth, async (req, res) => {
     try {
         const data = await FoodShop.find().sort({ sort: 1 })
         res.json({ code: 0, data })
@@ -295,7 +301,7 @@ router.get('/admin/shops', async (req, res) => {
 })
 
 // POST /api/food/admin/shop
-router.post('/admin/shop', async (req, res) => {
+router.post('/admin/shop', adminAuth, async (req, res) => {
     try {
         const { name, logo, category, phone, address, deliveryFee, minOrder, printerSn, openTime, closeTime } = req.body
         if (!name) return res.json({ code: -1, msg: '商家名称不能为空' })
@@ -313,7 +319,7 @@ router.post('/admin/shop', async (req, res) => {
 })
 
 // PUT /api/food/admin/shop/:id
-router.put('/admin/shop/:id', async (req, res) => {
+router.put('/admin/shop/:id', adminAuth, async (req, res) => {
     try {
         const updateData = { ...req.body }
         if (updateData.deliveryFee !== undefined) updateData.deliveryFee = parseFloat(updateData.deliveryFee) || 0
@@ -326,7 +332,7 @@ router.put('/admin/shop/:id', async (req, res) => {
 })
 
 // DELETE /api/food/admin/shop/:id
-router.delete('/admin/shop/:id', async (req, res) => {
+router.delete('/admin/shop/:id', adminAuth, async (req, res) => {
     try {
         await FoodShop.deleteOne({ _id: req.params.id })
         await FoodItem.deleteMany({ shopId: req.params.id })
@@ -337,7 +343,7 @@ router.delete('/admin/shop/:id', async (req, res) => {
 })
 
 // GET /api/food/admin/items/:shopId
-router.get('/admin/items/:shopId', async (req, res) => {
+router.get('/admin/items/:shopId', adminAuth, async (req, res) => {
     try {
         const data = await FoodItem.find({ shopId: req.params.shopId }).sort({ sort: 1 })
         res.json({ code: 0, data })
@@ -347,7 +353,7 @@ router.get('/admin/items/:shopId', async (req, res) => {
 })
 
 // POST /api/food/admin/item
-router.post('/admin/item', async (req, res) => {
+router.post('/admin/item', adminAuth, async (req, res) => {
     try {
         const { shopId, name, image, price, category, desc } = req.body
         if (!shopId || !name) return res.json({ code: -1, msg: '参数不完整' })
@@ -362,7 +368,7 @@ router.post('/admin/item', async (req, res) => {
 })
 
 // PUT /api/food/admin/item/:id
-router.put('/admin/item/:id', async (req, res) => {
+router.put('/admin/item/:id', adminAuth, async (req, res) => {
     try {
         const updateData = { ...req.body }
         if (updateData.price !== undefined) updateData.price = parseFloat(updateData.price) || 0
@@ -374,7 +380,7 @@ router.put('/admin/item/:id', async (req, res) => {
 })
 
 // DELETE /api/food/admin/item/:id
-router.delete('/admin/item/:id', async (req, res) => {
+router.delete('/admin/item/:id', adminAuth, async (req, res) => {
     try {
         await FoodItem.deleteOne({ _id: req.params.id })
         res.json({ code: 0 })
@@ -384,7 +390,7 @@ router.delete('/admin/item/:id', async (req, res) => {
 })
 
 // GET /api/food/admin/orders
-router.get('/admin/orders', async (req, res) => {
+router.get('/admin/orders', adminAuth, async (req, res) => {
     try {
         const { page = 1, pageSize = 20, status } = req.query
         const where = {}
@@ -399,7 +405,7 @@ router.get('/admin/orders', async (req, res) => {
 })
 
 // PUT /api/food/admin/order/:id/status
-router.put('/admin/order/:id/status', async (req, res) => {
+router.put('/admin/order/:id/status', adminAuth, async (req, res) => {
     try {
         const { status: newStatus } = req.body
         const order = await FoodOrder.findById(req.params.id)
@@ -420,13 +426,13 @@ router.put('/admin/order/:id/status', async (req, res) => {
 
 // ========== 打印机配置 ==========
 // GET /api/food/admin/printer-config
-router.get('/admin/printer-config', async (req, res) => {
+router.get('/admin/printer-config', adminAuth, async (req, res) => {
     const pc = await getPrinterConfig()
     res.json({ code: 0, data: pc || {} })
 })
 
 // POST /api/food/admin/printer-config
-router.post('/admin/printer-config', async (req, res) => {
+router.post('/admin/printer-config', adminAuth, async (req, res) => {
     try {
         const { user, ukey, defaultSn } = req.body
         const pConfig = { user: user || '', ukey: ukey || '', defaultSn: defaultSn || '' }
@@ -443,7 +449,7 @@ router.post('/admin/printer-config', async (req, res) => {
 })
 
 // POST /api/food/admin/order/:id/reprint
-router.post('/admin/order/:id/reprint', async (req, res) => {
+router.post('/admin/order/:id/reprint', adminAuth, async (req, res) => {
     try {
         const order = await FoodOrder.findById(req.params.id)
         if (!order) return res.json({ code: -1, msg: '订单不存在' })

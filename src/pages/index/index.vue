@@ -13,7 +13,7 @@
           <text class="hero-sub">实时更新</text>
         </view>
         <view class="hero-right">
-          <image class="hero-gif" src="/static/kuaidi.jpg" mode="aspectFit" />
+          <image class="hero-gif" :src="heroImage" mode="aspectFit" />
         </view>
       </view>
     </view>
@@ -72,7 +72,10 @@
     <view class="section">
       <swiper class="banner-swiper" :indicator-dots="true" :autoplay="true" :interval="3000" :duration="500" :circular="true" indicator-color="rgba(255,255,255,0.4)" indicator-active-color="#fff">
         <swiper-item v-for="item in banners" :key="item.id">
-          <view class="banner-item" :style="{ background: item.bg }">
+          <view v-if="item.imageUrl" class="banner-item">
+            <image class="banner-image" :src="item.imageUrl" mode="aspectFill" />
+          </view>
+          <view v-else class="banner-item" :style="{ background: item.bg }">
             <text class="banner-emoji">{{ item.emoji }}</text>
             <view class="banner-text-area">
               <text class="banner-title">{{ item.title }}</text>
@@ -93,14 +96,17 @@
 import CustomTabBar from '@/components/CustomTabBar.vue'
 import { ref, reactive, computed } from 'vue'
 import { onLoad, onUnload, onShow, onPullDownRefresh } from '@dcloudio/uni-app'
-import { callCloud, checkLogin } from '@/utils/cloud.js'
+import { callCloud, checkLogin, resolveImageUrl } from '@/utils/cloud.js'
 import ServiceFab from '@/components/ServiceFab.vue'
 import MsgNotify from '@/components/MsgNotify.vue'
 
+const defaultHeroImage = '/static/kuaidi.jpg'
+const heroImage = ref(defaultHeroImage)
+
 const defaultBanners = [
-  { id: 1, emoji: '📦', title: '快递代取 极速送达', desc: '下单后最快30分钟送到宿舍', bg: 'linear-gradient(135deg, #4299E1, #2B6CB0)' },
-  { id: 2, emoji: '🏃', title: '万能跑腿 有求必应', desc: '买饭、打印、取件 一键搞定', bg: 'linear-gradient(135deg, #ED8936, #DD6B20)' },
-  { id: 3, emoji: '🎉', title: '新用户首单立减', desc: '注册即享优惠 快来体验吧', bg: 'linear-gradient(135deg, #48BB78, #38A169)' }
+  { id: 1, imageUrl: '', emoji: '📦', title: '快递代取 极速送达', desc: '下单后最快30分钟送到宿舍', bg: 'linear-gradient(135deg, #4299E1, #2B6CB0)' },
+  { id: 2, imageUrl: '', emoji: '🏃', title: '万能跑腿 有求必应', desc: '买饭、打印、取件 一键搞定', bg: 'linear-gradient(135deg, #ED8936, #DD6B20)' },
+  { id: 3, imageUrl: '', emoji: '🎉', title: '新用户首单立减', desc: '注册即享优惠 快来体验吧', bg: 'linear-gradient(135deg, #48BB78, #38A169)' }
 ]
 const banners = ref(defaultBanners)
 
@@ -114,21 +120,46 @@ const actions = ref(defaultActions)
 const loadPageConfig = async () => {
   try {
     const res = await callCloud('home', 'getPageConfig')
+    console.log('[pageConfig] raw response:', JSON.stringify(res))
     if (res.code === 0 && res.data) {
-      if (res.data.banners && res.data.banners.length > 0) {
-        banners.value = res.data.banners.map((it, i) => ({
-          id: i + 1, emoji: it.emoji || '', title: it.title || '', desc: it.desc || '',
+      // 服务器返回原始文档结构：{ _id, page, config: { heroImage, banners, actions } }
+      // 兼容两种格式：新格式直接在 data 里，旧格式嵌套在 data.config 里
+      const cfg = (res.data.config && typeof res.data.config === 'object') ? res.data.config : res.data
+      console.log('[pageConfig] heroImage from server:', cfg.heroImage)
+      if (cfg.heroImage) {
+        const resolved = resolveImageUrl(cfg.heroImage) || cfg.heroImage || defaultHeroImage
+        console.log('[pageConfig] heroImage resolved to:', resolved)
+        heroImage.value = resolved
+      }
+      if (cfg.banners && cfg.banners.length > 0) {
+        banners.value = cfg.banners.map((it, i) => {
+          const raw = it.imageUrl || ''
+          const img = resolveImageUrl(raw)
+          console.log('[pageConfig] banner[' + i + '] raw:', raw, '→ resolved:', img)
+          return {
+            id: i + 1,
+            imageUrl: img,
+            emoji: it.emoji || '',
+            title: it.title || '',
+            desc: it.desc || '',
+            bg: it.bg || 'linear-gradient(135deg, #4299E1, #2B6CB0)'
+          }
+        })
+      }
+      if (cfg.actions && cfg.actions.length > 0) {
+        actions.value = cfg.actions.map(it => ({
+          emoji: it.emoji || '',
+          iconUrl: resolveImageUrl(it.iconUrl) || it.iconUrl || '',
+          text: it.text || '', link: it.link || '',
           bg: it.bg || 'linear-gradient(135deg, #4299E1, #2B6CB0)'
         }))
       }
-      if (res.data.actions && res.data.actions.length > 0) {
-        actions.value = res.data.actions.map(it => ({
-          emoji: it.emoji || '', iconUrl: it.iconUrl || '', text: it.text || '', link: it.link || '',
-          bg: it.bg || 'linear-gradient(135deg, #4299E1, #2B6CB0)'
-        }))
-      }
+    } else {
+      console.warn('[pageConfig] bad response:', res)
     }
-  } catch (e) { /* 使用默认配置 */ }
+  } catch (e) {
+    console.error('[pageConfig] error:', e)
+  }
 }
 
 const live = reactive({ updatedAt: '加载中', todayDelivered: 0 })
@@ -230,7 +261,9 @@ onLoad(() => {
 })
 onShow(() => {
   uni.hideTabBar({ animation: false })
-  loadOrders() })
+  loadOrders()
+  loadPageConfig()
+})
 onUnload(() => { if (liveTimer) clearInterval(liveTimer) })
 onPullDownRefresh(async () => {
   await Promise.all([refreshLive(), loadOrders()])
@@ -316,8 +349,9 @@ const goDetail = (id, orderType) => {
 .order-state { font-size: 22rpx; display: block; margin-top: 6rpx; font-weight: 600; }
 
 /* 轮播图 */
-.banner-swiper { height: 240rpx; border-radius: 20rpx; overflow: hidden; }
-.banner-item { width: 100%; height: 240rpx; display: flex; align-items: center; padding: 0 40rpx; box-sizing: border-box; }
+.banner-swiper { height: 400rpx; border-radius: 20rpx; overflow: hidden; }
+.banner-item { width: 100%; height: 400rpx; display: flex; align-items: center; padding: 0 40rpx; box-sizing: border-box; }
+.banner-image { width: 100%; height: 400rpx; border-radius: 20rpx; }
 .banner-emoji { font-size: 80rpx; margin-right: 28rpx; }
 .banner-text-area { display: flex; flex-direction: column; }
 .banner-title { font-size: 32rpx; font-weight: 800; color: #fff; margin-bottom: 10rpx; }

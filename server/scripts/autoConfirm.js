@@ -9,6 +9,21 @@ const config = require('../config')
 const ExpressOrder = require('../models/ExpressOrder')
 const ErrandTask = require('../models/ErrandTask')
 const Message = require('../models/Message')
+const UserWallet = require('../models/UserWallet')
+const WalletRecord = require('../models/WalletRecord')
+
+async function creditRiderWallet(riderId, amount, orderId, orderType) {
+    if (!riderId || !amount || amount <= 0) return
+    await UserWallet.updateOne(
+        { openid: riderId },
+        { $inc: { balance: amount, totalIncome: amount }, $set: { updateTime: new Date() } },
+        { upsert: true }
+    )
+    await WalletRecord.create({
+        openid: riderId, type: 'income', amount, title: orderType === 'express' ? '快递代拿收入' : '跑腿任务收入',
+        orderId: orderId || '', orderType: orderType || '', status: 1, statusText: '已到账', createTime: new Date()
+    })
+}
 
 async function autoConfirm() {
     await mongoose.connect(config.mongoUri)
@@ -40,6 +55,9 @@ async function autoConfirm() {
                     targetId: order._id.toString(), targetType: 'express',
                     read: false, createTime: new Date()
                 })
+                // 更新骑手钱包
+                const earnAmount = (order.price || 0) + (order.tip || 0)
+                await creditRiderWallet(order.riderId, earnAmount, order._id.toString(), 'express')
                 results.express++
             } catch (e) {
                 results.errors.push({ type: 'express', id: order._id, msg: e.message })
@@ -71,6 +89,9 @@ async function autoConfirm() {
                     targetId: task._id.toString(), targetType: 'errand',
                     read: false, createTime: new Date()
                 })
+                // 更新骑手钱包
+                const earnAmount = (task.price || 0) + (task.tip || 0)
+                await creditRiderWallet(task.riderId, earnAmount, task._id.toString(), 'errand')
                 results.errand++
             } catch (e) {
                 results.errors.push({ type: 'errand', id: task._id, msg: e.message })

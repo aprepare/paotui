@@ -57,6 +57,39 @@
     <view class="loading-wrap" v-if="loading && list.length === 0">
       <text class="loading-text">加载中...</text>
     </view>
+    <!-- 兼职应聘详情弹窗 -->
+    <view class="popup-mask" v-if="showApplyDetail" @click="showApplyDetail = false">
+      <view class="popup-body" @click.stop>
+        <view class="popup-close" @click="showApplyDetail = false"><text>✕</text></view>
+        <view class="popup-content" v-if="applyMsg">
+          <view class="apply-header">
+            <text class="apply-icon">👤</text>
+            <text class="apply-title">有人应聘了您的兼职</text>
+          </view>
+          <view class="apply-info">
+            <view class="info-row">
+              <text class="info-label">兼职名称：</text>
+              <text class="info-val">{{ applyMsg.content.split('应聘了「')[1]?.replace('」', '') || '未知兼职' }}</text>
+            </view>
+            <view class="info-row">
+              <text class="info-label">应聘者姓名：</text>
+              <text class="info-val">{{ applyMsg.fromName || '未填' }}</text>
+            </view>
+            <view class="info-row">
+              <text class="info-label">联系电话：</text>
+              <text class="info-val phone" @click="makePhoneCall(applyMsg.fromPhone)">{{ applyMsg.fromPhone || '未填' }} 📞</text>
+            </view>
+            <view class="info-row" v-if="applyMsg.content.includes('联系方式：')">
+              <text class="info-label">更多信息：</text>
+              <text class="info-val">{{ applyMsg.content.split('联系方式：')[0] }}</text>
+            </view>
+          </view>
+          <view class="apply-btn" @click="makePhoneCall(applyMsg.fromPhone)">
+            <text>拨打电话联系</text>
+          </view>
+        </view>
+      </view>
+    </view>
   </view>
 </template>
 
@@ -69,6 +102,14 @@ var list = ref([])
 var loading = ref(false)
 var page = ref(1)
 var hasMore = ref(true)
+
+var showApplyDetail = ref(false)
+var applyMsg = ref(null)
+
+var makePhoneCall = (phone) => {
+  if (!phone) return
+  uni.makePhoneCall({ phoneNumber: phone })
+}
 
 var iconMap = {
   like: '👍',
@@ -146,6 +187,13 @@ var onMsgClick = async (item) => {
     await callCloud('message', 'markRead', { msgId: item._id })
     item.read = true
   }
+
+  if (item.type === 'tutor_apply') {
+    applyMsg.value = item
+    showApplyDetail.value = true
+    return
+  }
+
   // 跳转到对应页面
   var targetType = item.targetType
   var targetId = item.targetId
@@ -241,4 +289,23 @@ onShow(() => { loadMessages(true) })
 
 .loading-wrap { text-align: center; padding-top: 200rpx; }
 .loading-text { font-size: 28rpx; color: #A0AEC0; }
+
+/* 弹窗样式 */
+.popup-mask { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 999; display: flex; align-items: flex-end; }
+.popup-body { width: 100%; background: #fff; border-radius: 40rpx 40rpx 0 0; padding: 40rpx 40rpx 60rpx; position: relative; animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.popup-close { position: absolute; right: 40rpx; top: 40rpx; width: 60rpx; height: 60rpx; border-radius: 30rpx; background: #F7FAFC; display: flex; justify-content: center; align-items: center; }
+.popup-close text { font-size: 28rpx; color: #A0AEC0; font-weight: 700; }
+.apply-header { display: flex; align-items: center; margin-bottom: 40rpx; }
+.apply-icon { font-size: 48rpx; margin-right: 16rpx; }
+.apply-title { font-size: 36rpx; font-weight: 800; color: #1A202C; }
+.apply-info { background: #F7FAFC; border-radius: 20rpx; padding: 30rpx; margin-bottom: 40rpx; }
+.info-row { display: flex; margin-bottom: 20rpx; }
+.info-row:last-child { margin-bottom: 0; }
+.info-label { width: 160rpx; font-size: 28rpx; color: #718096; flex-shrink: 0; }
+.info-val { flex: 1; font-size: 28rpx; color: #2D3748; font-weight: 500; word-break: break-all; }
+.info-val.phone { color: #3182CE; font-weight: 700; display: flex; align-items: center; }
+.apply-btn { width: 100%; height: 96rpx; background: linear-gradient(135deg, #4299E1, #2B6CB0); border-radius: 48rpx; display: flex; align-items: center; justify-content: center; box-shadow: 0 8rpx 20rpx rgba(66, 153, 225, 0.3); }
+.apply-btn:active { transform: scale(0.98); opacity: 0.9; }
+.apply-btn text { font-size: 32rpx; color: #fff; font-weight: 600; }
 </style>

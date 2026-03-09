@@ -1,26 +1,43 @@
-/**
- * 创建初始管理员账号
- * 用法: node scripts/create-admin.js
- */
-require('dotenv').config()
 const mongoose = require('mongoose')
 const bcrypt = require('bcryptjs')
+const path = require('path')
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') })
+
 const config = require('../config')
 const AdminUser = require('../models/AdminUser')
 
 async function main() {
   await mongoose.connect(config.mongoUri)
-  const username = 'admin'
-  const password = 'admin123'
+  console.log('Connected to MongoDB')
+
+  const username = process.argv[2] || 'admin'
+  const password = process.argv[3] || 'admin123'
+  const hash = await bcrypt.hash(password, 10)
+
   const existing = await AdminUser.findOne({ username })
   if (existing) {
-    console.log('Admin user already exists')
+    console.log(`Admin user "${username}" already exists, updating password...`)
+    existing.passwordHash = hash
+    await existing.save()
+    console.log('Password updated.')
   } else {
-    const passwordHash = await bcrypt.hash(password, 10)
-    await AdminUser.create({ username, passwordHash, role: 'admin', createTime: new Date() })
-    console.log(`Admin user created: ${username} / ${password}`)
+    await AdminUser.create({
+      username,
+      passwordHash: hash,
+      role: 'admin'
+    })
+    console.log(`Admin user "${username}" created.`)
   }
+
+  console.log(`\nLogin credentials:`)
+  console.log(`  Username: ${username}`)
+  console.log(`  Password: ${password}`)
+  console.log(`\nPlease change the password after first login.`)
+
   await mongoose.disconnect()
 }
 
-main().catch(err => { console.error(err); process.exit(1) })
+main().catch(err => {
+  console.error(err)
+  process.exit(1)
+})

@@ -5,7 +5,15 @@ const fs = require('fs')
 const auth = require('../middleware/auth')
 
 const uploadDir = path.join(__dirname, '../uploads/')
-const upload = multer({ dest: uploadDir })
+const allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+const upload = multer({
+  dest: uploadDir,
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (allowedMimes.includes(file.mimetype)) cb(null, true)
+    else cb(new Error('仅支持 jpg/png/gif/webp 图片格式'))
+  }
+})
 
 function moveFile(file, folder) {
   const ext = path.extname(file.originalname) || '.jpg'
@@ -41,9 +49,22 @@ router.post('/image', auth, upload.single('file'), async (req, res) => {
   }
 })
 
-router.post('/images', auth, upload.array('files', 9), (req, res) => {
+router.post('/images', auth, upload.array('files', 9), async (req, res) => {
   try {
     if (!req.files || !req.files.length) return res.json({ code: -1, msg: '未选择文件' })
+    const { imgSecCheck } = require('../services/wechat')
+    for (const file of req.files) {
+      try {
+        const buffer = fs.readFileSync(file.path)
+        const safe = await imgSecCheck(buffer)
+        if (!safe) {
+          req.files.forEach(f => { try { fs.unlinkSync(f.path) } catch (e) {} })
+          return res.json({ code: -1, msg: '图片包含违规内容，请更换' })
+        }
+      } catch (e) {
+        console.warn('[imgSecCheck batch] skip:', e.message)
+      }
+    }
     const folder = req.query.folder || 'images'
     const urls = req.files.map(f => moveFile(f, folder))
     res.json({ code: 0, data: { urls, keys: urls } })

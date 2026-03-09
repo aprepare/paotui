@@ -1,12 +1,12 @@
 {
-  "name": "校园跑腿",
+  "name": "燕大小树懒",
   "appid": "",
-  "description": "校园跑腿 - 你的校园生活助手",
+  "description": "燕大小树懒",
   "versionName": "1.0.0",
   "versionCode": "100",
   "transformPx": false,
   "mp-weixin": {
-    "appid": "wx8c7aa4be05058ad8",
+    "appid": "wx8727b14c51458e08",
     "setting": {
       "urlCheck": false,
       "es6": true,
@@ -20,7 +20,10 @@
         "desc": "用于展示当前位置和骑手距离"
       }
     },
-    "requiredPrivateInfos": ["getLocation", "chooseLocation"]
+    "requiredPrivateInfos": [
+      "getLocation",
+      "chooseLocation"
+    ]
   },
   "permission": {
     "scope.userLocation": {

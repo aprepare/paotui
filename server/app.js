@@ -21,6 +21,18 @@ app.use(express.urlencoded({ extended: true }))
 app.use('/admin', express.static(path.join(__dirname, 'public/admin')))
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')))
 
+// Request logger
+app.use((req, res, next) => {
+  const start = Date.now()
+  res.on('finish', () => {
+    const duration = Date.now() - start
+    if (duration > 1000) {
+      console.warn(`[slow] ${req.method} ${req.originalUrl} ${res.statusCode} ${duration}ms`)
+    }
+  })
+  next()
+})
+
 // Routes
 app.use('/api/upload', require('./routes/upload'))
 app.use('/api/user', require('./routes/user'))
@@ -41,6 +53,11 @@ app.use('/api/wash', require('./routes/wash'))
 app.use('/api/experience', require('./routes/experience'))
 app.use('/api/wework', require('./routes/wework'))
 app.use('/api/payment', require('./routes/payment'))
+
+// API 404 handler
+app.use('/api', (req, res) => {
+  res.status(404).json({ code: -1, msg: '接口不存在' })
+})
 
 // Global error handler
 app.use((err, req, res, next) => {

@@ -87,7 +87,7 @@
         <view class="menu-item last" @click="showWallet">
           <view class="menu-icon-bg" style="background: linear-gradient(135deg, #F6AD55, #DD6B20);"><text class="mi">💰</text></view>
           <text class="menu-text">我的钱包</text>
-          <view class="wallet-amount"><text>¥{{ stats.income || 0 }}</text></view>
+          <view class="wallet-amount"><text>¥{{ walletBalance }}</text></view>
           <text class="menu-arrow">›</text>
         </view>
       </view>
@@ -157,6 +157,7 @@ const isRider = ref(false)
 const isLoggedIn = ref(false)
 const isAdmin = ref(false)
 const unreadCount = ref(0)
+const walletBalance = ref('0.00')
 const userInfo = reactive({ name: '加载中...', phone: '', riderId: '', level: 'Lv.1 新手', avatar: '' })
 const stats = reactive({ publishedCount: 0, takenCount: 0, income: 0 })
 
@@ -195,6 +196,14 @@ const loadStats = async () => {
     stats.publishedCount = res.data.publishedCount || 0
     stats.takenCount = res.data.takenCount || 0
     stats.income = res.data.income || 0
+  }
+}
+
+const loadWalletBalance = async () => {
+  if (!isLoggedIn.value) return
+  var res = await callCloud('user', 'getWallet')
+  if (res.code === 0 && res.data) {
+    walletBalance.value = (res.data.balance || 0).toFixed(2)
   }
 }
 
@@ -268,7 +277,7 @@ const handleLogout = () => {
 
 onShow(() => {
   uni.hideTabBar({ animation: false })
-  loadProfile(); loadStats(); loadUnreadCount(); checkAdminStatus() })
+  loadProfile(); loadStats(); loadWalletBalance(); loadUnreadCount(); checkAdminStatus() })
 </script>
 
 <style scoped>

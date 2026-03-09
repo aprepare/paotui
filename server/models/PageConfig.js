@@ -16,6 +16,7 @@ const pageConfigSchema = new mongoose.Schema({
       order: Number
     }]
   }],
+  config: { type: mongoose.Schema.Types.Mixed, default: {} },
   updateTime: { type: Date, default: Date.now }
 })
 

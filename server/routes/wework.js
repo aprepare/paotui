@@ -60,11 +60,12 @@ router.post('/callback', async (req, res) => {
             const externalUserId = weworkService.getXmlValue(xmlContent, 'ExternalUserID')
             const userId = weworkService.getXmlValue(xmlContent, 'UserID')
             const state = weworkService.getXmlValue(xmlContent, 'State')
+            const welcomeCode = weworkService.getXmlValue(xmlContent, 'WelcomeCode')
 
-            console.log('[add_external_contact]', { externalUserId, userId, state })
+            console.log('[add_external_contact]', { externalUserId, userId, state, welcomeCode })
 
             if (state && externalUserId) {
-                await handleAddContact(state, externalUserId, userId)
+                await handleAddContact(state, externalUserId, userId, welcomeCode)
             }
         }
     } catch (e) {
@@ -74,38 +75,95 @@ router.post('/callback', async (req, res) => {
 })
 
 /**
- * 处理添加好友事件 → 自动拉群
- * state 格式: "activityId_openid"
+ * 处理添加好友事件 → 自动发送欢迎语 + 进群链接
+ * state 格式: TeamMember 的 ObjectId（24字符）
  */
-async function handleAddContact(state, externalUserId, staffUserId) {
-    const parts = state.split('_')
-    if (parts.length < 2) return console.log('[handleAddContact] invalid state:', state)
-    const activityId = parts[0]
-    const openid = parts.slice(1).join('_')
+async function handleAddContact(state, externalUserId, staffUserId, welcomeCode) {
+    if (!state || state.length !== 24) return console.log('[handleAddContact] invalid state:', state)
 
     // 校验用户是否是该活动的成员
-    const memberCount = await TeamMember.countDocuments({ activityId, openid })
-    if (memberCount === 0) return console.log('[handleAddContact] 用户不是活动成员')
+    const member = await TeamMember.findById(state)
+    if (!member) return console.log('[handleAddContact] 用户不是活动成员')
 
-    // 检查活动状态
+    // 标记该用户已是企微好友（同时更新该 openid 的所有活动记录）
+    await TeamMember.updateMany(
+        { openid: member.openid },
+        { $set: { externalUserId, isWeworkFriend: true } }
+    )
+    console.log('[handleAddContact] 已标记好友状态, openid:', member.openid)
+
+    const activityId = member.activityId
+
+    // 获取活动信息
     const activity = await TeamActivity.findById(activityId)
     if (!activity || activity.status === 'ended') return console.log('[handleAddContact] 活动不存在或已结束')
 
-    if (activity.chatId) {
-        // 已有群 → 拉人进群
-        console.log('[handleAddContact] 拉入已有群:', activity.chatId)
-        await weworkService.addMemberToGroupChat(activity.chatId, externalUserId)
-    } else {
-        // 创建新群
-        const groupName = activity.title ? (activity.title + ' 沟通群') : '组队沟通群'
-        const result = await weworkService.createGroupChat(groupName, staffUserId, [externalUserId])
-        if (result.errcode === 0 && result.chat_id) {
-            await TeamActivity.updateOne({ _id: activityId }, { $set: { chatId: result.chat_id } })
-            console.log('[handleAddContact] 群已创建, chatId:', result.chat_id)
-        } else {
-            console.error('[handleAddContact] 创建群失败', result)
+    // 如果没有 welcomeCode，只能打日志了
+    if (!welcomeCode) {
+        console.log('[handleAddContact] 无 welcomeCode，无法发送欢迎语')
+        return
+    }
+
+    try {
+        // 获取或创建活动的进群二维码
+        let joinQrCode = ''
+
+        if (activity.joinWayConfigId) {
+            // 已有进群配置，直接获取二维码
+            const joinWayRes = await weworkService.getGroupJoinWay(activity.joinWayConfigId)
+            if (joinWayRes.errcode === 0 && joinWayRes.join_way) {
+                joinQrCode = joinWayRes.join_way.qr_code || ''
+            }
         }
+
+        if (!joinQrCode) {
+            // 需要创建进群配置，但必须有活动绑定的群
+            let chatId = activity.chatId
+
+            if (chatId) {
+                const joinResult = await weworkService.createGroupJoinWay(
+                    [chatId], state.slice(0, 24),
+                    { autoCreateRoom: true, roomBaseName: activity.title || '组队群' }
+                )
+                if (joinResult.errcode === 0 && joinResult.config_id) {
+                    await TeamActivity.updateOne({ _id: activityId }, { $set: { joinWayConfigId: joinResult.config_id } })
+                    const joinWayRes = await weworkService.getGroupJoinWay(joinResult.config_id)
+                    if (joinWayRes.errcode === 0 && joinWayRes.join_way) {
+                        joinQrCode = joinWayRes.join_way.qr_code || ''
+                    }
+                }
+            }
+        }
+
+        // 构造欢迎消息
+        const activityTitle = activity.title || '组队活动'
+        let welcomeText = `🎉 欢迎加入！您已成功报名「${activityTitle}」\n\n`
+
+        const attachments = []
+
+        if (joinQrCode) {
+            welcomeText += `👇 请点击下方链接加入活动群聊，和队友一起沟通吧！`
+            attachments.push({
+                msgtype: 'link',
+                link: {
+                    title: `加入「${activityTitle}」群聊`,
+                    picurl: joinQrCode,
+                    desc: '点击即可加入活动专属群聊',
+                    url: joinQrCode
+                }
+            })
+        } else {
+            welcomeText += `⏳ 群聊正在创建中，稍后会通知您进群。`
+        }
+
+        // 发送欢迎消息
+        const result = await weworkService.sendWelcomeMsg(welcomeCode, welcomeText, attachments)
+        console.log('[handleAddContact] 欢迎消息发送结果:', JSON.stringify(result))
+
+    } catch (err) {
+        console.error('[handleAddContact] error:', err.message)
     }
 }
 
 module.exports = router
+

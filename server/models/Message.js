@@ -14,6 +14,8 @@ const messageSchema = new mongoose.Schema({
 })
 
 messageSchema.index({ toOpenid: 1, read: 1 })
+messageSchema.index({ toOpenid: 1, createTime: -1 })
+messageSchema.index({ fromOpenid: 1 })
 messageSchema.index({ createTime: -1 })
 
 module.exports = mongoose.model('Message', messageSchema, 'messages')

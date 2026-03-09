@@ -26,3 +26,6 @@ project.private.config.json
 
 # Kiro context chunks
 chunk_*.txt
+
+# Admin build artifacts
+server/public/admin/assets/

@@ -29,5 +29,6 @@ const foodOrderSchema = new mongoose.Schema({
 
 foodOrderSchema.index({ openid: 1, createTime: -1 })
 foodOrderSchema.index({ status: 1 })
+foodOrderSchema.index({ shopId: 1 })
 
 module.exports = mongoose.model('FoodOrder', foodOrderSchema, 'food_orders')

@@ -2,8 +2,8 @@
   <view class="login-page">
     <view class="login-header">
       <text class="login-emoji">🎓</text>
-      <text class="login-title">校园跑腿</text>
-      <text class="login-desc">完善信息后即可使用全部功能</text>
+      <text class="login-title">燕大小树懒</text>
+      <text class="login-subtitle">Hi, 欢迎回到校园！</text>
     </view>
 
     <view class="form-card">
@@ -45,7 +45,10 @@
       <text>保存并进入</text>
     </view>
 
-    <text class="login-notice">你的信息仅用于校园跑腿服务</text>
+    <!-- 底部信息 -->
+    <view class="login-footer">
+      <text class="login-notice">你的信息仅用于燕大小树懒服务</text>
+    </view>
   </view>
 </template>
 

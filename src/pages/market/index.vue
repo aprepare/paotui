@@ -3,7 +3,10 @@
     <view class="search-bar">
       <view class="search-input">
         <text class="search-icon">🔍</text>
-        <input placeholder="搜索你想要的宝贝" v-model="keyword"></input>
+        <input placeholder="搜索你想要的宝贝" v-model="keyword" confirm-type="search" @confirm="loadData"></input>
+        <view class="search-action" @click="loadData">
+          <text>搜索</text>
+        </view>
       </view>
     </view>
     <view class="category-bar">
@@ -14,8 +17,9 @@
     <view class="goods-grid">
       <view class="goods-column">
         <view v-for="item in leftList" :key="item.id" class="goods-card" @click="goDetail(item.id)">
-          <view class="goods-img" :style="{height: item.imgH + 'rpx', background: item.color}">
-            <text class="img-emoji">{{ item.emoji }}</text>
+          <image v-if="item.cover" class="goods-img" :src="item.cover" mode="aspectFill" />
+          <view v-else class="goods-img-placeholder" :style="{height: item.imgH + 'rpx', background: item.color}">
+            <text class="img-emoji">🛒</text>
           </view>
           <view class="goods-info">
             <text class="goods-title">{{ item.title }}</text>
@@ -28,8 +32,9 @@
       </view>
       <view class="goods-column">
         <view v-for="item in rightList" :key="item.id" class="goods-card" @click="goDetail(item.id)">
-          <view class="goods-img" :style="{height: item.imgH + 'rpx', background: item.color}">
-            <text class="img-emoji">{{ item.emoji }}</text>
+          <image v-if="item.cover" class="goods-img" :src="item.cover" mode="aspectFill" />
+          <view v-else class="goods-img-placeholder" :style="{height: item.imgH + 'rpx', background: item.color}">
+            <text class="img-emoji">🛒</text>
           </view>
           <view class="goods-info">
             <text class="goods-title">{{ item.title }}</text>
@@ -50,7 +55,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
-import { callCloud } from '@/utils/cloud'
+import { callCloud, resolveImageUrl } from '@/utils/cloud'
 
 const keyword = ref('')
 const currentCat = ref(0)
@@ -64,15 +69,27 @@ const loadData = async () => {
   const cat = categories.value[currentCat.value]
   const res = await callCloud('market', 'list', { category: cat, keyword: keyword.value })
   if (res.code === 0) {
-    goodsList.value = res.data.map((g, i) => ({
-      id: g._id,
-      title: g.title || '',
-      price: g.price || 0,
-      emoji: '🛒',
-      color: colorPool[i % colorPool.length],
-      imgH: heightPool[i % heightPool.length],
-      views: g.wants || 0
-    }))
+    goodsList.value = res.data.map((g, i) => {
+      // 取第一张有效图片作为封面
+      var imgs = g.images || []
+      var coverUrl = ''
+      for (var j = 0; j < imgs.length; j++) {
+        var img = imgs[j]
+        if (img && typeof img === 'string' && (img.indexOf('cloud://') === 0 || img.indexOf('http') === 0 || img.indexOf('/uploads/') === 0)) {
+          coverUrl = resolveImageUrl(img)
+          break
+        }
+      }
+      return {
+        id: g._id,
+        title: g.title || '',
+        price: g.price || 0,
+        cover: coverUrl,
+        color: colorPool[i % colorPool.length],
+        imgH: heightPool[i % heightPool.length],
+        views: g.wants || 0
+      }
+    })
   }
 }
 
@@ -93,16 +110,19 @@ const goCreate = () => {
 <style scoped>
 .market-page { background: #F5F7FA; min-height: 100vh; padding-bottom: 120rpx; }
 .search-bar { padding: 20rpx 24rpx; }
-.search-input { display: flex; align-items: center; background: #fff; border-radius: 40rpx; padding: 16rpx 24rpx; box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.06); }
+.search-input { display: flex; align-items: center; background: #fff; border-radius: 40rpx; padding: 12rpx 16rpx 12rpx 24rpx; box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.06); }
 .search-icon { margin-right: 12rpx; font-size: 28rpx; }
-.search-input input { flex: 1; font-size: 28rpx; }
+.search-input input { flex: 1; font-size: 28rpx; height: 60rpx; line-height: 60rpx; }
+.search-action { background: linear-gradient(135deg, #4A90D9, #357ABD); padding: 10rpx 24rpx; border-radius: 30rpx; margin-left: 12rpx; }
+.search-action text { color: #fff; font-size: 24rpx; font-weight: bold; }
 .category-bar { display: flex; padding: 0 24rpx 20rpx; gap: 16rpx; overflow-x: auto; }
 .cat-item { padding: 10rpx 28rpx; background: #fff; border-radius: 30rpx; font-size: 26rpx; color: #666; white-space: nowrap; }
 .cat-item.active { background: #4A90D9; color: #fff; }
 .goods-grid { display: flex; padding: 0 24rpx; gap: 16rpx; }
 .goods-column { flex: 1; display: flex; flex-direction: column; gap: 16rpx; }
 .goods-card { background: #fff; border-radius: 16rpx; overflow: hidden; box-shadow: 0 4rpx 12rpx rgba(0,0,0,0.08); }
-.goods-img { display: flex; align-items: center; justify-content: center; }
+.goods-img { width: 100%; height: 300rpx; }
+.goods-img-placeholder { display: flex; align-items: center; justify-content: center; }
 .img-emoji { font-size: 80rpx; }
 .goods-info { padding: 16rpx; }
 .goods-title { font-size: 26rpx; color: #333; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.4; }
@@ -112,3 +132,4 @@ const goCreate = () => {
 .fab-btn { position: fixed; right: 40rpx; bottom: 200rpx; width: 100rpx; height: 100rpx; background: linear-gradient(135deg, #4A90D9, #357ABD); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 8rpx 24rpx rgba(74,144,217,0.4); }
 .fab-btn text { color: #fff; font-size: 48rpx; }
 </style>
+

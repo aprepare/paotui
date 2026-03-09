@@ -96,7 +96,7 @@
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue'
+import { reactive, ref, computed } from 'vue'
 import { callCloud, uploadImage, checkLogin } from '@/utils/cloud'
 
 const buildingData = {

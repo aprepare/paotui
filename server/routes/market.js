@@ -10,7 +10,12 @@ router.get('/list', async (req, res) => {
     const { category, keyword, page = 1, pageSize = 10 } = req.query
     const query = {}
     if (category && category !== '全部') query.category = category
-    if (keyword) query.title = { $regex: keyword, $options: 'i' }
+    if (keyword) {
+      query.$or = [
+        { title: { $regex: keyword, $options: 'i' } },
+        { desc: { $regex: keyword, $options: 'i' } }
+      ]
+    }
     const data = await MarketGoods.find(query).sort({ createTime: -1 })
       .skip((Number(page) - 1) * Number(pageSize)).limit(Number(pageSize))
     res.json({ code: 0, data })

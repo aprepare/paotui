@@ -1,6 +1,18 @@
 // HTTP 模式 — 已迁移到自建服务器
 const USE_CLOUD = false
 const BASE_URL = 'https://xaioshualan.asia/api'
+const SERVER_ORIGIN = BASE_URL.replace(/\/api\/?$/, '')
+
+/**
+ * 解析图片地址：后台上传的 /uploads/xxx 需拼成完整 URL 才能在小程序里从服务器加载（支持 GIF 等，不占包体积）
+ */
+export const resolveImageUrl = (url) => {
+  if (!url) return ''
+  if (url.startsWith('http://') || url.startsWith('https://')) return url
+  if (url.startsWith('/uploads/')) return SERVER_ORIGIN + url
+  // 其它形式（例如纯文字）一律视为无效，避免被当成本地路径 /pages/... 导致加载报错
+  return ''
+}
 
 /**
  * 检查是否已登录（已完善用户信息）
@@ -70,7 +82,7 @@ function callCloudFunction(name, data) {
  * URL 映射：将 (functionName, action, data) 映射到 RESTful 端点（HTTP 模式用）
  */
 export function buildUrl(name, action, data = {}) {
-  const id = data.id || data.orderId || data.taskId || data.postId || data.goodsId || data.carpoolId || data.activityId || data.msgId || data.commentId || ''
+  const id = data.id || data.orderId || data.taskId || data.postId || data.goodsId || data.carpoolId || data.activityId || data.msgId || data.commentId || data.shopId || ''
   const map = {
     user: {
       login: { path: '/user/login', method: 'POST' },
@@ -83,7 +95,9 @@ export function buildUrl(name, action, data = {}) {
       myFavorites: { path: '/user/favorites', method: 'GET' },
       sendSmsCode: { path: '/user/sms/send', method: 'POST' },
       verifySmsCode: { path: '/user/sms/verify', method: 'POST' },
-      getPhoneByCode: { path: '/user/phone-by-code', method: 'POST' }
+      getPhoneByCode: { path: '/user/phone-by-code', method: 'POST' },
+      getWallet: { path: '/user/getWallet', method: 'POST' },
+      applyWithdraw: { path: '/user/applyWithdraw', method: 'POST' }
     },
     express: {
       list: { path: '/express/list', method: 'GET' },
@@ -141,14 +155,18 @@ export function buildUrl(name, action, data = {}) {
       endActivity: { path: `/team/${id}/end`, method: 'POST' },
       myTeam: { path: '/team/my', method: 'GET' },
       getGroupQrcode: { path: `/team/${id}/qrcode`, method: 'POST' },
-      getGroupStatus: { path: `/team/${id}/group-status`, method: 'GET' }
+      getGroupStatus: { path: `/team/${id}/group-status`, method: 'GET' },
+      getGroupList: { path: `/team/${id}/group-list`, method: 'GET' },
+      bindGroup: { path: `/team/${id}/bind-group`, method: 'POST' }
     },
     message: {
       list: { path: '/message/list', method: 'GET' },
       unreadCount: { path: '/message/unread-count', method: 'GET' },
       markRead: { path: `/message/${id}/read`, method: 'PUT' },
       markAllRead: { path: '/message/read-all', method: 'PUT' },
-      send: { path: '/message', method: 'POST' }
+      send: { path: '/message', method: 'POST' },
+      delete: { path: `/message/${id}`, method: 'DELETE' },
+      deleteAll: { path: '/message/all', method: 'DELETE' }
     },
     order: {
       myPublished: { path: '/order/my-published', method: 'GET' },

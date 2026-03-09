@@ -94,8 +94,11 @@ router.post('/register-rider', auth, async (req, res) => {
   try {
     const { realName, phone, studentId, building } = req.body
     if (!realName || !phone || !studentId) {
-      return res.json({ code: -1, msg: 'missing fields' })
+      return res.json({ code: -1, msg: '请填写完整信息' })
     }
+    if (!/^1[3-9]\d{9}$/.test(phone)) return res.json({ code: -1, msg: '手机号格式不正确' })
+    if (realName.length > 20) return res.json({ code: -1, msg: '姓名过长' })
+    if (studentId.length > 30) return res.json({ code: -1, msg: '学号过长' })
     const riderId = 'R-' + new Date().toISOString().slice(0, 10).replace(/-/g, '') +
       '-' + String(Math.floor(Math.random() * 100)).padStart(2, '0')
     await User.updateOne({ openid: req.user.openid }, {
@@ -235,8 +238,7 @@ router.post('/sms/verify', auth, async (req, res) => {
     const rec = await SmsCode.findOne({ phone }).sort({ createTime: -1 })
     if (!rec) return res.json({ code: -1, msg: '请先获取验证码' })
     if (Date.now() > rec.expireAt) return res.json({ code: -1, msg: '验证码已过期，请重新获取' })
-    // 开发模式：万能验证码 000000
-    if (rec.code !== smsCode && smsCode !== '000000') return res.json({ code: -1, msg: '验证码错误' })
+    if (rec.code !== smsCode) return res.json({ code: -1, msg: '验证码错误' })
     await SmsCode.deleteOne({ _id: rec._id })
     res.json({ code: 0, msg: '验证通过' })
   } catch (err) {
@@ -253,21 +255,82 @@ router.post('/phone-by-code', auth, async (req, res) => {
     res.json({ code: 0, data: { phone: result.phone } })
   } catch (err) {
     console.error('getPhoneByCode error:', err.message)
-    res.json({ code: -1, msg: 'Error: ' + err.message })
+    res.json({ code: -1, msg: '获取手机号失败，请重试' })
   }
 })
 // POST /api/user/getWallet
 router.post('/getWallet', auth, async (req, res) => {
   try {
     const UserWallet = require('../models/UserWallet')
+    const WalletRecord = require('../models/WalletRecord')
+    const WalletWithdrawal = require('../models/WalletWithdrawal')
     let wallet = await UserWallet.findOne({ openid: req.user.openid })
     if (!wallet) {
       wallet = await UserWallet.create({ openid: req.user.openid, balance: 0, totalIncome: 0 })
     }
-    res.json({ code: 0, data: wallet })
+    // 查询收入记录
+    const incomeRecords = await WalletRecord.find({ openid: req.user.openid })
+      .sort({ createTime: -1 }).limit(50).lean()
+    // 查询提现记录
+    const withdrawRecords = await WalletWithdrawal.find({ openid: req.user.openid })
+      .sort({ createTime: -1 }).limit(50).lean()
+    // 合并并排序
+    const records = [
+      ...incomeRecords.map(r => ({ ...r, type: 'income' })),
+      ...withdrawRecords.map(r => ({ ...r, type: 'withdraw' }))
+    ].sort((a, b) => new Date(b.createTime) - new Date(a.createTime)).slice(0, 50)
+    // 计算提现中金额和累计提现
+    const pendingWithdraw = withdrawRecords
+      .filter(r => r.status === 0)
+      .reduce((s, r) => s + (r.amount || 0), 0)
+    const totalWithdraw = withdrawRecords
+      .filter(r => r.status === 1)
+      .reduce((s, r) => s + (r.amount || 0), 0)
+    res.json({
+      code: 0,
+      data: {
+        balance: wallet.balance || 0,
+        totalIncome: wallet.totalIncome || 0,
+        totalWithdraw,
+        pendingWithdraw,
+        records
+      }
+    })
   } catch (err) {
     console.error('getWallet error:', err)
     res.status(500).json({ code: -1, msg: '获取钱包失败' })
+  }
+})
+
+// POST /api/user/applyWithdraw
+router.post('/applyWithdraw', auth, async (req, res) => {
+  try {
+    const { amount } = req.body
+    if (!amount || isNaN(amount) || amount < 1) {
+      return res.json({ code: -1, msg: '最低提现金额为1元' })
+    }
+    const UserWallet = require('../models/UserWallet')
+    const WalletWithdrawal = require('../models/WalletWithdrawal')
+    const wallet = await UserWallet.findOne({ openid: req.user.openid })
+    if (!wallet || wallet.balance < amount) {
+      return res.json({ code: -1, msg: '余额不足' })
+    }
+    const pendingCount = await WalletWithdrawal.countDocuments({ openid: req.user.openid, status: 0 })
+    if (pendingCount > 0) return res.json({ code: -1, msg: '您有待审核的提现申请，请等待处理' })
+    await UserWallet.updateOne({ openid: req.user.openid }, {
+      $inc: { balance: -amount },
+      $set: { updateTime: new Date() }
+    })
+    await WalletWithdrawal.create({
+      openid: req.user.openid,
+      amount,
+      status: 0,
+      createTime: new Date()
+    })
+    res.json({ code: 0, msg: '提现申请已提交' })
+  } catch (err) {
+    console.error('applyWithdraw error:', err)
+    res.status(500).json({ code: -1, msg: '提现失败，请重试' })
   }
 })
 

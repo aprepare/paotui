@@ -17,8 +17,11 @@ const routes = [
       { path: 'forum-posts', name: 'ForumPosts', component: () => import('../views/ForumPosts.vue') },
       { path: 'team-activities', name: 'TeamActivities', component: () => import('../views/TeamActivities.vue') },
       { path: 'skills', name: 'Skills', component: () => import('../views/Skills.vue') },
+      { path: 'food', name: 'FoodManage', component: () => import('../views/FoodManage.vue') },
+      { path: 'wash', name: 'WashManage', component: () => import('../views/WashManage.vue') },
+      { path: 'withdrawals', name: 'Withdrawals', component: () => import('../views/Withdrawals.vue') },
       { path: 'messages', name: 'Messages', component: () => import('../views/Messages.vue') },
-      { path: 'page-config', name: 'PageConfig', component: () => import('../views/PageConfig.vue') },
+      { path: 'site-config', name: 'SiteConfig', component: () => import('../views/SiteConfig.vue') },
       { path: 'stats', name: 'Stats', component: () => import('../views/Stats.vue') }
     ]
   }

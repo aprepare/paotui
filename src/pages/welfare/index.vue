@@ -44,7 +44,7 @@
 import CustomTabBar from '@/components/CustomTabBar.vue'
 import { ref } from 'vue'
 import { onLoad, onShow } from '@dcloudio/uni-app'
-import { callCloud } from '@/utils/cloud.js'
+import { callCloud, resolveImageUrl } from '@/utils/cloud.js'
 import MsgNotify from '@/components/MsgNotify.vue'
 
 const banners = ref([
@@ -88,14 +88,17 @@ const loadWelfareConfig = async () => {
     if (res.code === 0 && res.data) {
       if (res.data.services && res.data.services.length) {
         services.value = res.data.services.map(function(s) {
-          if (!s.iconUrl) s.iconUrl = getDefaultIcon(s.text)
-          return s
+          const iconUrl = s.iconUrl ? resolveImageUrl(s.iconUrl) : getDefaultIcon(s.text)
+          return { ...s, iconUrl }
         })
       } else {
         services.value = defaultServices
       }
       if (res.data.banners && res.data.banners.length) {
-        banners.value = res.data.banners
+        banners.value = res.data.banners.map(b => ({
+          ...b,
+          imageUrl: b.imageUrl ? resolveImageUrl(b.imageUrl) : b.imageUrl
+        }))
       }
     } else {
       services.value = defaultServices

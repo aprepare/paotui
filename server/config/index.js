@@ -3,7 +3,7 @@ require('dotenv').config()
 module.exports = {
   port: process.env.PORT || 3000,
   mongoUri: process.env.MONGO_URI || 'mongodb://localhost:27017/campus_errand',
-  jwtSecret: process.env.JWT_SECRET || 'dev_secret',
+  jwtSecret: process.env.JWT_SECRET,
   wx: {
     appid: process.env.WX_APPID || '',
     secret: process.env.WX_SECRET || ''

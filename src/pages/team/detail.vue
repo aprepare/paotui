@@ -1,5 +1,5 @@
 <template>
-  <view class="detail-page">
+  <view class="detail-page" :class="{ 'no-scroll': showGroupSelector }">
     <view class="info-card">
       <view class="card-header">
         <text class="card-title">{{ team.title }}</text>
@@ -54,8 +54,8 @@
           <text class="wechat-icon">🏢</text>
         </view>
         <view class="wechat-info">
-          <text class="wechat-title">添加企业微信，自动拉你进群</text>
-          <text class="wechat-desc">点击查看二维码 · 扫码添加后自动邀请入群</text>
+          <text class="wechat-title">{{ qrcodeType === 'group' ? '扫码直接加入组队群聊' : '添加企业微信，自动发送进群链接' }}</text>
+          <text class="wechat-desc">{{ qrcodeType === 'group' ? '点击查看二维码 · 扫码即可加入群聊' : '点击查看二维码 · 扫码添加后自动收到进群邀请' }}</text>
         </view>
         <text class="wechat-arrow">›</text>
       </view>
@@ -65,21 +65,44 @@
     <view class="qr-mask" v-if="showQrcode" @click="showQrcode = false">
       <view class="qr-popup" @click.stop>
         <view class="qr-close" @click="showQrcode = false"><text>✕</text></view>
-        <text class="qr-title">扫码添加企业微信</text>
-        <text class="qr-subtitle">添加后将自动邀请您进入组队群聊</text>
+        <text class="qr-title">{{ qrcodeType === 'group' ? '扫码加入组队群聊' : '扫码添加企业微信' }}</text>
+        <text class="qr-subtitle">{{ qrcodeType === 'group' ? '扫描下方二维码即可直接加入群聊' : '添加后将自动发送活动群聊邀请链接' }}</text>
         <image class="qr-image" :src="qrcodeUrl" mode="aspectFit" v-if="qrcodeUrl" />
         <view class="qr-image qr-loading" v-else><text>正在获取专属二维码...</text></view>
-        <view class="qr-copy-row">
-          <text class="qr-wechat-id">企业微信号：{{ workWechatId }}</text>
-          <view class="qr-copy-btn" @click="copyWechatId"><text>复制</text></view>
-        </view>
         <text class="qr-tip">长按二维码可保存到相册</text>
+      </view>
+    </view>
+
+    <!-- 选择企微群弹窗 -->
+    <view class="qr-mask" v-if="showGroupSelector" @click="showGroupSelector = false">
+      <view class="group-popup" @click.stop>
+        <view class="qr-close" @click="showGroupSelector = false"><text>✕</text></view>
+        <text class="qr-title">选择企微客户群</text>
+        <text class="qr-subtitle">请选择一个要绑定到该活动的专属群聊</text>
+        
+        <scroll-view scroll-y class="group-list" v-if="wxGroups.length > 0">
+          <view class="group-item" v-for="g in wxGroups" :key="g.chat_id" @click="onBindGroup(g.chat_id)">
+            <view class="group-info">
+               <text class="group-name">{{ g.name }}</text>
+               <text class="group-count">共有 {{ g.member_count }} 名成员</text>
+            </view>
+            <view class="group-btn"><text>绑定</text></view>
+          </view>
+        </scroll-view>
+        <view class="group-empty" v-else-if="!loadingGroups">
+          <text>暂无可用群聊</text>
+          <text class="group-empty-tip">请先在企业微信客户端创建一个客户群</text>
+        </view>
+        <view class="group-loading" v-else>
+           <text>正在获取企微群列表...</text>
+        </view>
       </view>
     </view>
 
     <!-- 底部操作 -->
     <view class="bottom-bar" v-if="team.status !== 'ended' && team.status !== 'expired'">
       <view v-if="team.isOwner" class="bottom-actions">
+        <view class="bind-btn" @click="openGroupSelector"><text>{{ hasBoundGroup ? '修改绑定的群' : '绑定专属企微群' }}</text></view>
         <view class="end-btn" @click="onEndActivity"><text>结束活动</text></view>
       </view>
       <view v-else-if="isJoined" class="bottom-actions">
@@ -113,14 +136,11 @@ const isJoined = ref(false)
 const isExpired = ref(false)
 const showQrcode = ref(false)
 const qrcodeUrl = ref('')
-const workWechatId = ref('WangJie') // 替换成您的企业微信号
-
-const copyWechatId = () => {
-  uni.setClipboardData({
-    data: workWechatId.value,
-    success: () => { uni.showToast({ title: '已复制微信号', icon: 'success' }) }
-  })
-}
+const qrcodeType = ref('contact') // 'contact' = 加好友码, 'group' = 进群码
+const showGroupSelector = ref(false)
+const wxGroups = ref([])
+const loadingGroups = ref(false)
+const hasBoundGroup = ref(false)
 
 const handleShowQrcode = async () => {
   showQrcode.value = true
@@ -130,6 +150,7 @@ const handleShowQrcode = async () => {
     uni.hideLoading()
     if (res.code === 0 && res.data && res.data.qr_code) {
       qrcodeUrl.value = res.data.qr_code
+      qrcodeType.value = res.data.type || 'contact'
     } else {
       uni.showToast({ title: res.msg || '获取二维码失败', icon: 'none' })
       showQrcode.value = false
@@ -172,6 +193,14 @@ onLoad(async (query) => {
           break
         }
       }
+    }
+    // 如果是发起人，查询是否已绑定群
+    if (d.isOwner) {
+      callCloud('team', 'getGroupStatus', { id: d._id }).then(res => {
+        if (res.code === 0 && res.data) {
+          hasBoundGroup.value = res.data.hasGroup
+        }
+      })
     }
   }
 })
@@ -230,6 +259,40 @@ const onEndActivity = () => {
     }
   })
 }
+
+const openGroupSelector = async () => {
+  showGroupSelector.value = true
+  loadingGroups.value = true
+  wxGroups.value = []
+  const res = await callCloud('team', 'getGroupList', { id: team.value._id })
+  loadingGroups.value = false
+  if (res.code === 0 && res.data) {
+    wxGroups.value = res.data.groups || []
+  } else {
+    uni.showToast({ title: res.msg || '获取群列表失败', icon: 'none' })
+  }
+}
+
+const onBindGroup = (chatId) => {
+  uni.showModal({
+    title: '确认绑定',
+    content: '确定将该群绑定为此活动的专属群吗？',
+    success: async (modalRes) => {
+      if (modalRes.confirm) {
+        uni.showLoading({ title: '绑定中' })
+        const res = await callCloud('team', 'bindGroup', { id: team.value._id, chatId })
+        uni.hideLoading()
+        if (res.code === 0) {
+          uni.showToast({ title: '绑定成功', icon: 'success' })
+          hasBoundGroup.value = true
+          showGroupSelector.value = false
+        } else {
+          uni.showToast({ title: res.msg || '绑定失败', icon: 'none' })
+        }
+      }
+    }
+  })
+}
 </script>
 
 <style scoped>
@@ -270,7 +333,11 @@ const onEndActivity = () => {
 .join-btn text { color: #fff; font-size: 30rpx; font-weight: 700; }
 .join-btn.disabled { background: #E2E8F0; box-shadow: none; }
 .join-btn.disabled text { color: #A0AEC0; }
+.join-btn.disabled { background: #E2E8F0; box-shadow: none; }
+.join-btn.disabled text { color: #A0AEC0; }
 .bottom-actions { display: flex; gap: 16rpx; }
+.bind-btn { flex: 1; border: 2rpx solid #3182CE; border-radius: 48rpx; padding: 28rpx; text-align: center; }
+.bind-btn text { color: #3182CE; font-size: 30rpx; font-weight: 700; }
 .end-btn { flex: 1; background: linear-gradient(135deg, #FC8181, #E53E3E); border-radius: 48rpx; padding: 28rpx; text-align: center; box-shadow: 0 8rpx 24rpx rgba(229,62,62,0.3); }
 .end-btn text { color: #fff; font-size: 30rpx; font-weight: 700; }
 .leave-btn { flex: 1; border: 2rpx solid #E53E3E; border-radius: 48rpx; padding: 28rpx; text-align: center; }
@@ -304,4 +371,21 @@ const onEndActivity = () => {
 /* 底部加微信进群按钮 */
 .wechat-group-btn { flex: 1; background: linear-gradient(135deg, #07C160, #06AD56); border-radius: 48rpx; padding: 28rpx; text-align: center; box-shadow: 0 8rpx 24rpx rgba(7,193,96,0.3); }
 .wechat-group-btn text { color: #fff; font-size: 30rpx; font-weight: 700; }
+
+/* 企微群选择列表配置 */
+.no-scroll { overflow: hidden; height: 100vh; }
+.group-popup { width: 640rpx; max-height: 80vh; background: #fff; border-radius: 28rpx; padding: 48rpx 0 24rpx 0; position: relative; display: flex; flex-direction: column; align-items: center; animation: fadeIn 0.2s ease; }
+.group-list { width: 100%; max-height: 50vh; padding: 0 32rpx; box-sizing: border-box; }
+.group-item { display: flex; align-items: center; justify-content: space-between; padding: 24rpx; background: #F7FAFC; border-radius: 16rpx; margin-bottom: 16rpx; border: 2rpx solid transparent; transition: all 0.2s; }
+.group-item:active { background: #EDF2F7; border-color: #CBD5E0; }
+.group-info { flex: 1; display: flex; flex-direction: column; gap: 6rpx; }
+.group-name { font-size: 28rpx; color: #1A1A2E; font-weight: 700; }
+.group-count { font-size: 24rpx; color: #718096; }
+.group-btn { background: #3182CE; padding: 10rpx 28rpx; border-radius: 32rpx; }
+.group-btn text { color: #fff; font-size: 24rpx; font-weight: 600; }
+.group-empty { padding: 60rpx 0; display: flex; flex-direction: column; align-items: center; gap: 12rpx; }
+.group-empty text { font-size: 28rpx; color: #4A5568; font-weight: 600; }
+.group-empty .group-empty-tip { font-size: 24rpx; color: #A0AEC0; font-weight: 400; }
+.group-loading { padding: 60rpx 0; }
+.group-loading text { font-size: 28rpx; color: #718096; }
 </style>
