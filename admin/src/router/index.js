@@ -20,6 +20,7 @@ const routes = [
       { path: 'food', name: 'FoodManage', component: () => import('../views/FoodManage.vue') },
       { path: 'wash', name: 'WashManage', component: () => import('../views/WashManage.vue') },
       { path: 'withdrawals', name: 'Withdrawals', component: () => import('../views/Withdrawals.vue') },
+      { path: 'jobs', name: 'Jobs', component: () => import('../views/Jobs.vue') },
       { path: 'messages', name: 'Messages', component: () => import('../views/Messages.vue') },
       { path: 'site-config', name: 'SiteConfig', component: () => import('../views/SiteConfig.vue') },
       { path: 'stats', name: 'Stats', component: () => import('../views/Stats.vue') }

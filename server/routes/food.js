@@ -7,6 +7,8 @@ const FoodShop = require('../models/FoodShop')
 const FoodItem = require('../models/FoodItem')
 const FoodOrder = require('../models/FoodOrder')
 const PageConfig = require('../models/PageConfig')
+const UserWallet = require('../models/UserWallet')
+const WalletRecord = require('../models/WalletRecord')
 
 // ========== 飞鹅云打印机 ==========
 const FEIE_URL = 'http://api.feieyun.cn/Api/Open/'
@@ -165,7 +167,7 @@ router.get('/shop/:id/menu', async (req, res) => {
 // POST /api/food/order
 router.post('/order', auth, async (req, res) => {
     try {
-        const { shopId, items, address, phone, remark, userName, deliveryMode = 'delivery' } = req.body
+        const { shopId, items, address, phone, remark, userName, deliveryMode = 'delivery', payType } = req.body
         if (!shopId || !items || !items.length) return res.json({ code: -1, msg: '参数不完整' })
         if (!phone) return res.json({ code: -1, msg: '请填写联系电话' })
         if (deliveryMode === 'delivery' && (!address || !address.trim())) return res.json({ code: -1, msg: '请填写收货地址' })
@@ -202,18 +204,50 @@ router.post('/order', auth, async (req, res) => {
         const totalPrice = itemsTotal + deliveryFee
         if (shop.minOrder && itemsTotal < shop.minOrder) return res.json({ code: -1, msg: '未达到起送价 ¥' + shop.minOrder })
 
+        const outTradeNo = 'food_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6)
+
+        // 钱包支付
+        if (payType === 'wallet') {
+            let wallet = await UserWallet.findOne({ openid: req.user.openid })
+            if (!wallet) wallet = await UserWallet.create({ openid: req.user.openid, balance: 0, totalIncome: 0 })
+            if (wallet.balance < totalPrice) return res.json({ code: -1, msg: '钱包余额不足，需要 ¥' + totalPrice })
+            await UserWallet.updateOne({ openid: req.user.openid }, { $inc: { balance: -totalPrice }, $set: { updateTime: new Date() } })
+            await WalletRecord.create({
+                openid: req.user.openid, type: 'income', amount: -totalPrice,
+                title: '外卖订单支付 - ' + (shop.name || ''), orderId: '', orderType: 'food_pay',
+                status: 1, statusText: '已扣款', createTime: new Date()
+            })
+            const foodOrder = await FoodOrder.create({
+                openid: req.user.openid, shopId, shopName: shop.name, items: orderItems,
+                itemsTotal, deliveryFee, totalPrice, deliveryMode,
+                address: deliveryMode === 'self_pickup' ? '' : (address || ''),
+                phone, userName: userName || '', remark: remark || '',
+                status: 0, statusText: '待确认', createTime: new Date(),
+                outTradeNo, payType: 'wallet'
+            })
+            printOrder(foodOrder, shop).catch(e => console.error('[print async]', e))
+            return res.json({ code: 0, data: { orderId: foodOrder._id }, walletPaid: true })
+        }
+
+        // 微信支付
         const foodOrder = await FoodOrder.create({
             openid: req.user.openid, shopId, shopName: shop.name, items: orderItems,
             itemsTotal, deliveryFee, totalPrice, deliveryMode,
             address: deliveryMode === 'self_pickup' ? '' : (address || ''),
             phone, userName: userName || '', remark: remark || '',
-            status: 0, statusText: '待确认', createTime: new Date()
+            status: -1, statusText: '待支付', createTime: new Date(),
+            outTradeNo, payType: 'wxpay'
         })
 
-        // 异步打印小票
-        printOrder(foodOrder, shop).catch(e => console.error('[print async]', e))
+        const { createJSAPIOrder } = require('../services/wxpay')
+        const payment = await createJSAPIOrder(
+            req.user.openid,
+            outTradeNo,
+            Math.round(totalPrice * 100),
+            '校园外卖-' + (shop.name || '点餐')
+        )
 
-        res.json({ code: 0, data: { orderId: foodOrder._id } })
+        res.json({ code: 0, data: { orderId: foodOrder._id }, payment })
     } catch (err) {
         res.status(500).json({ code: -1, msg: '下单失败: ' + err.message })
     }
@@ -251,6 +285,31 @@ router.post('/order/:id/cancel', auth, async (req, res) => {
         if (!order || order.openid !== req.user.openid) return res.json({ code: -1, msg: '无权操作' })
         if (order.status > 1) return res.json({ code: -1, msg: '当前状态不可取消' })
         await FoodOrder.updateOne({ _id: req.params.id }, { $set: { status: 4, statusText: '已取消' } })
+
+        // 退款处理
+        if (order.status >= 0 && order.outTradeNo) {
+            if (order.payType === 'wallet') {
+                // 钱包支付退回余额
+                await UserWallet.updateOne({ openid: order.openid }, { $inc: { balance: order.totalPrice }, $set: { updateTime: new Date() } })
+                await WalletRecord.create({
+                    openid: order.openid, type: 'income', amount: order.totalPrice,
+                    title: '外卖订单取消退款', orderId: order._id.toString(), orderType: 'food_refund',
+                    status: 1, statusText: '已退款', createTime: new Date()
+                })
+            } else {
+                // 微信支付退款
+                try {
+                    const { refundOrder } = require('../services/wxpay')
+                    const outRefundNo = 'ref_' + order.outTradeNo + '_' + Date.now()
+                    const totalAmount = Math.round((order.totalPrice || 0) * 100)
+                    await refundOrder(order.outTradeNo, outRefundNo, totalAmount, totalAmount)
+                    console.log(`[wxpay refund] 外卖退款成功: ${order.outTradeNo}`)
+                } catch (refundErr) {
+                    console.error(`[wxpay refund] 外卖退款失败: ${order.outTradeNo}`, refundErr.message)
+                }
+            }
+        }
+
         res.json({ code: 0 })
     } catch (err) {
         res.json({ code: -1, msg: '取消失败' })

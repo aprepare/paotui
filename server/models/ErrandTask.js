@@ -11,6 +11,7 @@ const errandTaskSchema = new mongoose.Schema({
   tip: { type: Number, default: 0 },
   deadline: String,
   contact: String,
+  phone: String,
   images: [String],
   status: { type: Number, default: 0 },
   statusText: { type: String, default: '待接单' },
@@ -26,6 +27,13 @@ const errandTaskSchema = new mongoose.Schema({
   autoConfirmed: { type: Boolean, default: false },
   publisher: { type: String, default: '' },
   outTradeNo: String,
+  payType: String,
+  destLat: { type: Number, default: 0 },
+  destLng: { type: Number, default: 0 },
+  riderLat: { type: Number, default: 0 },
+  riderLng: { type: Number, default: 0 },
+  riderLocationTime: Date,
+  washOrderId: String,
   createTime: { type: Date, default: Date.now }
 })
 

@@ -306,28 +306,54 @@ router.post('/getWallet', auth, async (req, res) => {
 router.post('/applyWithdraw', auth, async (req, res) => {
   try {
     const { amount } = req.body
-    if (!amount || isNaN(amount) || amount < 1) {
-      return res.json({ code: -1, msg: '最低提现金额为1元' })
+    if (!amount || isNaN(amount) || amount < 100) {
+      return res.json({ code: -1, msg: '最低提现金额为100元' })
     }
     const UserWallet = require('../models/UserWallet')
     const WalletWithdrawal = require('../models/WalletWithdrawal')
+    const User = require('../models/User')
     const wallet = await UserWallet.findOne({ openid: req.user.openid })
     if (!wallet || wallet.balance < amount) {
       return res.json({ code: -1, msg: '余额不足' })
     }
     const pendingCount = await WalletWithdrawal.countDocuments({ openid: req.user.openid, status: 0 })
-    if (pendingCount > 0) return res.json({ code: -1, msg: '您有待审核的提现申请，请等待处理' })
+    if (pendingCount > 0) return res.json({ code: -1, msg: '您有待提现的申请，请先完成后再申请' })
+
+    // 生成提现凭证编号: TX + 日期 + 4位随机
+    const now = new Date()
+    const dateStr = now.getFullYear().toString() +
+      String(now.getMonth() + 1).padStart(2, '0') +
+      String(now.getDate()).padStart(2, '0')
+    const rand = String(Math.floor(Math.random() * 10000)).padStart(4, '0')
+    const withdrawCode = 'TX' + dateStr + rand
+
+    // 获取用户信息
+    const user = await User.findOne({ openid: req.user.openid })
+    const userName = (user && user.name) || '用户'
+
     await UserWallet.updateOne({ openid: req.user.openid }, {
       $inc: { balance: -amount },
       $set: { updateTime: new Date() }
     })
-    await WalletWithdrawal.create({
+    const withdrawal = await WalletWithdrawal.create({
       openid: req.user.openid,
       amount,
+      withdrawCode,
+      userName,
       status: 0,
-      createTime: new Date()
+      createTime: now
     })
-    res.json({ code: 0, msg: '提现申请已提交' })
+    res.json({
+      code: 0,
+      msg: '提现申请已提交，请联系管理员提现',
+      data: {
+        withdrawId: withdrawal._id,
+        withdrawCode,
+        amount,
+        userName,
+        createTime: now.toISOString()
+      }
+    })
   } catch (err) {
     console.error('applyWithdraw error:', err)
     res.status(500).json({ code: -1, msg: '提现失败，请重试' })

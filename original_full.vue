@@ -282,18 +282,18 @@ const goDetail = (id, orderType) => {
 .action-row { display: flex; gap: 16rpx; }
 .action-card { flex: 1; background: #fff; border-radius: 20rpx; padding: 28rpx 0 20rpx; display: flex; flex-direction: column; align-items: center; box-shadow: 0 4rpx 16rpx rgba(0,0,0,0.04), 0 1rpx 4rpx rgba(0,0,0,0.06); transition: transform 0.2s ease, box-shadow 0.2s ease; }
 .action-card:active { transform: scale(0.95); box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.08); }
-.action-icon-bg { width: 72rpx; height: 72rpx; border-radius: 20rpx; display: flex; align-items: center; justify-content: center; margin-bottom: 12rpx; box-shadow: 0 4rpx 12rpx rgba(0,0,0,0.1); transition: transform 0.25s ease; }
+.action-icon-bg { width: 88rpx; height: 88rpx; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 16rpx; box-shadow: 0 6rpx 16rpx rgba(0,0,0,0.12); transition: transform 0.25s ease; }
 .action-card:active .action-icon-bg { transform: scale(1.1); }
-.action-icon { font-size: 32rpx; }
-.action-name { font-size: 22rpx; color: #2D3748; font-weight: 600; }
+.action-icon { font-size: 38rpx; }
+.action-name { font-size: 26rpx; color: #fff; font-weight: 700; background: linear-gradient(135deg, #4299E1, #2B6CB0); padding: 8rpx 22rpx; border-radius: 20rpx; margin-top: 4rpx; letter-spacing: 1rpx; }
 
 /* 楼栋筛选 */
 .building-filter { white-space: nowrap; margin-bottom: 20rpx; }
 .filter-inner { display: inline-flex; gap: 16rpx; padding: 4rpx 0; }
-.filter-tab { display: inline-flex; align-items: center; padding: 14rpx 28rpx; background: #fff; border-radius: 36rpx; border: 2rpx solid #E2E8F0; }
-.filter-tab.active { border-color: #2B6CB0; background: #EBF4FF; }
+.filter-tab { display: inline-flex; align-items: center; padding: 14rpx 28rpx; background: linear-gradient(135deg, #EBF8FF, #E2E8F0); border-radius: 36rpx; border: 2rpx solid #CBD5E0; box-shadow: 0 2rpx 8rpx rgba(66,153,225,0.08); transition: all 0.2s ease; }
+.filter-tab.active { border-color: #2B6CB0; background: linear-gradient(135deg, #4299E1, #2B6CB0); box-shadow: 0 4rpx 12rpx rgba(43,108,176,0.25); }
 .filter-text { font-size: 24rpx; color: #4A5568; font-weight: 600; }
-.filter-tab.active .filter-text { color: #2B6CB0; }
+.filter-tab.active .filter-text { color: #fff; }
 .filter-badge { min-width: 32rpx; height: 32rpx; background: #E53E3E; border-radius: 16rpx; display: flex; align-items: center; justify-content: center; padding: 0 8rpx; margin-left: 8rpx; }
 .filter-badge text { font-size: 18rpx; color: #fff; font-weight: 700; }
 .empty-orders { padding: 60rpx 0; text-align: center; }

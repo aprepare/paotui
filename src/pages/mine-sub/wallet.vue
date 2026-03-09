@@ -13,7 +13,7 @@
         </view>
       </view>
       <view class="balance-tip">
-        <text>收入来自已完成的接单，提现将转入微信零钱</text>
+        <text>收入来自已完成的接单，满100元可联系管理员提现</text>
       </view>
     </view>
 

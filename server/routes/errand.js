@@ -35,6 +35,44 @@ router.get('/list', async (req, res) => {
   }
 })
 
+// POST /api/errand/reportLocation — 骑手上报位置
+router.post('/reportLocation', auth, async (req, res) => {
+  try {
+    const { taskId, latitude, longitude } = req.body
+    if (!taskId || !latitude || !longitude) return res.json({ code: -1, msg: '参数不完整' })
+    const task = await ErrandTask.findById(taskId)
+    if (!task) return res.json({ code: -1, msg: '任务不存在' })
+    if (task.riderId !== req.user.openid) return res.json({ code: -1, msg: '仅接单人可上报位置' })
+    await ErrandTask.updateOne({ _id: taskId }, {
+      $set: { riderLat: latitude, riderLng: longitude, riderLocationTime: new Date() }
+    })
+    res.json({ code: 0 })
+  } catch (err) {
+    console.error('reportLocation error:', err)
+    res.status(500).json({ code: -1, msg: '服务器错误' })
+  }
+})
+
+// POST /api/errand/getRiderLocation — 发布者查询骑手位置
+router.post('/getRiderLocation', auth, async (req, res) => {
+  try {
+    const { taskId } = req.body
+    if (!taskId) return res.json({ code: -1, msg: '参数不完整' })
+    const task = await ErrandTask.findById(taskId)
+    if (!task) return res.json({ code: -1, msg: '任务不存在' })
+    res.json({
+      code: 0,
+      data: {
+        riderLat: task.riderLat || 0,
+        riderLng: task.riderLng || 0,
+        riderLocationTime: task.riderLocationTime || null
+      }
+    })
+  } catch (err) {
+    res.status(500).json({ code: -1, msg: '服务器错误' })
+  }
+})
+
 // GET /api/errand/:id
 router.get('/:id', async (req, res) => {
   try {
@@ -58,6 +96,8 @@ router.get('/:id', async (req, res) => {
       const riderUser = await User.findOne({ openid: detailData.riderId })
       if (riderUser) { detailData.riderName = riderUser.name || '接单人'; detailData.riderPhone = riderUser.phone || '' }
     }
+    // 兼容老数据: contact -> phone
+    if (!detailData.phone && detailData.contact) detailData.phone = detailData.contact
     res.json({ code: 0, data: detailData })
   } catch (err) {
     res.status(500).json({ code: -1, msg: '服务器错误' })
@@ -247,3 +287,4 @@ router.post('/:id/photo', auth, async (req, res) => {
 })
 
 module.exports = router
+

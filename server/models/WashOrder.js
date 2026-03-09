@@ -18,6 +18,8 @@ const washOrderSchema = new mongoose.Schema({
     status: { type: Number, default: 0 }, // 0=待处理 1=处理中 2=已完成 3=已取消
     statusText: { type: String, default: '待处理' },
     errandTaskId: String,
+    outTradeNo: String,
+    payType: { type: String, default: 'wxpay' },
     createTime: { type: Date, default: Date.now }
 })
 

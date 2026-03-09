@@ -14,10 +14,11 @@
       </view>
     </scroll-view>
     <scroll-view scroll-y class="job-list">
-      <view v-for="job in filteredJobs" :key="job.id" class="job-card" @click="onJobTap(job)">
+      <view v-for="job in filteredJobs" :key="job._id || job.id" class="job-card" @click="onJobTap(job)">
         <view class="job-top">
           <view class="job-emoji-wrap" :style="{background: job.bg}">
-            <text class="job-emoji">{{ job.emoji }}</text>
+            <image v-if="job.image" class="job-img" :src="job.image" mode="aspectFill" />
+            <text v-else class="job-emoji">{{ job.emoji }}</text>
           </view>
           <view class="job-main">
             <text class="job-title">{{ job.title }}</text>
@@ -46,7 +47,8 @@
         <view class="popup-close" @click="showDetail = false"><text>✕</text></view>
         <view class="popup-content" v-if="detailJob">
           <view class="popup-emoji-wrap" :style="{background: detailJob.bg}">
-            <text class="popup-emoji-icon">{{ detailJob.emoji }}</text>
+            <image v-if="detailJob.image" class="popup-img" :src="detailJob.image" mode="aspectFill" />
+            <text v-else class="popup-emoji-icon">{{ detailJob.emoji }}</text>
           </view>
           <text class="popup-title">{{ detailJob.title }}</text>
           <text class="popup-company">{{ detailJob.company }}</text>
@@ -68,8 +70,12 @@
               <text class="popup-val">{{ detailJob.company }}</text>
             </view>
           </view>
-          <view class="popup-tip">
-            <text>📌 详细信息即将上线，敬请期待</text>
+          <view class="popup-desc" v-if="detailJob.description">
+            <text class="popup-desc-title">📋 岗位介绍</text>
+            <text class="popup-desc-text">{{ detailJob.description }}</text>
+          </view>
+          <view class="popup-contact-btn" @click="onContactKefu">
+            <text>联系客服获取详细信息</text>
           </view>
         </view>
       </view>
@@ -79,33 +85,25 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { onLoad } from '@dcloudio/uni-app'
+import { callCloud } from '@/utils/cloud'
 
 const keyword = ref('')
 const activeFilter = ref('全部')
 const filterTags = ['全部', '校内', '家教', '阿那亚', '阿尔卡迪亚', '寒暑假']
 
-const allJobs = ref([
-  { id: 1, title: '图书馆整理员', company: '校图书馆', location: '图书馆三楼', pay: '¥20/小时', emoji: '📖', bg: 'linear-gradient(135deg, #89f7fe, #66a6ff)', hot: true, category: '校内' },
-  { id: 2, title: '食堂帮厨', company: '第一食堂', location: '一食堂后厨', pay: '¥50/次+免费午餐', emoji: '🍳', bg: 'linear-gradient(135deg, #ffecd2, #fcb69f)', hot: true, category: '校内' },
-  { id: 3, title: '快递驿站分拣', company: '菜鸟驿站', location: '校内驿站', pay: '¥18/小时', emoji: '📦', bg: 'linear-gradient(135deg, #a1c4fd, #c2e9fb)', hot: true, category: '校内' },
-  { id: 4, title: '学院办公室助理', company: '计算机学院', location: '教学楼A栋', pay: '¥25/小时', emoji: '💼', bg: 'linear-gradient(135deg, #a18cd1, #fbc2eb)', hot: false, category: '校内' },
-  { id: 5, title: '校运会志愿者', company: '体育部', location: '校体育场', pay: '¥80/天+餐补', emoji: '🏅', bg: 'linear-gradient(135deg, #f5576c, #ff6a88)', hot: false, category: '校内' },
-  { id: 6, title: '周末家教 数学辅导', company: '家长直招', location: '线上/线下均可', pay: '¥120/小时', emoji: '📐', bg: 'linear-gradient(135deg, #667eea, #764ba2)', hot: true, category: '家教' },
-  { id: 7, title: '英语口语陪练', company: '家长直招', location: '线上', pay: '¥100/小时', emoji: '🗣️', bg: 'linear-gradient(135deg, #f093fb, #f5576c)', hot: false, category: '家教' },
-  { id: 8, title: 'Python编程家教', company: '家长直招', location: '线上均可', pay: '¥180/小时', emoji: '💻', bg: 'linear-gradient(135deg, #4facfe, #00f2fe)', hot: true, category: '家教' },
-  { id: 9, title: '民宿前台接待', company: '阿那亚度假区', location: '阿那亚社区', pay: '¥180/天', emoji: '🏨', bg: 'linear-gradient(135deg, #f093fb, #f5576c)', hot: true, category: '阿那亚' },
-  { id: 10, title: '海边咖啡师', company: '孤独图书馆咖啡', location: '阿那亚海边', pay: '¥200/天', emoji: '☕', bg: 'linear-gradient(135deg, #ffecd2, #fcb69f)', hot: true, category: '阿那亚' },
-  { id: 11, title: '沙滩活动执行', company: '阿那亚活动部', location: '阿那亚沙滩', pay: '¥250/天', emoji: '🎪', bg: 'linear-gradient(135deg, #f5576c, #ff6a88)', hot: false, category: '阿那亚' },
-  { id: 12, title: '摄影跟拍助理', company: '海边摄影工作室', location: '阿那亚全区', pay: '¥300/天', emoji: '📸', bg: 'linear-gradient(135deg, #d4fc79, #96e6a1)', hot: true, category: '阿那亚' },
-  { id: 13, title: '物业前台接待', company: '阿尔卡迪亚物业', location: '服务中心', pay: '¥130/天', emoji: '🏢', bg: 'linear-gradient(135deg, #4facfe, #00f2fe)', hot: true, category: '阿尔卡迪亚' },
-  { id: 14, title: '奶茶店兼职', company: '蜜雪冰城', location: '阿尔卡迪亚南门', pay: '¥16/小时', emoji: '🧋', bg: 'linear-gradient(135deg, #a18cd1, #fbc2eb)', hot: true, category: '阿尔卡迪亚' },
-  { id: 15, title: '托管班辅导老师', company: '社区教育中心', location: '阿尔卡迪亚', pay: '¥80/次', emoji: '📝', bg: 'linear-gradient(135deg, #a1c4fd, #c2e9fb)', hot: false, category: '阿尔卡迪亚' },
-  { id: 16, title: '电子厂暑期工', company: '富士康科技', location: '开发区工业园', pay: '¥5500-7000/月', emoji: '🏭', bg: 'linear-gradient(135deg, #667eea, #764ba2)', hot: true, category: '寒暑假' },
-  { id: 17, title: '火锅店暑期服务员', company: '海底捞', location: '市中心商圈', pay: '¥4500/月+餐补', emoji: '🍲', bg: 'linear-gradient(135deg, #f5576c, #ff6a88)', hot: true, category: '寒暑假' },
-  { id: 18, title: '快递分拣员', company: '顺丰速运', location: '物流园区', pay: '¥200/天', emoji: '📮', bg: 'linear-gradient(135deg, #43e97b, #38f9d7)', hot: false, category: '寒暑假' },
-  { id: 19, title: '商场促销员', company: '万达百货', location: '万达广场', pay: '¥150/天+提成', emoji: '🛍️', bg: 'linear-gradient(135deg, #fbc2eb, #a6c1ee)', hot: false, category: '寒暑假' },
-  { id: 20, title: '景区讲解员', company: '文旅集团', location: '本地景区', pay: '¥180/天', emoji: '🎫', bg: 'linear-gradient(135deg, #fddb92, #d1fdff)', hot: true, category: '寒暑假' }
-])
+const allJobs = ref([])
+
+const loadJobs = async () => {
+  try {
+    const res = await callCloud('job', 'list', {})
+    if (res.code === 0 && res.data && res.data.length > 0) {
+      allJobs.value = res.data
+    }
+  } catch (e) { }
+}
+
+onLoad(() => { loadJobs() })
 
 const filteredJobs = computed(() => {
   let list = allJobs.value
@@ -124,6 +122,11 @@ const onJobTap = (job) => {
   detailJob.value = job
   showDetail.value = true
 }
+
+const onContactKefu = () => {
+  showDetail.value = false
+  uni.navigateTo({ url: '/pages/kefu/show?img=' + encodeURIComponent('/static/TeamWork.jpg') })
+}
 </script>
 
 <style scoped>
@@ -141,8 +144,9 @@ const onJobTap = (job) => {
 .job-list { flex: 1; height: calc(100vh - 200rpx); padding: 16rpx 24rpx; }
 .job-card { background: #fff; border-radius: 16rpx; padding: 24rpx; margin-bottom: 16rpx; box-shadow: 0 4rpx 16rpx rgba(0,0,0,0.04); }
 .job-top { display: flex; align-items: center; }
-.job-emoji-wrap { width: 72rpx; height: 72rpx; border-radius: 16rpx; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-right: 16rpx; }
+.job-emoji-wrap { width: 72rpx; height: 72rpx; border-radius: 16rpx; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-right: 16rpx; overflow: hidden; }
 .job-emoji { font-size: 32rpx; }
+.job-img { width: 72rpx; height: 72rpx; }
 .job-main { flex: 1; min-width: 0; }
 .job-title { font-size: 28rpx; font-weight: 700; color: #1A1A2E; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .job-company { font-size: 22rpx; color: #718096; margin-top: 4rpx; display: block; }
@@ -164,11 +168,12 @@ const onJobTap = (job) => {
 .popup-mask { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 100; display: flex; align-items: flex-end; justify-content: center; }
 .popup-body { width: 100%; max-height: 80vh; background: #fff; border-radius: 32rpx 32rpx 0 0; padding: 40rpx 32rpx; padding-bottom: calc(40rpx + env(safe-area-inset-bottom)); position: relative; overflow-y: auto; animation: slideUp 0.25s ease-out; }
 @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-.popup-close { position: absolute; top: 24rpx; right: 28rpx; width: 56rpx; height: 56rpx; border-radius: 50%; background: #F0F2F5; display: flex; align-items: center; justify-content: center; }
+.popup-close { position: absolute; top: 24rpx; right: 28rpx; width: 56rpx; height: 56rpx; border-radius: 50%; background: #F0F2F5; display: flex; align-items: center; justify-content: center; z-index: 10; }
 .popup-close text { font-size: 28rpx; color: #718096; }
 .popup-content { display: flex; flex-direction: column; align-items: center; }
-.popup-emoji-wrap { width: 120rpx; height: 120rpx; border-radius: 28rpx; display: flex; align-items: center; justify-content: center; margin-bottom: 24rpx; }
+.popup-emoji-wrap { width: 120rpx; height: 120rpx; border-radius: 28rpx; display: flex; align-items: center; justify-content: center; margin-bottom: 24rpx; overflow: hidden; }
 .popup-emoji-icon { font-size: 56rpx; }
+.popup-img { width: 120rpx; height: 120rpx; }
 .popup-title { font-size: 34rpx; font-weight: 800; color: #1A1A2E; margin-bottom: 8rpx; }
 .popup-company { font-size: 26rpx; color: #718096; margin-bottom: 28rpx; }
 .popup-grid { display: flex; flex-wrap: wrap; gap: 20rpx; width: 100%; margin-bottom: 24rpx; }
@@ -176,6 +181,9 @@ const onJobTap = (job) => {
 .popup-label { font-size: 22rpx; color: #A0AEC0; display: block; margin-bottom: 6rpx; }
 .popup-val { font-size: 28rpx; color: #2D3748; font-weight: 600; display: block; }
 .popup-val.price { color: #E53E3E; font-weight: 800; }
-.popup-tip { background: #FFFAF0; border-radius: 12rpx; padding: 20rpx; width: 100%; text-align: center; }
-.popup-tip text { font-size: 24rpx; color: #DD6B20; }
+.popup-desc { width: 100%; background: #F7FAFC; border-radius: 16rpx; padding: 24rpx; margin-bottom: 24rpx; }
+.popup-desc-title { font-size: 24rpx; color: #718096; display: block; margin-bottom: 12rpx; }
+.popup-desc-text { font-size: 26rpx; color: #4A5568; line-height: 40rpx; display: block; }
+.popup-contact-btn { width: 100%; padding: 24rpx; background: linear-gradient(135deg, #4299E1, #2B6CB0); border-radius: 48rpx; text-align: center; }
+.popup-contact-btn text { font-size: 28rpx; color: #fff; font-weight: 700; }
 </style>

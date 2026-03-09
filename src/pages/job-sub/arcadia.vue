@@ -3,24 +3,25 @@
     <view class="search-bar">
       <view class="search-input">
         <text class="search-icon">🔍</text>
-        <input placeholder="搜索岗位" v-model="keyword" confirm-type="search" @confirm="onSearch"></input>
+        <input placeholder="搜索岗位" v-model="keyword" confirm-type="search"></input>
       </view>
     </view>
     <view class="main-wrap">
       <scroll-view scroll-y class="side-nav">
-        <view v-for="(cat, idx) in categories" :key="cat.name" class="nav-item" :class="{active: activeIdx === idx}" @click="activeIdx = idx">
-          <text>{{ cat.name }}</text>
+        <view v-for="(cat, idx) in subCats" :key="cat" class="nav-item" :class="{active: activeIdx === idx}" @click="activeIdx = idx">
+          <text>{{ cat }}</text>
         </view>
       </scroll-view>
       <scroll-view scroll-y class="content-area">
         <view class="content-header">
-          <text class="content-title">{{ categories[activeIdx].name }}</text>
+          <text class="content-title">{{ subCats[activeIdx] || '全部' }}</text>
           <text class="content-count">{{ filteredJobs.length }}个岗位</text>
         </view>
-        <view v-for="job in filteredJobs" :key="job.id" class="job-card" @click="onJobTap(job)">
+        <view v-for="job in filteredJobs" :key="job._id || job.id" class="job-card" @click="onJobTap(job)">
           <view class="job-top">
             <view class="job-emoji-wrap" :style="{background: job.bg}">
-              <text class="job-emoji">{{ job.emoji }}</text>
+              <image v-if="job.image" class="job-img" :src="job.image" mode="aspectFill" />
+              <text v-else class="job-emoji">{{ job.emoji }}</text>
             </view>
             <view class="job-main">
               <text class="job-title">{{ job.title }}</text>
@@ -30,7 +31,7 @@
           </view>
           <view class="job-detail-row">
             <text class="job-location">📍 {{ job.location }}</text>
-            <text class="job-time">🕐 {{ job.time }}</text>
+            <text class="job-time" v-if="job.time">🕐 {{ job.time }}</text>
           </view>
           <view class="job-bottom">
             <text class="job-pay">{{ job.pay }}</text>
@@ -39,47 +40,31 @@
         </view>
         <view v-if="filteredJobs.length === 0" class="empty-state">
           <text class="empty-emoji">📋</text>
-          <text class="empty-text">暂无该分类的岗位</text>
+          <text class="empty-text">暂无岗位，敬请期待</text>
         </view>
       </scroll-view>
     </view>
 
-    <!-- 详情弹出层 -->
     <view class="popup-mask" v-if="showDetail" @click="showDetail = false">
       <view class="popup-body" @click.stop>
         <view class="popup-close" @click="showDetail = false"><text>✕</text></view>
         <view class="popup-content" v-if="detailJob">
           <view class="popup-emoji-wrap" :style="{background: detailJob.bg}">
-            <text class="popup-emoji-icon">{{ detailJob.emoji }}</text>
+            <image v-if="detailJob.image" class="popup-img" :src="detailJob.image" mode="aspectFill" />
+            <text v-else class="popup-emoji-icon">{{ detailJob.emoji }}</text>
           </view>
           <text class="popup-title">{{ detailJob.title }}</text>
           <text class="popup-company">{{ detailJob.company }}</text>
           <view class="popup-grid">
-            <view class="popup-field">
-              <text class="popup-label">📍 工作地点</text>
-              <text class="popup-val">{{ detailJob.location }}</text>
-            </view>
-            <view class="popup-field">
-              <text class="popup-label">🕐 工作时间</text>
-              <text class="popup-val">{{ detailJob.time }}</text>
-            </view>
-            <view class="popup-field">
-              <text class="popup-label">💰 薪资待遇</text>
-              <text class="popup-val price">{{ detailJob.pay }}</text>
-            </view>
-            <view class="popup-field">
-              <text class="popup-label">🏢 招聘单位</text>
-              <text class="popup-val">{{ detailJob.company }}</text>
-            </view>
+            <view class="popup-field"><text class="popup-label">📍 工作地点</text><text class="popup-val">{{ detailJob.location }}</text></view>
+            <view class="popup-field"><text class="popup-label">🕐 工作时间</text><text class="popup-val">{{ detailJob.time || '待定' }}</text></view>
+            <view class="popup-field"><text class="popup-label">💰 薪资待遇</text><text class="popup-val price">{{ detailJob.pay }}</text></view>
+            <view class="popup-field"><text class="popup-label">🏢 招聘单位</text><text class="popup-val">{{ detailJob.company }}</text></view>
           </view>
-          <view class="popup-desc-section">
-            <view class="popup-desc-header">
-              <text class="popup-desc-icon">📋</text>
-              <text class="popup-desc-title">工作详情</text>
-            </view>
+          <view class="popup-desc-section" v-if="detailJob.description">
+            <view class="popup-desc-header"><text class="popup-desc-icon">📋</text><text class="popup-desc-title">工作详情</text></view>
             <text class="popup-desc-text">{{ detailJob.description }}</text>
           </view>
-
           <view class="popup-contact-btn" @click="onContactKefu">
             <text class="popup-contact-icon">💬</text>
             <text class="popup-contact-text">联系客服获取详细信息</text>
@@ -92,37 +77,32 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { onLoad } from '@dcloudio/uni-app'
+import { callCloud } from '@/utils/cloud'
 
+const CATEGORY = '阿尔卡迪亚'
 const keyword = ref('')
 const activeIdx = ref(0)
+const allJobs = ref([])
 
-const categories = [
-  { name: '物业服务', tag: '物业' },
-  { name: '商超零售', tag: '商超' },
-  { name: '餐饮服务', tag: '餐饮' },
-  { name: '教育培训', tag: '教育' },
-  { name: '社区活动', tag: '活动' },
-  { name: '其他岗位', tag: '其他' }
-]
+onLoad(() => { loadJobs() })
 
-const jobs = ref([
-  { id: 1, title: '物业前台接待', company: '阿尔卡迪亚物业', location: '阿尔卡迪亚服务中心', time: '工作日 08:30-17:30', pay: '¥130/天', emoji: '🏢', bg: 'linear-gradient(135deg, #4facfe, #00f2fe)', hot: true, tag: '物业', description: '负责小区业主来访登记，接受报修请求，协助处理基础缴费及查询服务。' },
-  { id: 2, title: '社区巡逻协管', company: '阿尔卡迪亚安保', location: '阿尔卡迪亚社区', time: '排班制', pay: '¥140/天', emoji: '🛡️', bg: 'linear-gradient(135deg, #667eea, #764ba2)', hot: false, tag: '物业', description: '协助安保人员进行社区巡视，门岗人员车辆登记管控，维护社区的安全秩序。' },
-  { id: 3, title: '绿化养护助理', company: '阿尔卡迪亚物业', location: '社区花园', time: '早班 07:00-12:00', pay: '¥100/半天', emoji: '🌿', bg: 'linear-gradient(135deg, #43e97b, #38f9d7)', hot: false, tag: '物业', description: '协助绿化师傅修剪草坪、浇水、处理落叶，适合喜欢花草植物，能早起的同学。' },
-  { id: 4, title: '超市收银员', company: '社区超市', location: '阿尔卡迪亚商业街', time: '排班制', pay: '¥18/小时', emoji: '💰', bg: 'linear-gradient(135deg, #ffecd2, #fcb69f)', hot: true, tag: '商超', description: '负责超市前台的扫码计价和收银结账工作，态度要和善，做事认真不出错。' },
-  { id: 5, title: '便利店店员', company: '全家便利店', location: '阿尔卡迪亚北门', time: '晚班 18:00-23:00', pay: '¥16/小时', emoji: '🏪', bg: 'linear-gradient(135deg, #89f7fe, #66a6ff)', hot: false, tag: '商超', description: '负责晚间便利店的商品补货、收银以及鲜食加热，清洁店面环境。' },
-  { id: 6, title: '水果店理货', company: '百果园', location: '阿尔卡迪亚商业区', time: '上午 08:00-12:00', pay: '¥15/小时', emoji: '🍎', bg: 'linear-gradient(135deg, #fa709a, #fee140)', hot: false, tag: '商超', description: '负责水果的挑拣、上架陈列及价签更换，保持水果展示区的整洁美观。' },
-  { id: 7, title: '快餐店服务员', company: '社区餐饮', location: '阿尔卡迪亚美食街', time: '午/晚餐时段', pay: '¥20/小时', emoji: '🍔', bg: 'linear-gradient(135deg, #f093fb, #f5576c)', hot: false, tag: '餐饮', description: '在快餐店负责收银、打包或者大堂桌面的清洁回收，适合时间较为碎片化的同学。' },
-  { id: 8, title: '奶茶店兼职', company: '蜜雪冰城', location: '阿尔卡迪亚南门', time: '排班制', pay: '¥16/小时', emoji: '🧋', bg: 'linear-gradient(135deg, #a18cd1, #fbc2eb)', hot: true, tag: '餐饮', description: '负责按照标准配方制作饮品，点单收银以及门店的卫生维护，排班灵活。' },
-  { id: 9, title: '托管班辅导老师', company: '社区教育中心', location: '阿尔卡迪亚教育楼', time: '周一至周五 15:30-18:30', pay: '¥80/次', emoji: '📝', bg: 'linear-gradient(135deg, #a1c4fd, #c2e9fb)', hot: true, tag: '教育', description: '负责小学生放学后的作业辅导与纪律维持，解答简单问题，保障学生安全。' },
-  { id: 10, title: '少儿美术助教', company: '创意美术工作室', location: '阿尔卡迪亚二期', time: '周末 09:00-12:00', pay: '¥100/次', emoji: '🎨', bg: 'linear-gradient(135deg, #fbc2eb, #a6c1ee)', hot: false, tag: '教育', description: '协助美术主讲老师发放画材、指导小朋友绘画创作，课后清理画室。' },
-  { id: 11, title: '社区运动会志愿者', company: '阿尔卡迪亚居委会', location: '社区广场', time: '活动期间', pay: '¥120/天', emoji: '🏅', bg: 'linear-gradient(135deg, #f5576c, #ff6a88)', hot: false, tag: '活动', description: '协助居委会举办社区趣味运动会，负责场地布置、物资分发及秩序维护。' },
-  { id: 12, title: '快递代收点', company: '菜鸟驿站', location: '阿尔卡迪亚东门', time: '每天 10:00-20:00 排班', pay: '¥15/小时', emoji: '📦', bg: 'linear-gradient(135deg, #fddb92, #d1fdff)', hot: false, tag: '其他', description: '负责接收各个快递公司的包裹，按货架号入库及为业主寻找快递出库。' }
-])
+const loadJobs = async () => {
+  try {
+    const res = await callCloud('job', 'list', { category: CATEGORY })
+    if (res.code === 0 && res.data) allJobs.value = res.data
+  } catch (e) { }
+}
+
+const subCats = computed(() => {
+  const s = new Set(); allJobs.value.forEach(j => { if (j.subCategory) s.add(j.subCategory) })
+  const arr = Array.from(s); return arr.length > 0 ? arr : ['全部']
+})
 
 const filteredJobs = computed(() => {
-  const tag = categories[activeIdx.value].tag
-  let list = jobs.value.filter(j => j.tag === tag)
+  const sub = subCats.value[activeIdx.value]
+  let list = allJobs.value
+  if (sub && sub !== '全部') list = list.filter(j => j.subCategory === sub)
   if (keyword.value.trim()) {
     const kw = keyword.value.trim().toLowerCase()
     list = list.filter(j => j.title.toLowerCase().includes(kw) || j.company.toLowerCase().includes(kw))
@@ -130,25 +110,9 @@ const filteredJobs = computed(() => {
   return list
 })
 
-const onSearch = () => {
-  if (!keyword.value.trim()) return
-  const kw = keyword.value.trim().toLowerCase()
-  const idx = categories.findIndex(cat => jobs.value.some(j => j.tag === cat.tag && (j.title.toLowerCase().includes(kw) || j.company.toLowerCase().includes(kw))))
-  if (idx >= 0) activeIdx.value = idx
-}
-
-const showDetail = ref(false)
-const detailJob = ref(null)
-
-const onJobTap = (job) => {
-  detailJob.value = job
-  showDetail.value = true
-}
-
-const onContactKefu = () => {
-  showDetail.value = false
-  uni.navigateTo({ url: '/pages/kefu/show?img=' + encodeURIComponent('/static/TeamWork.jpg') })
-}
+const showDetail = ref(false), detailJob = ref(null)
+const onJobTap = (job) => { detailJob.value = job; showDetail.value = true }
+const onContactKefu = () => { showDetail.value = false; uni.navigateTo({ url: '/pages/kefu/show?img=' + encodeURIComponent('/static/TeamWork.jpg') }) }
 </script>
 
 <style scoped>
@@ -170,8 +134,9 @@ const onContactKefu = () => {
 .content-count { font-size: 22rpx; color: #A0AEC0; }
 .job-card { background: #F7FAFC; border-radius: 16rpx; padding: 24rpx; margin-bottom: 16rpx; }
 .job-top { display: flex; align-items: center; }
-.job-emoji-wrap { width: 72rpx; height: 72rpx; border-radius: 16rpx; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-right: 16rpx; }
+.job-emoji-wrap { width: 72rpx; height: 72rpx; border-radius: 16rpx; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-right: 16rpx; overflow: hidden; }
 .job-emoji { font-size: 32rpx; }
+.job-img { width: 72rpx; height: 72rpx; }
 .job-main { flex: 1; min-width: 0; }
 .job-title { font-size: 28rpx; font-weight: 700; color: #1A1A2E; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .job-company { font-size: 22rpx; color: #718096; margin-top: 4rpx; display: block; }
@@ -187,16 +152,15 @@ const onContactKefu = () => {
 .empty-state { display: flex; flex-direction: column; align-items: center; padding: 100rpx 0; }
 .empty-emoji { font-size: 72rpx; }
 .empty-text { font-size: 26rpx; color: #A0AEC0; margin-top: 16rpx; }
-
-/* Popup */
-.popup-mask { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 100; display: flex; align-items: flex-end; justify-content: center; }
-.popup-body { width: 100%; max-height: 80vh; background: #fff; border-radius: 32rpx 32rpx 0 0; padding: 40rpx 32rpx; padding-bottom: calc(40rpx + env(safe-area-inset-bottom)); position: relative; overflow-y: auto; animation: slideUp 0.25s ease-out; }
+.popup-mask { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 10000; display: flex; align-items: flex-end; justify-content: center; }
+.popup-body { width: 100%; max-height: 80vh; background: #fff; border-radius: 32rpx 32rpx 0 0; padding: 40rpx 32rpx; padding-bottom: calc(160rpx + env(safe-area-inset-bottom)); position: relative; overflow-y: auto; animation: slideUp 0.25s ease-out; }
 @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-.popup-close { position: absolute; top: 24rpx; right: 28rpx; width: 56rpx; height: 56rpx; border-radius: 50%; background: #F0F2F5; display: flex; align-items: center; justify-content: center; }
+.popup-close { position: absolute; top: 24rpx; right: 28rpx; width: 56rpx; height: 56rpx; border-radius: 50%; background: #F0F2F5; display: flex; align-items: center; justify-content: center; z-index: 10; }
 .popup-close text { font-size: 28rpx; color: #718096; }
 .popup-content { display: flex; flex-direction: column; align-items: center; }
-.popup-emoji-wrap { width: 120rpx; height: 120rpx; border-radius: 28rpx; display: flex; align-items: center; justify-content: center; margin-bottom: 24rpx; }
+.popup-emoji-wrap { width: 120rpx; height: 120rpx; border-radius: 28rpx; display: flex; align-items: center; justify-content: center; margin-bottom: 24rpx; overflow: hidden; }
 .popup-emoji-icon { font-size: 56rpx; }
+.popup-img { width: 120rpx; height: 120rpx; }
 .popup-title { font-size: 34rpx; font-weight: 800; color: #1A1A2E; margin-bottom: 8rpx; }
 .popup-company { font-size: 26rpx; color: #718096; margin-bottom: 28rpx; }
 .popup-grid { display: flex; flex-wrap: wrap; gap: 20rpx; width: 100%; margin-bottom: 24rpx; }

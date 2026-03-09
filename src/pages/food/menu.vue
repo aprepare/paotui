@@ -27,58 +27,11 @@
             <text class="item-desc" v-if="item.desc">{{ item.desc }}</text>
             <view class="item-bottom">
               <text class="item-price">¥{{ item.price.toFixed(1) }}</text>
-              <view class="qty-ctrl">
-                <view class="qty-btn minus" v-if="getQty(item._id) > 0" @click.stop="changeQty(item, -1)">
-                  <text>−</text>
-                </view>
-                <text class="qty-num" v-if="getQty(item._id) > 0">{{ getQty(item._id) }}</text>
-                <view class="qty-btn plus" @click.stop="changeQty(item, 1)">
-                  <text>＋</text>
-                </view>
-              </view>
             </view>
           </view>
         </view>
         <view class="empty-items" v-if="!filteredItems.length">
           <text>暂无菜品</text>
-        </view>
-        <!-- 底部占位 -->
-        <view style="height: 140rpx;"></view>
-      </scroll-view>
-    </view>
-
-    <!-- 底部购物车 -->
-    <view class="cart-bar" v-if="totalCount > 0">
-      <view class="cart-left" @click="showCartPopup = true">
-        <view class="cart-badge">
-          <text class="badge-num">{{ totalCount }}</text>
-        </view>
-        <text class="cart-icon">🛒</text>
-        <text class="cart-total">¥{{ totalPrice.toFixed(1) }}</text>
-      </view>
-      <view class="cart-btn" :class="{disabled: !canOrder}" @click="goConfirm">
-        <text>{{ canOrder ? '去结算' : '¥' + shop.minOrder + '起送' }}</text>
-      </view>
-    </view>
-
-    <!-- 购物车弹窗 -->
-    <view class="cart-popup-mask" v-if="showCartPopup" @click="showCartPopup = false"></view>
-    <view class="cart-popup" v-if="showCartPopup">
-      <view class="popup-header">
-        <text class="popup-title">已选商品</text>
-        <text class="popup-clear" @click="clearCart">清空</text>
-      </view>
-      <scroll-view :scroll-y="true" class="popup-list">
-        <view class="popup-item" v-for="ci in cartItems" :key="ci.item._id">
-          <text class="pi-name">{{ ci.item.name }}</text>
-          <view class="pi-right">
-            <text class="pi-price">¥{{ (ci.item.price * ci.qty).toFixed(1) }}</text>
-            <view class="qty-ctrl sm">
-              <view class="qty-btn minus" @click.stop="changeQty(ci.item, -1)"><text>−</text></view>
-              <text class="qty-num">{{ ci.qty }}</text>
-              <view class="qty-btn plus" @click.stop="changeQty(ci.item, 1)"><text>＋</text></view>
-            </view>
-          </view>
         </view>
       </scroll-view>
     </view>

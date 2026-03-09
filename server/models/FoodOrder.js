@@ -24,6 +24,8 @@ const foodOrderSchema = new mongoose.Schema({
     riderId: String,
     riderName: String,
     riderPhone: String,
+    outTradeNo: String,
+    payType: { type: String, default: 'wxpay' },
     createTime: { type: Date, default: Date.now }
 })
 

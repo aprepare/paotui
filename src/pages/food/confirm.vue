@@ -62,6 +62,24 @@
       </view>
     </view>
 
+    <!-- 支付方式 -->
+    <view class="section">
+      <view class="section-title"><text>💳 支付方式</text></view>
+      <view class="pay-options">
+        <view class="pay-item" :class="{active: payType === 'wechat'}" @click="payType = 'wechat'">
+          <text class="pay-icon">💚</text>
+          <text class="pay-name">微信支付</text>
+        </view>
+        <view class="pay-item" :class="{active: payType === 'wallet'}" @click="payType = 'wallet'">
+          <text class="pay-icon">💰</text>
+          <view class="pay-name-row">
+            <text class="pay-name">钱包余额</text>
+            <text class="pay-balance">¥{{ walletBalance }}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
     <!-- 提交按钮 -->
     <view class="submit-bar">
       <view class="submit-left">
@@ -76,7 +94,7 @@
 
 <script setup>
 import { ref, computed } from 'vue'
-import { onLoad } from '@dcloudio/uni-app'
+import { onLoad, onShow } from '@dcloudio/uni-app'
 import { callCloud } from '@/utils/cloud.js'
 import { requestOrderSubscribe } from '@/utils/subscribe'
 
@@ -87,12 +105,19 @@ const address = ref('')
 const remark = ref('')
 const submitting = ref(false)
 const deliveryMode = ref('delivery')
+const payType = ref('wechat')
+const walletBalance = ref('0.00')
 
 const itemsTotal = computed(() => {
   return (cartData.value.items || []).reduce((s, i) => s + i.price * i.quantity, 0)
 })
 const actualDeliveryFee = computed(() => deliveryMode.value === 'self_pickup' ? 0 : (cartData.value.deliveryFee || 0))
 const totalPrice = computed(() => itemsTotal.value + actualDeliveryFee.value)
+
+const loadWalletBalance = async () => {
+  var res = await callCloud('user', 'getWallet')
+  if (res.code === 0 && res.data) walletBalance.value = (res.data.balance || 0).toFixed(2)
+}
 
 const submitOrder = async () => {
   if (submitting.value) return
@@ -103,6 +128,7 @@ const submitOrder = async () => {
   submitting.value = true
   // 请求订阅消息授权
   await requestOrderSubscribe()
+  uni.showLoading({ title: '下单中...', mask: true })
   const orderItems = cartData.value.items.map(i => ({ itemId: i.itemId, name: i.name, price: i.price, image: i.image || '', quantity: i.quantity }))
   const res = await callCloud('food', 'createOrder', {
     shopId: cartData.value.shopId,
@@ -111,16 +137,46 @@ const submitOrder = async () => {
     phone: phone.value.trim(),
     userName: userName.value.trim(),
     remark: remark.value.trim(),
-    deliveryMode: deliveryMode.value
+    deliveryMode: deliveryMode.value,
+    payType: payType.value === 'wallet' ? 'wallet' : undefined
   })
   submitting.value = false
+  uni.hideLoading()
 
   if (res.code === 0) {
-    uni.removeStorageSync('food_cart')
-    uni.showToast({ title: '下单成功', icon: 'success' })
-    setTimeout(() => {
-      uni.redirectTo({ url: '/pages/food/detail?id=' + res.data.orderId })
-    }, 1200)
+    if (res.walletPaid) {
+      // 钱包支付成功
+      uni.removeStorageSync('food_cart')
+      uni.showToast({ title: '下单成功！已从钱包扣款', icon: 'success' })
+      setTimeout(() => {
+        uni.redirectTo({ url: '/pages/food/detail?id=' + res.data.orderId })
+      }, 1200)
+    } else if (res.payment) {
+      // 微信支付
+      wx.requestPayment({
+        ...res.payment,
+        success: () => {
+          uni.removeStorageSync('food_cart')
+          uni.showToast({ title: '支付成功！', icon: 'success' })
+          setTimeout(() => {
+            uni.redirectTo({ url: '/pages/food/detail?id=' + res.data.orderId })
+          }, 1200)
+        },
+        fail: (err) => {
+          if (err.errMsg && err.errMsg.indexOf('cancel') > -1) {
+            uni.showToast({ title: '已取消支付，订单待支付', icon: 'none' })
+          } else {
+            uni.showToast({ title: '支付失败', icon: 'none' })
+          }
+        }
+      })
+    } else {
+      uni.removeStorageSync('food_cart')
+      uni.showToast({ title: '下单成功', icon: 'success' })
+      setTimeout(() => {
+        uni.redirectTo({ url: '/pages/food/detail?id=' + res.data.orderId })
+      }, 1200)
+    }
   } else {
     uni.showToast({ title: res.msg || '下单失败', icon: 'none' })
   }
@@ -142,6 +198,8 @@ onLoad(() => {
     address.value = userInfo.building ? (userInfo.building + ' ' + (userInfo.room || '')) : ''
   }
 })
+
+onShow(() => { loadWalletBalance() })
 </script>
 
 <style scoped>
@@ -179,4 +237,12 @@ onLoad(() => {
 .submit-btn { background: linear-gradient(135deg, #ED8936, #DD6B20); padding: 20rpx 48rpx; border-radius: 36rpx; }
 .submit-btn text { color: #fff; font-size: 30rpx; font-weight: 700; }
 .submit-btn.disabled { opacity: 0.6; }
+
+.pay-options { display: flex; gap: 20rpx; }
+.pay-item { flex: 1; background: #F7FAFC; border-radius: 16rpx; padding: 24rpx; display: flex; align-items: center; gap: 16rpx; border: 2rpx solid #E2E8F0; }
+.pay-item.active { border-color: #DD6B20; background: #FFFAF0; }
+.pay-icon { font-size: 36rpx; }
+.pay-name { font-size: 26rpx; color: #2D3748; font-weight: 600; }
+.pay-name-row { display: flex; flex-direction: column; }
+.pay-balance { font-size: 22rpx; color: #A0AEC0; margin-top: 4rpx; }
 </style>

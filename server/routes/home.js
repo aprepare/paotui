@@ -84,4 +84,15 @@ router.get('/page-config', async (req, res) => {
   }
 })
 
+// GET /api/home/price-config — 公共接口，前端获取价格配置
+router.get('/price-config', async (req, res) => {
+  try {
+    const doc = await PageConfig.findOne({ page: 'price' })
+    const cfg = doc && doc.config ? doc.config : {}
+    res.json({ code: 0, data: cfg })
+  } catch (err) {
+    res.status(500).json({ code: -1, msg: '服务器错误' })
+  }
+})
+
 module.exports = router

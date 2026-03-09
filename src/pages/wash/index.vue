@@ -5,7 +5,7 @@
         <text class="banner-emoji">🧼</text>
         <view class="banner-text">
           <text class="banner-title">萌马洗护</text>
-          <text class="banner-desc">专业洗护，拼团更优惠 · 跑腿上门取仅+3元</text>
+          <text class="banner-desc">专业洗护，拼团更优惠 · 跑腿上门取仅+{{ washDeliveryFee }}元</text>
         </view>
       </view>
     </view>
@@ -106,7 +106,7 @@
           </view>
           <view class="oc-body">
             <text class="oc-info">x{{ o.quantity }} · ¥{{ (o.itemPrice || 0).toFixed(2) }}</text>
-            <text class="oc-delivery" v-if="o.needDelivery">🏃 跑腿取送 +¥3</text>
+            <text class="oc-delivery" v-if="o.needDelivery">🏃 跑腿取送 +¥{{ washDeliveryFee }}</text>
           </view>
           <view class="oc-footer">
             <text class="oc-time">{{ fmtDate(o.createTime) }}</text>
@@ -164,7 +164,7 @@
         <view class="delivery-option" @click="orderDelivery = !orderDelivery">
           <view class="delivery-check" :class="{checked: orderDelivery}"><text v-if="orderDelivery">✓</text></view>
           <view class="delivery-text">
-            <text class="dt-main">🏃 跑腿上门取 +¥3</text>
+            <text class="dt-main">🏃 跑腿上门取 +¥{{ washDeliveryFee }}</text>
             <text class="dt-sub">骑手到宿舍取件送至洗护店</text>
           </view>
         </view>
@@ -172,9 +172,25 @@
           <text class="modal-label">宿舍地址</text>
           <input class="modal-input" v-model="orderAddress" placeholder="如：3号楼 502" />
         </view>
+        <view class="modal-pay">
+          <text class="modal-label" style="width:auto;margin-bottom:12rpx;display:block;">💳 支付方式</text>
+          <view class="pay-options">
+            <view class="pay-item" :class="{active: orderPayType === 'wechat'}" @click="orderPayType = 'wechat'">
+              <text class="pay-icon">💚</text>
+              <text class="pay-name">微信支付</text>
+            </view>
+            <view class="pay-item" :class="{active: orderPayType === 'wallet'}" @click="orderPayType = 'wallet'">
+              <text class="pay-icon">💰</text>
+              <view class="pay-name-row">
+                <text class="pay-name">钱包余额</text>
+                <text class="pay-balance">¥{{ walletBalance }}</text>
+              </view>
+            </view>
+          </view>
+        </view>
         <view class="modal-total">
           <text>合计：</text>
-          <text class="mt-price">¥{{ ((modalProduct.price || 0) * orderQty + (orderDelivery ? 3 : 0)).toFixed(2) }}</text>
+          <text class="mt-price">¥{{ ((modalProduct.price || 0) * orderQty + (orderDelivery ? washDeliveryFee : 0)).toFixed(2) }}</text>
         </view>
         <view class="modal-btn" @click="submitOrder"><text>{{ submitting ? '提交中...' : '确认下单' }}</text></view>
       </view>
@@ -186,6 +202,10 @@
 import { ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { callCloud, checkLogin } from '@/utils/cloud'
+import { getPriceConfig } from '@/utils/priceConfig'
+
+var washDeliveryFee = ref(3)
+getPriceConfig().then(cfg => { washDeliveryFee.value = cfg.washDeliveryFee })
 
 var currentTab = ref(0)
 var myTab = ref(0)
@@ -208,6 +228,8 @@ var orderPhone = ref('')
 var orderAddress = ref('')
 var orderRemark = ref('')
 var orderDelivery = ref(false)
+var orderPayType = ref('wechat')
+var walletBalance = ref('0.00')
 
 var defaultNormals = [
   { _id: 'normal_1', name: '运动鞋基础清洗', price: 35, desc: '适用于日常运动鞋、帆布鞋' },
@@ -314,6 +336,7 @@ var openOrderModal = function(p) {
   orderRemark.value = ''
   orderDelivery.value = false
   orderAddress.value = ''
+  orderPayType.value = 'wechat'
   var userInfo = uni.getStorageSync('userInfo')
   if (userInfo && userInfo.phone) orderPhone.value = userInfo.phone
   showModal.value = true
@@ -335,16 +358,45 @@ var submitOrder = async function() {
     userName: (userInfo && userInfo.name) || '',
     address: orderAddress.value,
     remark: orderRemark.value,
-    needDelivery: orderDelivery.value
+    needDelivery: orderDelivery.value,
+    payType: orderPayType.value === 'wallet' ? 'wallet' : undefined
   })
   uni.hideLoading()
   submitting.value = false
   if (r.code === 0) {
-    uni.showToast({ title: '下单成功', icon: 'success' })
-    showModal.value = false
-    currentTab.value = 2
-    myTab.value = 0
-    loadMyOrders()
+    if (r.walletPaid) {
+      // 钱包支付成功
+      uni.showToast({ title: '下单成功！已从钱包扣款', icon: 'success' })
+      showModal.value = false
+      currentTab.value = 2
+      myTab.value = 0
+      loadMyOrders()
+    } else if (r.payment) {
+      // 微信支付
+      showModal.value = false
+      wx.requestPayment({
+        ...r.payment,
+        success: () => {
+          uni.showToast({ title: '支付成功！', icon: 'success' })
+          currentTab.value = 2
+          myTab.value = 0
+          loadMyOrders()
+        },
+        fail: (err) => {
+          if (err.errMsg && err.errMsg.indexOf('cancel') > -1) {
+            uni.showToast({ title: '已取消支付，订单待支付', icon: 'none' })
+          } else {
+            uni.showToast({ title: '支付失败', icon: 'none' })
+          }
+        }
+      })
+    } else {
+      uni.showToast({ title: '下单成功', icon: 'success' })
+      showModal.value = false
+      currentTab.value = 2
+      myTab.value = 0
+      loadMyOrders()
+    }
   } else {
     uni.showToast({ title: r.msg || '下单失败', icon: 'none' })
   }
@@ -383,6 +435,10 @@ onShow(function() {
     var info = uni.getStorageSync('userInfo')
     if (info && info.openid) myOpenid = info.openid
   } catch (e) {}
+  // 加载钱包余额
+  callCloud('user', 'getWallet').then(function(res) {
+    if (res.code === 0 && res.data) walletBalance.value = (res.data.balance || 0).toFixed(2)
+  }).catch(function() {})
 })
 </script>
 
@@ -496,4 +552,13 @@ onShow(function() {
 
 .empty { padding: 80rpx 0; text-align: center; }
 .empty text { font-size: 28rpx; color: #A0AEC0; }
+
+.modal-pay { margin-bottom: 20rpx; }
+.pay-options { display: flex; gap: 16rpx; }
+.pay-item { flex: 1; background: #F7FAFC; border-radius: 14rpx; padding: 20rpx; display: flex; align-items: center; gap: 12rpx; border: 2rpx solid #E2E8F0; }
+.pay-item.active { border-color: #319795; background: #E6FFFA; }
+.pay-icon { font-size: 32rpx; }
+.pay-name { font-size: 24rpx; color: #2D3748; font-weight: 600; }
+.pay-name-row { display: flex; flex-direction: column; }
+.pay-balance { font-size: 20rpx; color: #A0AEC0; margin-top: 2rpx; }
 </style>

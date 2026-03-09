@@ -111,6 +111,16 @@ const loadWelfareConfig = async () => {
 }
 
 const goPage = (service) => {
+  // 小岛巴士暂未开通
+  if (service.text === '小岛巴士') {
+    uni.showModal({
+      title: '🚌 小岛巴士',
+      content: '小岛巴士将在五一、十一、寒暑假期间开通，敬请期待！',
+      showCancel: false,
+      confirmText: '知道了'
+    })
+    return
+  }
   if (service.isTab) {
     uni.switchTab({ url: service.url })
   } else {

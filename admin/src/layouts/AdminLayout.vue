@@ -38,6 +38,7 @@
           <el-menu-item index="/team-activities">组队活动</el-menu-item>
           <el-menu-item index="/carpool">拼车信息</el-menu-item>
           <el-menu-item index="/skills">技能服务</el-menu-item>
+          <el-menu-item index="/jobs">兼职管理</el-menu-item>
         </el-sub-menu>
 
         <el-sub-menu index="merchant-group">

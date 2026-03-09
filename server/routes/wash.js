@@ -6,6 +6,8 @@ const WashGroup = require('../models/WashGroup')
 const WashOrder = require('../models/WashOrder')
 const User = require('../models/User')
 const ErrandTask = require('../models/ErrandTask')
+const UserWallet = require('../models/UserWallet')
+const WalletRecord = require('../models/WalletRecord')
 
 // 默认商品数据
 const defaultGroupProducts = {
@@ -126,7 +128,7 @@ router.get('/my-groups', auth, async (req, res) => {
 // POST /api/wash/order
 router.post('/order', auth, async (req, res) => {
     try {
-        const { productId, quantity = 1, phone, userName, address, remark, needDelivery = false } = req.body
+        const { productId, quantity = 1, phone, userName, address, remark, needDelivery = false, payType } = req.body
         if (!productId) return res.json({ code: -1, msg: '缺少商品ID' })
         if (!phone) return res.json({ code: -1, msg: '请填写联系电话' })
         if (needDelivery && (!address || !address.trim())) return res.json({ code: -1, msg: '跑腿取送需填写宿舍地址' })
@@ -143,32 +145,65 @@ router.post('/order', auth, async (req, res) => {
         const itemPrice = (product.price || 0) * quantity
         const totalPrice = itemPrice + deliveryFee
 
+        const outTradeNo = 'wash_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6)
+
+        // 钱包支付
+        if (payType === 'wallet') {
+            let wallet = await UserWallet.findOne({ openid: req.user.openid })
+            if (!wallet) wallet = await UserWallet.create({ openid: req.user.openid, balance: 0, totalIncome: 0 })
+            if (wallet.balance < totalPrice) return res.json({ code: -1, msg: '钱包余额不足，需要 ¥' + totalPrice })
+            await UserWallet.updateOne({ openid: req.user.openid }, { $inc: { balance: -totalPrice }, $set: { updateTime: new Date() } })
+            await WalletRecord.create({
+                openid: req.user.openid, type: 'income', amount: -totalPrice,
+                title: '洗护订单支付 - ' + (product.name || ''), orderId: '', orderType: 'wash_pay',
+                status: 1, statusText: '已扣款', createTime: new Date()
+            })
+            const order = await WashOrder.create({
+                openid: req.user.openid, productId, productName: product.name,
+                productImage: product.image || '', quantity, unitPrice: product.price || 0,
+                itemPrice, deliveryFee, totalPrice, needDelivery,
+                address: needDelivery ? address.trim() : '', phone, userName: userName || '',
+                remark: remark || '', status: 0, statusText: '待处理', createTime: new Date(),
+                outTradeNo, payType: 'wallet'
+            })
+            // 如果选了跑腿取送，自动创建跑腿任务
+            if (needDelivery) {
+                const user = await User.findOne({ openid: req.user.openid })
+                const publisher = (user && user.name) || userName || '匿名'
+                const errand = await ErrandTask.create({
+                    openid: req.user.openid,
+                    title: '萌马洗护取件',
+                    desc: '【萌马洗护】' + product.name + ' x' + quantity + '\n请到宿舍取件送至萌马洗护店',
+                    fromAddr: address.trim(), toAddr: '萌马洗护店',
+                    price: deliveryFee, tip: 0, phone,
+                    remark: '洗护订单关联取件，订单号: ' + order._id,
+                    publisher, status: 0, statusText: '待接单', statusColor: '#DD6B20',
+                    washOrderId: order._id.toString(), createTime: new Date()
+                })
+                await WashOrder.updateOne({ _id: order._id }, { $set: { errandTaskId: errand._id.toString() } })
+            }
+            return res.json({ code: 0, data: { orderId: order._id }, walletPaid: true })
+        }
+
+        // 微信支付
         const order = await WashOrder.create({
             openid: req.user.openid, productId, productName: product.name,
             productImage: product.image || '', quantity, unitPrice: product.price || 0,
             itemPrice, deliveryFee, totalPrice, needDelivery,
             address: needDelivery ? address.trim() : '', phone, userName: userName || '',
-            remark: remark || '', status: 0, statusText: '待处理', createTime: new Date()
+            remark: remark || '', status: -1, statusText: '待支付', createTime: new Date(),
+            outTradeNo, payType: 'wxpay'
         })
 
-        // 如果选了跑腿取送，自动创建跑腿任务
-        if (needDelivery) {
-            const user = await User.findOne({ openid: req.user.openid })
-            const publisher = (user && user.name) || userName || '匿名'
-            const errand = await ErrandTask.create({
-                openid: req.user.openid,
-                title: '萌马洗护取件',
-                desc: '【萌马洗护】' + product.name + ' x' + quantity + '\n请到宿舍取件送至萌马洗护店',
-                fromAddr: address.trim(), toAddr: '萌马洗护店',
-                price: deliveryFee, tip: 0, phone,
-                remark: '洗护订单关联取件，订单号: ' + order._id,
-                publisher, status: 0, statusText: '待接单', statusColor: '#DD6B20',
-                washOrderId: order._id.toString(), createTime: new Date()
-            })
-            await WashOrder.updateOne({ _id: order._id }, { $set: { errandTaskId: errand._id.toString() } })
-        }
+        const { createJSAPIOrder } = require('../services/wxpay')
+        const payment = await createJSAPIOrder(
+            req.user.openid,
+            outTradeNo,
+            Math.round(totalPrice * 100),
+            '萌马洗护-' + (product.name || '洗护服务')
+        )
 
-        res.json({ code: 0, data: { orderId: order._id } })
+        res.json({ code: 0, data: { orderId: order._id }, payment })
     } catch (err) {
         res.status(500).json({ code: -1, msg: '下单失败: ' + err.message })
     }
@@ -210,6 +245,31 @@ router.post('/order/:id/cancel', auth, async (req, res) => {
                 })
             } catch (e) { }
         }
+
+        // 退款处理
+        if (order.status >= 0 && order.outTradeNo) {
+            if (order.payType === 'wallet') {
+                // 钱包支付退回余额
+                await UserWallet.updateOne({ openid: order.openid }, { $inc: { balance: order.totalPrice }, $set: { updateTime: new Date() } })
+                await WalletRecord.create({
+                    openid: order.openid, type: 'income', amount: order.totalPrice,
+                    title: '洗护订单取消退款', orderId: order._id.toString(), orderType: 'wash_refund',
+                    status: 1, statusText: '已退款', createTime: new Date()
+                })
+            } else {
+                // 微信支付退款
+                try {
+                    const { refundOrder } = require('../services/wxpay')
+                    const outRefundNo = 'ref_' + order.outTradeNo + '_' + Date.now()
+                    const totalAmount = Math.round((order.totalPrice || 0) * 100)
+                    await refundOrder(order.outTradeNo, outRefundNo, totalAmount, totalAmount)
+                    console.log(`[wxpay refund] 洗护退款成功: ${order.outTradeNo}`)
+                } catch (refundErr) {
+                    console.error(`[wxpay refund] 洗护退款失败: ${order.outTradeNo}`, refundErr.message)
+                }
+            }
+        }
+
         res.json({ code: 0 })
     } catch (err) {
         res.json({ code: -1, msg: '取消失败' })

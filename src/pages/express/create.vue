@@ -175,17 +175,26 @@
 import { ref, reactive, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { callCloud, checkLogin } from '@/utils/cloud'
-import { requestOrderSubscribe } from '@/utils/subscribe'
+import { getPriceConfig } from '@/utils/priceConfig'
 
-const sizes = [
+const sizes = ref([
   { emoji: '📄', name: '小件', price: 2, desc: '信件/小包裹' },
   { emoji: '📦', name: '大件', price: 5, desc: '中型包裹' },
   { emoji: '📦', name: '超大件', price: 20, desc: '大型/重型包裹' }
-]
+])
 const selectedSize = ref(0)
-const currentSize = computed(() => sizes[selectedSize.value])
+const currentSize = computed(() => sizes.value[selectedSize.value])
 const tipList = [1, 2, 3, 5]
 const customTip = ref(false)
+
+// 页面加载时获取价格配置
+getPriceConfig().then(cfg => {
+  sizes.value = [
+    { emoji: '📄', name: '小件', price: cfg.expressSmallFee, desc: '信件/小包裹' },
+    { emoji: '📦', name: '大件', price: cfg.expressMediumFee, desc: '中型包裹' },
+    { emoji: '📦', name: '超大件', price: cfg.expressLargeFee, desc: '大型/重型包裹' }
+  ]
+})
 
 const buildingData = {
   '东区': ['一舍女', '二舍男', '三舍女', '四舍男', '五舍女', '六舍男', '七舍女', '八舍男'],

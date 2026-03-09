@@ -72,7 +72,7 @@
     <view class="section">
       <swiper class="banner-swiper" :indicator-dots="true" :autoplay="true" :interval="3000" :duration="500" :circular="true" indicator-color="rgba(255,255,255,0.4)" indicator-active-color="#fff">
         <swiper-item v-for="item in banners" :key="item.id">
-          <view v-if="item.imageUrl" class="banner-item">
+          <view v-if="item.imageUrl" class="banner-item banner-item--img">
             <image class="banner-image" :src="item.imageUrl" mode="aspectFill" />
           </view>
           <view v-else class="banner-item" :style="{ background: item.bg }">
@@ -120,25 +120,17 @@ const actions = ref(defaultActions)
 const loadPageConfig = async () => {
   try {
     const res = await callCloud('home', 'getPageConfig')
-    console.log('[pageConfig] raw response:', JSON.stringify(res))
     if (res.code === 0 && res.data) {
-      // 服务器返回原始文档结构：{ _id, page, config: { heroImage, banners, actions } }
-      // 兼容两种格式：新格式直接在 data 里，旧格式嵌套在 data.config 里
-      const cfg = (res.data.config && typeof res.data.config === 'object') ? res.data.config : res.data
-      console.log('[pageConfig] heroImage from server:', cfg.heroImage)
-      if (cfg.heroImage) {
-        const resolved = resolveImageUrl(cfg.heroImage) || cfg.heroImage || defaultHeroImage
-        console.log('[pageConfig] heroImage resolved to:', resolved)
-        heroImage.value = resolved
+      if (res.data.heroImage) {
+        heroImage.value = resolveImageUrl(res.data.heroImage) || res.data.heroImage || defaultHeroImage
       }
-      if (cfg.banners && cfg.banners.length > 0) {
-        banners.value = cfg.banners.map((it, i) => {
+      if (res.data.banners && res.data.banners.length > 0) {
+        banners.value = res.data.banners.map((it, i) => {
           const raw = it.imageUrl || ''
           const img = resolveImageUrl(raw)
-          console.log('[pageConfig] banner[' + i + '] raw:', raw, '→ resolved:', img)
           return {
             id: i + 1,
-            imageUrl: img,
+            imageUrl: img, // 只接受 /uploads 或 http(s)，否则为空
             emoji: it.emoji || '',
             title: it.title || '',
             desc: it.desc || '',
@@ -146,20 +138,16 @@ const loadPageConfig = async () => {
           }
         })
       }
-      if (cfg.actions && cfg.actions.length > 0) {
-        actions.value = cfg.actions.map(it => ({
+      if (res.data.actions && res.data.actions.length > 0) {
+        actions.value = res.data.actions.map(it => ({
           emoji: it.emoji || '',
           iconUrl: resolveImageUrl(it.iconUrl) || it.iconUrl || '',
           text: it.text || '', link: it.link || '',
           bg: it.bg || 'linear-gradient(135deg, #4299E1, #2B6CB0)'
         }))
       }
-    } else {
-      console.warn('[pageConfig] bad response:', res)
     }
-  } catch (e) {
-    console.error('[pageConfig] error:', e)
-  }
+  } catch (e) { /* 使用默认配置 */ }
 }
 
 const live = reactive({ updatedAt: '加载中', todayDelivered: 0 })
@@ -261,9 +249,7 @@ onLoad(() => {
 })
 onShow(() => {
   uni.hideTabBar({ animation: false })
-  loadOrders()
-  loadPageConfig()
-})
+  loadOrders() })
 onUnload(() => { if (liveTimer) clearInterval(liveTimer) })
 onPullDownRefresh(async () => {
   await Promise.all([refreshLive(), loadOrders()])
@@ -290,15 +276,15 @@ const goDetail = (id, orderType) => {
 .header-area { background: linear-gradient(160deg, #1A4F8B 0%, #2B6CB0 40%, #4299E1 100%); padding: 32rpx 0 40rpx; }
 
 /* 送达卡片 */
-.hero-card { margin: 0 28rpx; background: rgba(255,255,255,0.12); backdrop-filter: blur(20px); border: 1rpx solid rgba(255,255,255,0.18); border-radius: 20rpx; padding: 36rpx 32rpx; display: flex; align-items: center; }
+.hero-card { margin: 0 28rpx; background: rgba(255,255,255,0.12); backdrop-filter: blur(20px); border: 1rpx solid rgba(255,255,255,0.18); border-radius: 20rpx; padding: 36rpx 12rpx 36rpx 32rpx; display: flex; align-items: center; }
 .hero-left { flex: 1; display: flex; flex-direction: column; }
-.hero-title { font-size: 30rpx; color: rgba(255,255,255,0.85); font-weight: 600; }
+.hero-title { font-size: 34rpx; color: rgba(255,255,255,0.85); font-weight: 600; }
 .hero-num-row { display: flex; align-items: baseline; margin-top: 12rpx; }
 .hero-num { font-size: 72rpx; font-weight: 800; color: #fff; line-height: 1; }
-.hero-unit { font-size: 30rpx; color: rgba(255,255,255,0.85); font-weight: 600; margin-left: 6rpx; }
-.hero-sub { font-size: 22rpx; color: rgba(255,255,255,0.5); margin-top: 10rpx; }
-.hero-right { width: 180rpx; height: 160rpx; border-radius: 20rpx; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; overflow: hidden; }
-.hero-gif { width: 150rpx; height: 150rpx; }
+.hero-unit { font-size: 34rpx; color: rgba(255,255,255,0.85); font-weight: 600; margin-left: 6rpx; }
+.hero-sub { font-size: 26rpx; color: rgba(255,255,255,0.5); margin-top: 10rpx; }
+.hero-right { width: 240rpx; height: 220rpx; border-radius: 20rpx; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.hero-gif { width: 210rpx; height: 210rpx; }
 .hero-emoji { font-size: 80rpx; }
 
 /* 通用区块 */
@@ -308,11 +294,11 @@ const goDetail = (id, orderType) => {
 .section-link { font-size: 26rpx; color: #fff; font-weight: 700; background: linear-gradient(135deg, #4299E1, #2B6CB0); padding: 10rpx 24rpx; border-radius: 24rpx; }
 
 /* 快捷操作 */
-.action-row { display: flex; justify-content: space-around; padding: 8rpx 0; }
-.action-item { display: flex; flex-direction: column; align-items: center; padding: 16rpx 0; }
+.action-row { display: flex; justify-content: space-around; padding: 4rpx 0; }
+.action-item { display: flex; flex-direction: column; align-items: center; padding: 8rpx 0; }
 .action-item:active { opacity: 0.7; }
-.action-img { width: 120rpx; height: 120rpx; margin-bottom: 12rpx; }
-.action-emoji { font-size: 56rpx; margin-bottom: 12rpx; }
+.action-img { width: 180rpx; height: 180rpx; margin-bottom: 10rpx; }
+.action-emoji { font-size: 72rpx; margin-bottom: 10rpx; }
 .action-name { font-size: 24rpx; color: #2D3748; font-weight: 600; }
 
 /* 楼栋筛选 */
@@ -349,9 +335,10 @@ const goDetail = (id, orderType) => {
 .order-state { font-size: 22rpx; display: block; margin-top: 6rpx; font-weight: 600; }
 
 /* 轮播图 */
-.banner-swiper { height: 400rpx; border-radius: 20rpx; overflow: hidden; }
-.banner-item { width: 100%; height: 400rpx; display: flex; align-items: center; padding: 0 40rpx; box-sizing: border-box; }
-.banner-image { width: 100%; height: 400rpx; border-radius: 20rpx; }
+.banner-swiper { height: 350rpx; border-radius: 20rpx; overflow: hidden; }
+.banner-item { width: 100%; height: 350rpx; display: flex; align-items: center; padding: 0 40rpx; box-sizing: border-box; }
+.banner-item--img { padding: 0; }
+.banner-image { width: 100%; height: 100%; }
 .banner-emoji { font-size: 80rpx; margin-right: 28rpx; }
 .banner-text-area { display: flex; flex-direction: column; }
 .banner-title { font-size: 32rpx; font-weight: 800; color: #fff; margin-bottom: 10rpx; }

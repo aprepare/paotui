@@ -29,6 +29,7 @@ const WalletWithdrawal = require('../models/WalletWithdrawal')
 const FoodShop = require('../models/FoodShop')
 const FoodItem = require('../models/FoodItem')
 const FoodOrder = require('../models/FoodOrder')
+const JobPost = require('../models/JobPost')
 
 const DEFAULT_ADMIN_PHONES = []
 
@@ -66,40 +67,6 @@ router.post('/check-admin', auth, async (req, res) => {
   try {
     const isAdmin = await checkAdminByOpenid(req.user.openid)
     res.json({ code: 0, isAdmin })
-  } catch (err) {
-    res.status(500).json({ code: -1, msg: '服务器错误' })
-  }
-})
-
-// GET /api/admin/dashboard
-router.get('/dashboard', adminAuth, async (req, res) => {
-  try {
-    const [uc, ec, erc, cc, fc, mc, tc, msgc, rc] = await Promise.all([
-      User.countDocuments(),
-      ExpressOrder.countDocuments(),
-      ErrandTask.countDocuments(),
-      Carpool.countDocuments(),
-      ForumPost.countDocuments(),
-      MarketGoods.countDocuments(),
-      TeamActivity.countDocuments(),
-      Message.countDocuments(),
-      User.countDocuments({ isRider: true })
-    ])
-    const [pe, per] = await Promise.all([
-      ExpressOrder.countDocuments({ status: 0 }),
-      ErrandTask.countDocuments({ status: 0 })
-    ])
-    const stat = await Stat.findOne({ key: 'global' }) || { todayDelivered: 0, totalOrders: 0 }
-    res.json({
-      code: 0, data: {
-        userCount: uc, expressCount: ec, errandCount: erc,
-        carpoolCount: cc, forumCount: fc, marketCount: mc,
-        teamCount: tc, msgCount: msgc, riderCount: rc,
-        pendingExpress: pe, pendingErrand: per,
-        todayDelivered: stat.todayDelivered || 0,
-        totalOrders: stat.totalOrders || 0
-      }
-    })
   } catch (err) {
     res.status(500).json({ code: -1, msg: '服务器错误' })
   }
@@ -559,7 +526,16 @@ router.post('/withdraw-list', auth, async (req, res) => {
     const total = await WalletWithdrawal.countDocuments(query)
     const data = await WalletWithdrawal.find(query).sort({ createTime: -1 })
       .skip((Number(page) - 1) * Number(pageSize)).limit(Number(pageSize))
-    res.json({ code: 0, data, total })
+
+    // populate 用户信息
+    const enriched = []
+    for (const w of data) {
+      const wObj = w.toObject()
+      const u = await User.findOne({ openid: w.openid })
+      wObj.userInfo = u ? { name: u.name || '', avatar: u.avatar || '', phone: u.phone || '' } : {}
+      enriched.push(wObj)
+    }
+    res.json({ code: 0, data: enriched, total })
   } catch (err) {
     res.status(500).json({ code: -1, msg: '服务器错误' })
   }
@@ -569,7 +545,7 @@ router.post('/approve-withdraw', auth, async (req, res) => {
   try {
     if (!await checkAdminByOpenid(req.user.openid)) return res.json({ code: -1, msg: '无权限' })
     await WalletWithdrawal.updateOne({ _id: req.body.withdrawId }, {
-      $set: { status: 1, approveTime: new Date(), approvedBy: req.user.openid }
+      $set: { status: 3, paidTime: new Date(), paidBy: req.user.openid }
     })
     res.json({ code: 0 })
   } catch (err) {
@@ -580,6 +556,15 @@ router.post('/approve-withdraw', auth, async (req, res) => {
 router.post('/reject-withdraw', auth, async (req, res) => {
   try {
     if (!await checkAdminByOpenid(req.user.openid)) return res.json({ code: -1, msg: '无权限' })
+    const w = await WalletWithdrawal.findById(req.body.withdrawId)
+    if (w && w.status === 0) {
+      // 拒绝时退还余额
+      const UserWallet = require('../models/UserWallet')
+      await UserWallet.updateOne({ openid: w.openid }, {
+        $inc: { balance: w.amount },
+        $set: { updateTime: new Date() }
+      }, { upsert: true })
+    }
     await WalletWithdrawal.updateOne({ _id: req.body.withdrawId }, {
       $set: { status: 2, rejectTime: new Date(), rejectReason: req.body.reason || '', rejectedBy: req.user.openid }
     })
@@ -757,11 +742,14 @@ router.get('/dashboard', adminAuth, async (req, res) => {
     const totalOrders = totalExpress + totalErrand + totalFood + totalWash
     const now = new Date()
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-    const [todayOrders, todayUsers] = await Promise.all([
-      ExpressOrder.countDocuments({ createTime: { $gte: todayStart } }) +
-        ErrandTask.countDocuments({ createTime: { $gte: todayStart } }),
+    const [todayExpress, todayErrand, todayFood, todayWash, todayUsers] = await Promise.all([
+      ExpressOrder.countDocuments({ createTime: { $gte: todayStart } }),
+      ErrandTask.countDocuments({ createTime: { $gte: todayStart } }),
+      FoodOrder.countDocuments({ createTime: { $gte: todayStart } }),
+      WashOrder.countDocuments({ createTime: { $gte: todayStart } }),
       User.countDocuments({ createTime: { $gte: todayStart } })
     ])
+    const todayOrders = todayExpress + todayErrand + todayFood + todayWash
     const revenueAgg = await ExpressOrder.aggregate([
       { $match: { status: 3 } },
       { $group: { _id: null, total: { $sum: '$totalPrice' } } }
@@ -1114,7 +1102,16 @@ router.get('/withdrawals', adminAuth, async (req, res) => {
     const total = await WalletWithdrawal.countDocuments(query)
     const data = await WalletWithdrawal.find(query).sort({ createTime: -1 })
       .skip((Number(page) - 1) * Number(pageSize)).limit(Number(pageSize))
-    res.json({ code: 0, data, total })
+
+    // populate 用户信息
+    const enriched = []
+    for (const w of data) {
+      const wObj = w.toObject()
+      const u = await User.findOne({ openid: w.openid })
+      wObj.userInfo = u ? { name: u.name || '', avatar: u.avatar || '', phone: u.phone || '' } : {}
+      enriched.push(wObj)
+    }
+    res.json({ code: 0, data: enriched, total })
   } catch (err) {
     res.status(500).json({ code: -1, msg: '服务器错误' })
   }
@@ -1126,7 +1123,7 @@ router.put('/withdrawals/:id/approve', adminAuth, async (req, res) => {
     if (!w) return res.json({ code: -1, msg: '记录不存在' })
     if (w.status !== 0) return res.json({ code: -1, msg: '该记录已处理' })
     await WalletWithdrawal.updateOne({ _id: req.params.id }, {
-      $set: { status: 1, statusText: '已通过', handleTime: new Date() }
+      $set: { status: 3, paidTime: new Date(), paidBy: 'admin' }
     })
     res.json({ code: 0 })
   } catch (err) {
@@ -1139,13 +1136,15 @@ router.put('/withdrawals/:id/reject', adminAuth, async (req, res) => {
     const w = await WalletWithdrawal.findById(req.params.id)
     if (!w) return res.json({ code: -1, msg: '记录不存在' })
     if (w.status !== 0) return res.json({ code: -1, msg: '该记录已处理' })
+    // 拒绝时退还余额
+    const UserWallet = require('../models/UserWallet')
+    await UserWallet.updateOne({ openid: w.openid }, {
+      $inc: { balance: w.amount },
+      $set: { updateTime: new Date() }
+    }, { upsert: true })
     await WalletWithdrawal.updateOne({ _id: req.params.id }, {
       $set: { status: 2, statusText: '已拒绝', handleTime: new Date(), rejectReason: req.body.reason || '' }
     })
-    const user = await User.findOne({ openid: w.openid })
-    if (user) {
-      await User.updateOne({ openid: w.openid }, { $inc: { balance: w.amount } })
-    }
     res.json({ code: 0 })
   } catch (err) {
     res.status(500).json({ code: -1, msg: '服务器错误' })
@@ -1452,6 +1451,51 @@ router.put('/welfare-config', adminAuth, async (req, res) => {
   }
 })
 
+router.get('/job-config', adminAuth, async (req, res) => {
+  try {
+    let cfg = await PageConfig.findOne({ page: 'job' })
+    if (!cfg) cfg = { page: 'job', sections: [], config: {} }
+    res.json({ code: 0, data: cfg })
+  } catch (err) {
+    res.status(500).json({ code: -1, msg: '服务器错误' })
+  }
+})
+
+router.put('/job-config', adminAuth, async (req, res) => {
+  try {
+    const { config } = req.body
+    const update = { updateTime: new Date() }
+    if (config) update.config = config
+    await PageConfig.updateOne({ page: 'job' }, { $set: update }, { upsert: true })
+    res.json({ code: 0 })
+  } catch (err) {
+    res.status(500).json({ code: -1, msg: '服务器错误' })
+  }
+})
+
+// ===== 价格配置 =====
+router.get('/price-config', adminAuth, async (req, res) => {
+  try {
+    let cfg = await PageConfig.findOne({ page: 'price' })
+    if (!cfg) cfg = { page: 'price', config: {} }
+    res.json({ code: 0, data: cfg })
+  } catch (err) {
+    res.status(500).json({ code: -1, msg: '服务器错误' })
+  }
+})
+
+router.put('/price-config', adminAuth, async (req, res) => {
+  try {
+    const { config } = req.body
+    const update = { updateTime: new Date() }
+    if (config) update.config = config
+    await PageConfig.updateOne({ page: 'price' }, { $set: update }, { upsert: true })
+    res.json({ code: 0 })
+  } catch (err) {
+    res.status(500).json({ code: -1, msg: '服务器错误' })
+  }
+})
+
 // ===== 管理员图片上传 =====
 const uploadDir = path.join(__dirname, '../uploads/')
 const adminUpload = multer({
@@ -1478,8 +1522,117 @@ router.post('/upload', adminAuth, adminUpload.single('file'), async (req, res) =
     res.json({ code: 0, data: { url } })
   } catch (err) {
     console.error('[/admin/upload] error:', err)
-    if (req.file?.path) try { fs.unlinkSync(req.file.path) } catch (e) {}
+    if (req.file?.path) try { fs.unlinkSync(req.file.path) } catch (e) { }
     res.status(500).json({ code: -1, msg: '上传失败' })
+  }
+})
+
+// ===== 兼职管理 =====
+router.get('/jobs', adminAuth, async (req, res) => {
+  try {
+    const { page = 1, pageSize = 50, category, keyword } = req.query
+    const query = {}
+    if (category) query.category = category
+    if (keyword) {
+      query.$or = [
+        { title: { $regex: keyword, $options: 'i' } },
+        { company: { $regex: keyword, $options: 'i' } }
+      ]
+    }
+    const total = await JobPost.countDocuments(query)
+    const data = await JobPost.find(query).sort({ sort: 1, createTime: -1 })
+      .skip((Number(page) - 1) * Number(pageSize)).limit(Number(pageSize))
+    res.json({ code: 0, data, total })
+  } catch (err) {
+    res.status(500).json({ code: -1, msg: '服务器错误' })
+  }
+})
+
+router.post('/jobs', adminAuth, async (req, res) => {
+  try {
+    const job = await JobPost.create(req.body)
+    res.json({ code: 0, data: job })
+  } catch (err) {
+    res.status(500).json({ code: -1, msg: '创建失败' })
+  }
+})
+
+router.put('/jobs/:id', adminAuth, async (req, res) => {
+  try {
+    await JobPost.updateOne({ _id: req.params.id }, { $set: req.body })
+    res.json({ code: 0 })
+  } catch (err) {
+    res.status(500).json({ code: -1, msg: '更新失败' })
+  }
+})
+
+router.delete('/jobs/:id', adminAuth, async (req, res) => {
+  try {
+    await JobPost.deleteOne({ _id: req.params.id })
+    res.json({ code: 0 })
+  } catch (err) {
+    res.status(500).json({ code: -1, msg: '删除失败' })
+  }
+})
+// ===== 屏蔽词管理 =====
+router.get('/banned-words', adminAuth, async (req, res) => {
+  try {
+    const cfg = await PageConfig.findOne({ page: 'bannedWords' })
+    const words = (cfg && cfg.config && cfg.config.words) || []
+    res.json({ code: 0, data: { words } })
+  } catch (err) {
+    res.status(500).json({ code: -1, msg: '服务器错误' })
+  }
+})
+
+router.put('/banned-words', adminAuth, async (req, res) => {
+  try {
+    const { words } = req.body
+    if (!Array.isArray(words)) return res.json({ code: -1, msg: '参数格式错误' })
+    // 过滤空字符串，去重，去除前后空格
+    const cleanWords = [...new Set(words.map(w => (w || '').trim()).filter(w => w.length > 0))]
+    await PageConfig.updateOne(
+      { page: 'bannedWords' },
+      { $set: { page: 'bannedWords', config: { words: cleanWords }, updateTime: new Date() } },
+      { upsert: true }
+    )
+    // 清除内存缓存
+    const { clearBannedWordsCache } = require('../services/wechat')
+    clearBannedWordsCache()
+    res.json({ code: 0, msg: `已保存 ${cleanWords.length} 个屏蔽词` })
+  } catch (err) {
+    res.status(500).json({ code: -1, msg: '服务器错误' })
+  }
+})
+
+// 小程序端管理屏蔽词
+router.post('/get-banned-words', auth, async (req, res) => {
+  try {
+    if (!await checkAdminByOpenid(req.user.openid)) return res.json({ code: -1, msg: '无权限' })
+    const cfg = await PageConfig.findOne({ page: 'bannedWords' })
+    const words = (cfg && cfg.config && cfg.config.words) || []
+    res.json({ code: 0, data: { words } })
+  } catch (err) {
+    res.status(500).json({ code: -1, msg: '服务器错误' })
+  }
+})
+
+router.post('/save-banned-words', auth, async (req, res) => {
+  try {
+    if (!await checkAdminByOpenid(req.user.openid)) return res.json({ code: -1, msg: '无权限' })
+    const { words } = req.body
+    if (!Array.isArray(words)) return res.json({ code: -1, msg: '参数格式错误' })
+    const cleanWords = [...new Set(words.map(w => (w || '').trim()).filter(w => w.length > 0))]
+    await PageConfig.updateOne(
+      { page: 'bannedWords' },
+      { $set: { page: 'bannedWords', config: { words: cleanWords }, updateTime: new Date() } },
+      { upsert: true }
+    )
+    const { clearBannedWordsCache } = require('../services/wechat')
+    clearBannedWordsCache()
+    res.json({ code: 0, msg: `已保存 ${cleanWords.length} 个屏蔽词` })
+  } catch (err) {
+    res.status(500).json({ code: -1, msg: '服务器错误' })
   }
 })
 

@@ -130,11 +130,63 @@ async function imgSecCheck(imageBuffer) {
   }
 }
 
+// ========== 自定义屏蔽词 ==========
+let bannedWordsCache = { words: [], expireAt: 0 }
+
+/**
+ * 从数据库加载屏蔽词列表（带 60 秒缓存）
+ */
+async function loadBannedWords() {
+  if (bannedWordsCache.words.length > 0 && Date.now() < bannedWordsCache.expireAt) {
+    return bannedWordsCache.words
+  }
+  try {
+    const PageConfig = require('../models/PageConfig')
+    const cfg = await PageConfig.findOne({ page: 'bannedWords' })
+    const words = (cfg && cfg.config && cfg.config.words) || []
+    bannedWordsCache = { words, expireAt: Date.now() + 60 * 1000 }
+    return words
+  } catch (e) {
+    console.warn('[loadBannedWords] error:', e.message)
+    return []
+  }
+}
+
+/**
+ * 检测文本是否包含自定义屏蔽词
+ * @param {string} text - 待检测文字
+ * @returns {Promise<{pass: boolean, hitWord: string}>}
+ */
+async function checkBannedWords(text) {
+  if (!text || !text.trim()) return { pass: true, hitWord: '' }
+  const words = await loadBannedWords()
+  const lowerText = text.toLowerCase()
+  for (const w of words) {
+    if (w && lowerText.includes(w.toLowerCase())) {
+      return { pass: false, hitWord: w }
+    }
+  }
+  return { pass: true, hitWord: '' }
+}
+
 /**
  * 便捷内容检测（与云函数 checkContent 兼容）
+ * 先检查自定义屏蔽词，再调用微信官方 API
  */
 async function checkContent(openid, text, scene) {
+  // 1. 先检查自定义屏蔽词
+  const banned = await checkBannedWords(text)
+  if (!banned.pass) {
+    console.log(`[checkContent] 命中屏蔽词: "${banned.hitWord}"，内容被拦截`)
+    return false
+  }
+  // 2. 再调用微信官方内容安全检测
   return msgSecCheck(openid, text, scene)
 }
 
-module.exports = { code2session, getAccessToken, getPhoneNumber, msgSecCheck, imgSecCheck, checkContent }
+// 清除屏蔽词缓存（管理后台修改后调用）
+function clearBannedWordsCache() {
+  bannedWordsCache = { words: [], expireAt: 0 }
+}
+
+module.exports = { code2session, getAccessToken, getPhoneNumber, msgSecCheck, imgSecCheck, checkContent, checkBannedWords, clearBannedWordsCache }

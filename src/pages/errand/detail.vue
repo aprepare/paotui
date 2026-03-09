@@ -281,7 +281,7 @@ const loadDetail = async (id) => {
       statusText: ['待接单', '进行中', '已完成', '已取消', '待确认'][d.status] || '待接单',
       userName: d.publisher || '发布者',
       userAvatar: '🧑',
-      phone: d.phone || '',
+      phone: d.phone || d.contact || '',
       runner: d.riderId ? { avatar: '🧑‍🎓', name: d.riderName || '接单人', phone: d.riderPhone || '' } : null,
       pickupPhoto: d.pickupPhoto || '',
       pickupPhotoTime: d.pickupPhotoTime ? formatPhotoTime(d.pickupPhotoTime) : '',

@@ -52,6 +52,7 @@ app.use('/api/food', require('./routes/food'))
 app.use('/api/wash', require('./routes/wash'))
 app.use('/api/experience', require('./routes/experience'))
 app.use('/api/wework', require('./routes/wework'))
+app.use('/api/job', require('./routes/job'))
 app.use('/api/payment', require('./routes/payment'))
 
 // API 404 handler

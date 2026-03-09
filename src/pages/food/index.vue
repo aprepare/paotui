@@ -41,12 +41,6 @@
         <text class="empty-sub">敬请期待</text>
       </view>
     </view>
-
-    <!-- 我的订单入口 -->
-    <view class="my-orders-fab" @click="goMyOrders">
-      <text class="fab-icon">📋</text>
-      <text class="fab-text">我的订单</text>
-    </view>
   </view>
 </template>
 

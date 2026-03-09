@@ -175,7 +175,7 @@
             </view>
             <view v-else class="pay-lock-box" @click.stop="onPayToView(detailData, 'demand')">
               <text class="pay-lock-icon">🔒</text>
-              <text class="pay-lock-text">支付 ¥0.01 查看联系方式</text>
+              <text class="pay-lock-text">{{ tutorViewFee > 0 ? '支付 ¥' + tutorViewFee + ' 查看联系方式' : '免费查看联系方式' }}</text>
             </view>
           </view>
           <view class="popup-parent">
@@ -244,7 +244,7 @@
             </view>
             <view v-else class="pay-lock-box" @click.stop="onPayToView(detailData, 'tutor')">
               <text class="pay-lock-icon">🔒</text>
-              <text class="pay-lock-text">支付 ¥0.01 查看联系方式</text>
+              <text class="pay-lock-text">{{ tutorViewFee > 0 ? '支付 ¥' + tutorViewFee + ' 查看联系方式' : '免费查看联系方式' }}</text>
             </view>
           </view>
         </view>
@@ -261,11 +261,11 @@
           <text class="pay-popup-desc">支付后即可查看{{ payTarget === 'demand' ? '家长' : '家教' }}的完整联系方式（手机/微信/QQ）</text>
           <view class="pay-popup-price">
             <text class="pay-popup-currency">¥</text>
-            <text class="pay-popup-amount">0.01</text>
+            <text class="pay-popup-amount">{{ tutorViewFee }}</text>
           </view>
           <text class="pay-popup-note">同一信息仅需支付一次，之后可重复查看</text>
           <view class="pay-popup-btn" @click="onConfirmPay">
-            <text>立即支付 ¥0.01</text>
+            <text>立即支付 ¥{{ tutorViewFee }}</text>
           </view>
           <view class="pay-popup-cancel" @click="showPayPopup = false">
             <text>取消</text>
@@ -279,6 +279,10 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { callCloud, checkLogin } from '@/utils/cloud.js'
+import { getPriceConfig } from '@/utils/priceConfig'
+
+const tutorViewFee = ref(0.01)
+getPriceConfig().then(cfg => { tutorViewFee.value = cfg.tutorViewFee })
 
 const activeTab = ref('market')
 const filters = ['全部', '数学', '英语', '物理', '化学', '语文', '编程']
@@ -368,6 +372,25 @@ const onConfirmPay = async () => {
   }
   uni.showLoading({ title: '创建订单中...' })
   try {
+    // 如果费用为0，直接获取联系方式
+    if (tutorViewFee.value <= 0) {
+      var freeRes = await callCloud('tutor', 'createPayOrder', {
+        postId: postId,
+        orderType: 'view_contact'
+      })
+      uni.hideLoading()
+      if (freeRes && freeRes.code === 0 && freeRes.paid) {
+        showPayPopup.value = false
+        contactPaid.value = true
+        paidContact.value = freeRes.contact || {}
+        uni.showToast({ title: '已获取联系方式', icon: 'success' })
+        if (payActionType.value === 'contact') doContactTutor(payPostData.value)
+        else if (payActionType.value === 'apply') doApplyDemand(payPostData.value)
+      } else {
+        uni.showToast({ title: freeRes && freeRes.msg || '获取失败', icon: 'none' })
+      }
+      return
+    }
     var res = await callCloud('tutor', 'createPayOrder', {
       postId: postId,
       orderType: 'view_contact'

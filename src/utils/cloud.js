@@ -117,7 +117,14 @@ export function buildUrl(name, action, data = {}) {
       accept: { path: `/errand/${id}/accept`, method: 'POST' },
       updateStatus: { path: `/errand/${id}/status`, method: 'PUT' },
       cancel: { path: `/errand/${id}/cancel`, method: 'POST' },
-      uploadPhoto: { path: `/errand/${id}/photo`, method: 'POST' }
+      uploadPhoto: { path: `/errand/${id}/photo`, method: 'POST' },
+      reportLocation: { path: '/errand/reportLocation', method: 'POST' },
+      getRiderLocation: { path: '/errand/getRiderLocation', method: 'POST' }
+    },
+    job: {
+      list: { path: '/job/list', method: 'GET' },
+      detail: { path: `/job/${id}`, method: 'GET' },
+      pageConfig: { path: '/job/page-config', method: 'GET' }
     },
     carpool: {
       list: { path: '/carpool/list', method: 'GET' },
@@ -176,7 +183,8 @@ export function buildUrl(name, action, data = {}) {
     home: {
       getLiveData: { path: '/home/live-data', method: 'GET' },
       getLatestOrders: { path: '/home/latest-orders', method: 'GET' },
-      getPageConfig: { path: '/home/page-config', method: 'GET' }
+      getPageConfig: { path: '/home/page-config', method: 'GET' },
+      priceConfig: { path: '/home/price-config', method: 'GET' }
     },
     skill: {
       list: { path: '/skill/list', method: 'GET' },
