@@ -23,11 +23,7 @@
           <text class="menu-text">我的洗护</text>
           <text class="menu-arrow">›</text>
         </view>
-        <view class="menu-item" @click="goSub('/pages/order/list?tab=12')">
-          <view class="menu-icon-bg" style="background: linear-gradient(135deg, #68D391, #38A169);"><text class="mi">🚗</text></view>
-          <text class="menu-text">我的拼车</text>
-          <text class="menu-arrow">›</text>
-        </view>
+
         <view class="menu-item" @click="goSub('/pages/order/list?tab=14')">
           <view class="menu-icon-bg" style="background: linear-gradient(135deg, #B794F4, #805AD5);"><text class="mi">🏕️</text></view>
           <text class="menu-text">我的组队</text>
@@ -127,7 +123,7 @@ var loading = ref(false)
 var takenList = ref([])
 var expressList = ref([])
 var errandList = ref([])
-var carpoolList = ref([])
+
 var goodsList = ref([])
 var teamList = ref([])
 var skillList = ref([])
@@ -139,8 +135,7 @@ var expressStatusMap = { 0: '待接单', 1: '已接单', 2: '配送中', 3: '已
 var expressColorMap = { 0: '#DD6B20', 1: '#2B6CB0', 2: '#38A169', 3: '#A0AEC0', 4: '#E53E3E' }
 var errandStatusMap = { 0: '待接单', 1: '进行中', 2: '已完成', 3: '已取消', 4: '待确认' }
 var errandColorMap = { 0: '#DD6B20', 1: '#38A169', 2: '#A0AEC0', 3: '#E53E3E', 4: '#2B6CB0' }
-var carpoolStatusMap = { 0: '招募中', 1: '已满员', 2: '已出发', 3: '已结束' }
-var carpoolColorMap = { 0: '#DD6B20', 1: '#2B6CB0', 2: '#38A169', 3: '#A0AEC0' }
+
 var goodsStatusMap = { 0: '在售', 1: '已售出', 2: '已下架' }
 var goodsColorMap = { 0: '#38A169', 1: '#A0AEC0', 2: '#E53E3E' }
 
@@ -164,13 +159,7 @@ var mapErrand = function(o) {
     desc: o.remark || o.desc || '', price: o.price || 0, time: fmtTime(o.createTime),
     statusText: errandStatusMap[s] || '待接单', statusColor: errandColorMap[s] || '#DD6B20' }
 }
-var mapCarpool = function(o) {
-  var s = o.status || 0
-  return { id: o._id, type: '拼车', typeEmoji: '🚗', _raw: 'carpool',
-    fromAddr: o.from || '', toAddr: o.to || '',
-    desc: o.remark || '', price: o.price || 0, time: fmtTime(o.createTime),
-    statusText: carpoolStatusMap[s] || '招募中', statusColor: carpoolColorMap[s] || '#DD6B20' }
-}
+
 var teamStatusMap = { 0: '招募中', 1: '已满员', 2: '进行中', 3: '已结束' }
 var teamColorMap = { 0: '#DD6B20', 1: '#2B6CB0', 2: '#38A169', 3: '#A0AEC0' }
 
@@ -223,14 +212,7 @@ var loadData = async function() {
     }
   } catch (e) { console.log('loadData myAccepted error:', e) }
 
-  try {
-    var r3 = await callCloud('order', 'myCarpool')
-    if (r3.code === 0) {
-      var cArr = []
-      for (var k = 0; k < r3.data.length; k++) cArr.push(mapCarpool(r3.data[k]))
-      carpoolList.value = cArr
-    }
-  } catch (e) { console.log('loadData myCarpool error:', e) }
+
 
   try {
     var r4 = await callCloud('market', 'myGoods')
@@ -337,7 +319,7 @@ var currentList = computed(function() {
   if (tab.value === 1) return takenList.value
   if (tab.value === 10) return expressList.value
   if (tab.value === 11) return errandList.value
-  if (tab.value === 12) return carpoolList.value
+
   if (tab.value === 13) return goodsList.value
   if (tab.value === 14) return teamList.value
   if (tab.value === 15) return tutorList.value
@@ -351,7 +333,7 @@ var currentList = computed(function() {
 var goSub = function(url) { uni.navigateTo({ url: url }) }
 var goDetail = function(order) {
   if (order._raw === 'errand') uni.navigateTo({ url: '/pages/errand/detail?id=' + order.id })
-  else if (order._raw === 'carpool') uni.navigateTo({ url: '/pages/carpool/detail?id=' + order.id })
+
   else if (order._raw === 'team') uni.navigateTo({ url: '/pages/team/detail?id=' + order.id })
   else if (order._raw === 'goods') uni.navigateTo({ url: '/pages/market/detail?id=' + order.id })
   else if (order._raw === 'skill') uni.navigateTo({ url: '/pages/skill/detail?id=' + order.id })
@@ -367,7 +349,7 @@ var goRegister = function() { uni.navigateTo({ url: '/pages/express/rider-regist
 onLoad(function(opts) {
   if (opts && opts.tab) {
     tab.value = Number(opts.tab)
-    var titleMap = { 1: '我的接单', 10: '我的快递单', 11: '我的跑腿任务', 12: '我的拼车', 13: '我的商品', 14: '我的组队', 15: '我的家教', 16: '我的兼职', 17: '我的技能', 18: '我的外卖', 19: '我的洗护' }
+    var titleMap = { 1: '我的接单', 10: '我的快递单', 11: '我的跑腿任务', 13: '我的商品', 14: '我的组队', 15: '我的家教', 16: '我的兼职', 17: '我的技能', 18: '我的外卖', 19: '我的洗护' }
     var t = titleMap[tab.value]
     if (t) uni.setNavigationBarTitle({ title: t })
   }

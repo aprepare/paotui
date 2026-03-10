@@ -57,7 +57,6 @@ const banners = ref([
 const defaultIconMap = {
   '校园搭子': '/static/welfare/dazi.png',
   '萌马洗护': '/static/welfare/xihu.png',
-  '校园拼车': '/static/welfare/pinche.png',
   '技能出租': '/static/welfare/jineng.png',
   '考研服务': '/static/welfare/kaoyan.png',
   '二手市场': '/static/welfare/ershou.png',
@@ -71,11 +70,10 @@ const getDefaultIcon = (text) => {
 const defaultServices = [
   { iconUrl: '/static/welfare/dazi.png', text: '\u6821\u56ED\u642D\u5B50', desc: '\u627E\u642D\u5B50\u4E00\u8D77', url: '/pages/team/index', gradient: 'linear-gradient(135deg, #63B3ED, #2B6CB0)' },
   { iconUrl: '/static/welfare/xihu.png', text: '\u840C\u9A6C\u6D17\u62A4', desc: '\u6D17\u978B\u56E2\u8D2D', url: '/pages/wash/index', gradient: 'linear-gradient(135deg, #F6AD55, #DD6B20)' },
-  { iconUrl: '/static/welfare/pinche.png', text: '\u6821\u56ED\u62FC\u8F66', desc: '\u62FC\u8F66\u7701\u94B1', url: '/pages/carpool/index', gradient: 'linear-gradient(135deg, #68D391, #38A169)' },
   { iconUrl: '/static/welfare/jineng.png', text: '\u6280\u80FD\u51FA\u79DF', desc: '\u6280\u80FD\u53D8\u73B0', url: '/pages/skill/index', gradient: 'linear-gradient(135deg, #F687B3, #D53F8C)' },
   { iconUrl: '/static/welfare/kaoyan.png', text: '\u8003\u7814\u670D\u52A1', desc: '\u8003\u7814\u52A0\u6CB9', url: '/pages/graduate/index', gradient: 'linear-gradient(135deg, #4FD1C5, #319795)' },
   { iconUrl: '/static/welfare/ershou.png', text: '\u4E8C\u624B\u5E02\u573A', desc: '\u95F2\u7F6E\u6362\u94B1', url: '/pages/market/index', gradient: 'linear-gradient(135deg, #FC8181, #E53E3E)' },
-  { iconUrl: '/static/welfare/bashi.png', text: '\u5C0F\u5C9B\u5DF4\u58EB', desc: '\u6821\u56ED\u51FA\u884C', url: '/pages/carpool/index', gradient: 'linear-gradient(135deg, #B794F4, #805AD5)' },
+  { iconUrl: '/static/welfare/bashi.png', text: '\u5C0F\u5C9B\u5DF4\u58EB', desc: '\u6821\u56ED\u51FA\u884C', url: '', gradient: 'linear-gradient(135deg, #B794F4, #805AD5)' },
   { iconUrl: '/static/welfare/waimai.png', text: '\u798F\u5229\u5916\u5356', desc: '\u4F18\u60E0\u70B9\u9910', url: '/pages/food/index', gradient: 'linear-gradient(135deg, #FBD38D, #DD6B20)' }
 ]
 

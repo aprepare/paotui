@@ -297,35 +297,6 @@
 			]
 		},
 		{
-			"root": "pages/carpool",
-			"pages": [
-				{
-					"path": "index",
-					"style": {
-						"navigationBarTitleText": "校园拼车",
-						"navigationBarBackgroundColor": "#38A169",
-						"navigationBarTextStyle": "white"
-					}
-				},
-				{
-					"path": "create",
-					"style": {
-						"navigationBarTitleText": "发起拼车",
-						"navigationBarBackgroundColor": "#38A169",
-						"navigationBarTextStyle": "white"
-					}
-				},
-				{
-					"path": "detail",
-					"style": {
-						"navigationBarTitleText": "拼车详情",
-						"navigationBarBackgroundColor": "#38A169",
-						"navigationBarTextStyle": "white"
-					}
-				}
-			]
-		},
-		{
 			"root": "pages/team",
 			"pages": [
 				{

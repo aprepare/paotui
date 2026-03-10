@@ -106,7 +106,7 @@
         <text class="chip" :class="{active: contentType === 'forum'}" @click="contentType='forum'; loadContent()">帖子</text>
         <text class="chip" :class="{active: contentType === 'market'}" @click="contentType='market'; loadContent()">商品</text>
         <text class="chip" :class="{active: contentType === 'team'}" @click="contentType='team'; loadContent()">组队</text>
-        <text class="chip" :class="{active: contentType === 'carpool'}" @click="contentType='carpool'; loadContent()">拼车</text>
+
       </view>
       <view class="list-item" v-for="c in contentList" :key="c._id">
         <view class="li-body">
@@ -464,7 +464,7 @@ const dashCards = computed(() => [
   { label: '跑腿单', value: dash.errandCount, color: '#D53F8C' },
   { label: '待接快递', value: dash.pendingExpress, color: '#E53E3E' },
   { label: '待接跑腿', value: dash.pendingErrand, color: '#E53E3E' },
-  { label: '拼车', value: dash.carpoolCount, color: '#319795' },
+
   { label: '帖子', value: dash.forumCount, color: '#805AD5' },
   { label: '商品', value: dash.marketCount, color: '#D69E2E' },
   { label: '组队', value: dash.teamCount, color: '#2B6CB0' }
@@ -559,7 +559,7 @@ const rejectWd = (w) => {
 const contentType = ref('forum')
 const contentList = ref([])
 const loadContent = async () => {
-  var m = { forum: 'forumList', market: 'marketList', team: 'teamList', carpool: 'carpoolList' }
+  var m = { forum: 'forumList', market: 'marketList', team: 'teamList' }
   var res = await callCloud('admin', m[contentType.value])
   if (res.code === 0) contentList.value = res.data || []
 }
@@ -567,12 +567,12 @@ const getContentTitle = (c) => {
   if (contentType.value === 'forum') return c.content ? c.content.substring(0, 30) : '无内容'
   if (contentType.value === 'market') return c.title || c.name || '商品'
   if (contentType.value === 'team') return c.title || c.name || '组队'
-  if (contentType.value === 'carpool') return (c.from || '') + ' → ' + (c.to || '')
+
   return '未知'
 }
 const deleteContent = (c) => {
-  var am = { forum: 'deletePost', market: 'deleteGoods', team: 'deleteTeam', carpool: 'deleteCarpool' }
-  var im = { forum: 'postId', market: 'goodsId', team: 'activityId', carpool: 'carpoolId' }
+  var am = { forum: 'deletePost', market: 'deleteGoods', team: 'deleteTeam' }
+  var im = { forum: 'postId', market: 'goodsId', team: 'activityId' }
   uni.showModal({ title: '确认删除', content: '删除后不可恢复', success: async (r) => {
     if (r.confirm) { var res = await callCloud('admin', am[contentType.value], { [im[contentType.value]]: c._id }); if (res.code === 0) { uni.showToast({ title: '已删除', icon: 'success' }); loadContent() } }
   }})
@@ -654,11 +654,10 @@ const editTabItems = ref([
 const defaultServices = [
   { iconUrl: '/static/welfare/dazi.png', text: '校园搭子', desc: '找搭子一起', url: '/pages/team/index', gradient: 'linear-gradient(135deg, #63B3ED, #2B6CB0)' },
   { iconUrl: '/static/welfare/xihu.png', text: '萌马洗护', desc: '洗护服务', url: '/pages/wash/index', gradient: 'linear-gradient(135deg, #F6AD55, #DD6B20)' },
-  { iconUrl: '/static/welfare/pinche.png', text: '校园拼车', desc: '拼车省钱', url: '/pages/carpool/index', gradient: 'linear-gradient(135deg, #68D391, #38A169)' },
   { iconUrl: '/static/welfare/jineng.png', text: '技能出租', desc: '技能变现', url: '/pages/skill/index', gradient: 'linear-gradient(135deg, #F687B3, #D53F8C)' },
   { iconUrl: '/static/welfare/kaoyan.png', text: '考研服务', desc: '考研加油', url: '/pages/graduate/index', gradient: 'linear-gradient(135deg, #4FD1C5, #319795)' },
   { iconUrl: '/static/welfare/ershou.png', text: '二手市场', desc: '闲置换钱', url: '/pages/market/index', gradient: 'linear-gradient(135deg, #FC8181, #E53E3E)' },
-  { iconUrl: '/static/welfare/bashi.png', text: '小岛巴士', desc: '校园出行', url: '/pages/carpool/index', gradient: 'linear-gradient(135deg, #B794F4, #805AD5)' },
+  { iconUrl: '/static/welfare/bashi.png', text: '小岛巴士', desc: '校园出行', url: '', gradient: 'linear-gradient(135deg, #B794F4, #805AD5)' },
   { iconUrl: '/static/welfare/waimai.png', text: '福利外卖', desc: '优惠点餐', url: '/pages/food/index', gradient: 'linear-gradient(135deg, #FBD38D, #DD6B20)' }
 ]
 const loadIconConfig = async () => {
