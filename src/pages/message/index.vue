@@ -64,12 +64,12 @@
         <view class="popup-content" v-if="applyMsg">
           <view class="apply-header">
             <text class="apply-icon">👤</text>
-            <text class="apply-title">有人应聘了您的兼职</text>
+            <text class="apply-title">{{ applyMsg.type === 'tutor_contact' ? '有人联系了您的家教信息' : '有人应聘了您的家教需求' }}</text>
           </view>
           <view class="apply-info">
             <view class="info-row">
-              <text class="info-label">兼职名称：</text>
-              <text class="info-val">{{ applyMsg.content.split('应聘了「')[1]?.replace('」', '') || '未知兼职' }}</text>
+              <text class="info-label">{{ applyMsg.type === 'tutor_contact' ? '联系事由：' : '需求名称：' }}</text>
+              <text class="info-val">{{ applyMsg.type === 'tutor_contact' ? '家教服务咨询' : (applyMsg.content.split('应聘了「')[1]?.replace('」', '') || '未知需求') }}</text>
             </view>
             <view class="info-row">
               <text class="info-label">应聘者姓名：</text>
@@ -188,7 +188,7 @@ var onMsgClick = async (item) => {
     item.read = true
   }
 
-  if (item.type === 'tutor_apply') {
+  if (item.type === 'tutor_apply' || item.type === 'tutor_contact') {
     applyMsg.value = item
     showApplyDetail.value = true
     return
