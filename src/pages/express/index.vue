@@ -73,7 +73,7 @@
             <text class="card-time">{{ order.time }}</text>
             <view class="price-area">
               <text class="card-price">¥{{ (order.price || 0) + (order.tip || 0) }}</text>
-              <text v-if="order.tip > 0" class="card-tip">+{{ order.tip }}小费</text>
+              <text v-if="order.tip > 0" class="card-tip">+{{ order.tip }}加急费</text>
             </view>
           </view>
         </view>
@@ -200,7 +200,7 @@ var loadOrders = async function() {
       list.push(r)
     }
   }
-  // 排序：待接单 > 配送中/进行中 > 已接单 > 已完成 > 已取消，同状态按小费降序
+  // 排序：待接单 > 配送中/进行中 > 已接单 > 已完成 > 已取消，同状态按加急费降序
   // 快递：0=待接单, 1=已接单, 2=配送中, 3=已完成, 4=已取消
   // 跑腿：0=待接单, 1=进行中, 2=已完成, 3=已取消
   var expressPriority = { 0: 0, 2: 1, 1: 2, 3: 3, 4: 4 }

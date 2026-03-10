@@ -113,7 +113,7 @@ router.post('/', auth, async (req, res) => {
     if (title.length > 50) return res.json({ code: -1, msg: '标题过长，最多50字' })
     if (desc.length > 500) return res.json({ code: -1, msg: '描述过长，最多500字' })
     if (price !== undefined && (isNaN(price) || price <= 0 || price > 999)) return res.json({ code: -1, msg: '价格不合法' })
-    if (tip !== undefined && (isNaN(tip) || tip < 0 || tip > 100)) return res.json({ code: -1, msg: '小费金额不合法' })
+    if (tip !== undefined && (isNaN(tip) || tip < 0 || tip > 100)) return res.json({ code: -1, msg: '加急费金额不合法' })
     if (phone && !/^1[3-9]\d{9}$/.test(phone)) return res.json({ code: -1, msg: '手机号格式不正确' })
     const user = await User.findOne({ openid: req.user.openid })
     const userName = user ? user.name || '匿名' : '匿名'

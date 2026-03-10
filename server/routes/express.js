@@ -118,7 +118,7 @@ router.post('/', auth, async (req, res) => {
     if (!building || !building.trim()) return res.json({ code: -1, msg: '请填写楼栋号' })
     if (!room || !room.trim()) return res.json({ code: -1, msg: '请填写房间号' })
     if (price !== undefined && (isNaN(price) || price <= 0 || price > 999)) return res.json({ code: -1, msg: '价格不合法' })
-    if (tip !== undefined && (isNaN(tip) || tip < 0 || tip > 100)) return res.json({ code: -1, msg: '小费金额不合法' })
+    if (tip !== undefined && (isNaN(tip) || tip < 0 || tip > 100)) return res.json({ code: -1, msg: '加急费金额不合法' })
     const sizeMap = { 0: { text: '小件', class: 'small' }, 1: { text: '大件', class: 'large' }, 2: { text: '超大件', class: 'xlarge' } }
     const size = sizeMap[sizeType] || sizeMap[0]
 

@@ -79,7 +79,7 @@
         <text class="info-value price">¥{{ order.price }}</text>
       </view>
       <view class="info-row" v-if="order.tip > 0">
-        <text class="info-label">小费</text>
+        <text class="info-label">加急费</text>
         <text class="info-value tip">+¥{{ order.tip }}</text>
       </view>
     </view>

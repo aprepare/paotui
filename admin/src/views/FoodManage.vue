@@ -117,7 +117,19 @@
     <el-dialog v-model="shopFormVisible" :title="shopFormId ? '编辑商家' : '添加商家'" width="600px">
       <el-form :model="shopForm" label-width="80px">
         <el-form-item label="名称"><el-input v-model="shopForm.name" /></el-form-item>
-        <el-form-item label="Logo"><el-input v-model="shopForm.logo" placeholder="图片URL" /></el-form-item>
+        <el-form-item label="Logo">
+          <div style="width:100%">
+            <div style="display:flex;gap:8px;align-items:center">
+              <el-upload :show-file-list="false" :auto-upload="false" accept="image/*" @change="f => uploadImg(f, url => shopForm.logo = url)">
+                <el-button size="small" type="primary">上传图片</el-button>
+              </el-upload>
+              <el-input v-model="shopForm.logo" placeholder="图片URL（或点击上传）" />
+            </div>
+            <div v-if="shopForm.logo" style="margin-top:8px">
+              <el-image :src="shopForm.logo" style="width:80px;height:80px" fit="cover" />
+            </div>
+          </div>
+        </el-form-item>
         <el-form-item label="分类"><el-input v-model="shopForm.category" /></el-form-item>
         <el-form-item label="电话"><el-input v-model="shopForm.phone" /></el-form-item>
         <el-form-item label="地址"><el-input v-model="shopForm.address" /></el-form-item>
@@ -147,7 +159,19 @@
           </el-select>
         </el-form-item>
         <el-form-item label="名称"><el-input v-model="itemForm.name" /></el-form-item>
-        <el-form-item label="图片"><el-input v-model="itemForm.image" placeholder="图片URL" /></el-form-item>
+        <el-form-item label="图片">
+          <div style="width:100%">
+            <div style="display:flex;gap:8px;align-items:center">
+              <el-upload :show-file-list="false" :auto-upload="false" accept="image/*" @change="f => uploadImg(f, url => itemForm.image = url)">
+                <el-button size="small" type="primary">上传图片</el-button>
+              </el-upload>
+              <el-input v-model="itemForm.image" placeholder="图片URL（或点击上传）" />
+            </div>
+            <div v-if="itemForm.image" style="margin-top:8px">
+              <el-image :src="itemForm.image" style="width:120px;height:80px" fit="cover" />
+            </div>
+          </div>
+        </el-form-item>
         <el-form-item label="价格"><el-input-number v-model="itemForm.price" :min="0" :precision="2" /></el-form-item>
         <el-form-item label="分类"><el-input v-model="itemForm.category" /></el-form-item>
         <el-form-item label="描述"><el-input v-model="itemForm.desc" type="textarea" /></el-form-item>
@@ -332,6 +356,26 @@ async function saveOrderStatus() {
   ElMessage.success('已更新')
   orderEditVisible.value = false
   loadOrders()
+}
+
+async function uploadImg(uploadFile, callback) {
+  const file = uploadFile.raw || uploadFile
+  if (!file) return
+  const formData = new FormData()
+  formData.append('file', file)
+  try {
+    const { data } = await api.post('/admin/upload?folder=food', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+    if (data.code === 0 && data.data && data.data.url) {
+      callback(data.data.url)
+      ElMessage.success('图片上传成功')
+    } else {
+      ElMessage.error(data.msg || '上传失败')
+    }
+  } catch (e) {
+    ElMessage.error('上传失败')
+  }
 }
 
 onMounted(async () => {

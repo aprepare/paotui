@@ -98,7 +98,7 @@
 
     <!-- 报酬设置 -->
     <view class="form-section">
-      <text class="section-title">💰 配送费 + 小费</text>
+      <text class="section-title">💰 配送费 + 加急费</text>
       <view class="price-display">
         <view class="base-price">
           <text class="price-label">基础配送费</text>
@@ -106,7 +106,7 @@
         </view>
       </view>
       <view class="tip-section">
-        <text class="tip-label">加小费（可选，吸引骑手更快接单）</text>
+        <text class="tip-label">加急费（可选，吸引骑手更快接单）</text>
         <view class="tip-options">
           <view class="tip-item" :class="{active: form.tip === 0 && !customTip}" @click="selectTip(0)">
             <text>不加</text>
@@ -120,7 +120,7 @@
         </view>
         <view v-if="customTip" class="custom-tip-input">
           <text>+¥</text>
-          <input type="digit" placeholder="输入小费金额" v-model.number="form.tip" />
+          <input type="digit" placeholder="输入加急费金额" v-model.number="form.tip" />
         </view>
       </view>
       <view class="total-price">
@@ -347,7 +347,7 @@ const submit = async () => {
   // Phone format validation (Req 3.2)
   if (!/^1[3-9]\d{9}$/.test(form.phone)) { uni.showToast({ title: '手机号格式不正确', icon: 'none' }); return }
   // Tip range validation (Req 5.2)
-  if (customTip.value && (form.tip < 0 || form.tip > 99)) { uni.showToast({ title: '小费金额需在0-99元之间', icon: 'none' }); return }
+  if (customTip.value && (form.tip < 0 || form.tip > 99)) { uni.showToast({ title: '加急费金额需在0-99元之间', icon: 'none' }); return }
   // 验证位置坐标
   if (!destLocation.lat || !destLocation.lng) {
     uni.showModal({

@@ -57,7 +57,7 @@
         <view class="order-end">
           <text class="order-price">¥{{ order.totalPrice }}</text>
           <view v-if="order.tip > 0" class="order-tip-row">
-            <text class="order-tip-label">含小费</text>
+            <text class="order-tip-label">含加急费</text>
             <text class="order-tip-num">+{{ order.tip }}</text>
           </view>
           <text class="order-state" :style="{color: order.statusColor}">{{ order.statusText }}</text>

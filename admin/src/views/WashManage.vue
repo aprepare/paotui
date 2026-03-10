@@ -78,7 +78,19 @@
     <el-dialog v-model="prodFormVisible" :title="prodFormId ? '编辑商品' : '添加商品'" width="600px">
       <el-form :model="prodForm" label-width="90px">
         <el-form-item label="名称"><el-input v-model="prodForm.name" /></el-form-item>
-        <el-form-item label="图片"><el-input v-model="prodForm.image" placeholder="图片URL" /></el-form-item>
+        <el-form-item label="图片">
+          <div style="width:100%">
+            <div style="display:flex;gap:8px;align-items:center">
+              <el-upload :show-file-list="false" :auto-upload="false" accept="image/*" @change="f => uploadImg(f, url => prodForm.image = url)">
+                <el-button size="small" type="primary">上传图片</el-button>
+              </el-upload>
+              <el-input v-model="prodForm.image" placeholder="图片URL（或点击上传）" />
+            </div>
+            <div v-if="prodForm.image" style="margin-top:8px">
+              <el-image :src="prodForm.image" style="width:120px;height:80px" fit="cover" />
+            </div>
+          </div>
+        </el-form-item>
         <el-form-item label="描述"><el-input v-model="prodForm.desc" type="textarea" /></el-form-item>
         <el-form-item label="原价"><el-input-number v-model="prodForm.originalPrice" :min="0" :precision="2" /></el-form-item>
         <el-form-item label="拼团价"><el-input-number v-model="prodForm.groupPrice" :min="0" :precision="2" /></el-form-item>
@@ -200,6 +212,26 @@ async function saveOrderStatus() {
   ElMessage.success('已更新')
   orderEditVisible.value = false
   loadOrders()
+}
+
+async function uploadImg(uploadFile, callback) {
+  const file = uploadFile.raw || uploadFile
+  if (!file) return
+  const formData = new FormData()
+  formData.append('file', file)
+  try {
+    const { data } = await api.post('/admin/upload?folder=wash', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+    if (data.code === 0 && data.data && data.data.url) {
+      callback(data.data.url)
+      ElMessage.success('图片上传成功')
+    } else {
+      ElMessage.error(data.msg || '上传失败')
+    }
+  } catch (e) {
+    ElMessage.error('上传失败')
+  }
 }
 
 onMounted(loadProducts)
