@@ -113,7 +113,7 @@
                 <el-form-item label="Emoji"><el-input v-model="banner.emoji" placeholder="如 📦" /></el-form-item>
                 <el-form-item label="标题"><el-input v-model="banner.title" /></el-form-item>
                 <el-form-item label="描述"><el-input v-model="banner.desc" /></el-form-item>
-                <el-form-item label="背景色"><el-input v-model="banner.bg" placeholder="linear-gradient(135deg, #4299E1, #2B6CB0)" /></el-form-item>
+                <el-form-item label="背景色"><GradientPicker :value="banner.bg" @update="v => banner.bg = v" /></el-form-item>
               </el-form>
             </el-card>
           </div>
@@ -200,7 +200,7 @@
                 </el-form-item>
                 <el-form-item label="标题"><el-input v-model="banner.title" /></el-form-item>
                 <el-form-item label="描述"><el-input v-model="banner.desc" /></el-form-item>
-                <el-form-item label="背景色"><el-input v-model="banner.bg" placeholder="linear-gradient(...)" /></el-form-item>
+                <el-form-item label="背景色"><GradientPicker :value="banner.bg" @update="v => banner.bg = v" /></el-form-item>
               </el-form>
             </el-card>
           </div>
@@ -250,7 +250,7 @@
                 <el-form-item label="Emoji"><el-input v-model="cat.icon" placeholder="如 📚" /></el-form-item>
                 <el-form-item label="标题"><el-input v-model="cat.title" placeholder="如 家教信息" /></el-form-item>
                 <el-form-item label="描述"><el-input v-model="cat.desc" placeholder="如 一对一辅导" /></el-form-item>
-                <el-form-item label="背景色"><el-input v-model="cat.gradient" placeholder="linear-gradient(135deg, #667eea, #764ba2)" /></el-form-item>
+                <el-form-item label="背景色"><GradientPicker :value="cat.gradient" @update="v => cat.gradient = v" /></el-form-item>
                 <el-form-item label="跳转"><el-input v-model="cat.link" placeholder="/pages/job-sub/tutor" /></el-form-item>
               </el-form>
             </el-card>
@@ -276,7 +276,7 @@
               <el-input v-model="jobSeasonBanner.desc" placeholder="如 精选假期好岗位，安全有保障" style="width:400px" />
             </el-form-item>
             <el-form-item label="背景色">
-              <el-input v-model="jobSeasonBanner.bg" placeholder="linear-gradient(135deg, #FF9800, #F57C00)" style="width:400px" />
+              <GradientPicker :value="jobSeasonBanner.bg" @update="v => jobSeasonBanner.bg = v" />
             </el-form-item>
             <el-form-item label="跳转">
               <el-input v-model="jobSeasonBanner.link" placeholder="/pages/job-sub/seasonal" style="width:400px" />
@@ -414,6 +414,29 @@
           </div>
         </el-card>
       </el-tab-pane>
+
+      <!-- ===== 修改密码 ===== -->
+      <el-tab-pane label="修改密码" name="password">
+        <el-card style="max-width:500px">
+          <template #header>
+            <span style="font-weight:bold;font-size:16px">🔒 修改后台密码</span>
+          </template>
+          <el-form label-width="100px" size="default">
+            <el-form-item label="旧密码">
+              <el-input v-model="pwdForm.oldPassword" type="password" show-password placeholder="请输入当前密码" />
+            </el-form-item>
+            <el-form-item label="新密码">
+              <el-input v-model="pwdForm.newPassword" type="password" show-password placeholder="至少6位" />
+            </el-form-item>
+            <el-form-item label="确认新密码">
+              <el-input v-model="pwdForm.confirmPassword" type="password" show-password placeholder="再次输入新密码" />
+            </el-form-item>
+            <el-form-item>
+              <el-button type="primary" @click="changePassword">保存密码</el-button>
+            </el-form-item>
+          </el-form>
+        </el-card>
+      </el-tab-pane>
     </el-tabs>
   </div>
 </template>
@@ -459,6 +482,54 @@ const ImgPreview = (props) => {
   }, '无图标')
 }
 ImgPreview.props = ['url', 'emoji', 'wide']
+
+// 渐变色预设选择器
+const gradientPresets = [
+  { name: '天空蓝', value: 'linear-gradient(135deg, #4299E1, #2B6CB0)' },
+  { name: '活力橙', value: 'linear-gradient(135deg, #F6AD55, #DD6B20)' },
+  { name: '翠绿', value: 'linear-gradient(135deg, #48BB78, #38A169)' },
+  { name: '梦幻紫', value: 'linear-gradient(135deg, #667eea, #764ba2)' },
+  { name: '珊瑚红', value: 'linear-gradient(135deg, #FC5C7D, #E74C3C)' },
+  { name: '日落橘', value: 'linear-gradient(135deg, #FF9800, #F57C00)' },
+  { name: '玫瑰粉', value: 'linear-gradient(135deg, #f093fb, #f5576c)' },
+  { name: '薄荷蓝', value: 'linear-gradient(135deg, #4facfe, #00f2fe)' },
+  { name: '深空蓝', value: 'linear-gradient(135deg, #1a2980, #26d0ce)' },
+  { name: '金色', value: 'linear-gradient(135deg, #f7971e, #ffd200)' },
+  { name: '森林绿', value: 'linear-gradient(135deg, #134E5E, #71B280)' },
+  { name: '暮色紫', value: 'linear-gradient(135deg, #8E2DE2, #4A00E0)' }
+]
+
+const GradientPicker = (props, { emit }) => {
+  const swatches = gradientPresets.map((preset, i) => {
+    const isActive = props.value === preset.value
+    return h('div', {
+      key: i,
+      title: preset.name,
+      style: {
+        width: '36px', height: '36px', borderRadius: '8px', cursor: 'pointer',
+        background: preset.value, border: isActive ? '3px solid #409eff' : '2px solid #e0e0e0',
+        boxShadow: isActive ? '0 0 0 2px rgba(64,158,255,0.3)' : 'none',
+        transition: 'all 0.2s'
+      },
+      onClick: () => emit('update', preset.value)
+    })
+  })
+  // 当前选中预览
+  const preview = props.value ? h('div', {
+    style: {
+      width: '100%', height: '28px', borderRadius: '6px', marginTop: '8px',
+      background: props.value, display: 'flex', alignItems: 'center', justifyContent: 'center'
+    }
+  }, h('span', { style: { color: '#fff', fontSize: '11px', textShadow: '0 1px 2px rgba(0,0,0,0.3)' } },
+    (gradientPresets.find(p => p.value === props.value) || {}).name || '自定义'
+  )) : null
+  return h('div', { style: { width: '100%' } }, [
+    h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: '6px' } }, swatches),
+    preview
+  ])
+}
+GradientPicker.props = ['value']
+GradientPicker.emits = ['update']
 
 const activeTab = ref('home')
 const loading = ref(false)
@@ -607,6 +678,28 @@ async function loadWelfare() {
     ElMessage.error('加载福利页配置失败')
   }
   loading.value = false
+}
+
+const pwdForm = ref({ oldPassword: '', newPassword: '', confirmPassword: '' })
+
+async function changePassword() {
+  if (!pwdForm.value.oldPassword) return ElMessage.warning('请输入旧密码')
+  if (!pwdForm.value.newPassword || pwdForm.value.newPassword.length < 6) return ElMessage.warning('新密码至少6位')
+  if (pwdForm.value.newPassword !== pwdForm.value.confirmPassword) return ElMessage.warning('两次输入的新密码不一致')
+  try {
+    const { data } = await api.put('/admin/change-password', {
+      oldPassword: pwdForm.value.oldPassword,
+      newPassword: pwdForm.value.newPassword
+    })
+    if (data.code === 0) {
+      ElMessage.success('密码修改成功')
+      pwdForm.value = { oldPassword: '', newPassword: '', confirmPassword: '' }
+    } else {
+      ElMessage.error(data.msg || '修改失败')
+    }
+  } catch (e) {
+    ElMessage.error('修改失败')
+  }
 }
 
 function onTabChange(tab) {

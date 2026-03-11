@@ -1636,4 +1636,128 @@ router.post('/save-banned-words', auth, async (req, res) => {
   }
 })
 
+// ===== 骑手审核 =====
+router.get('/rider-applications', adminAuth, async (req, res) => {
+  try {
+    const { status = 'pending' } = req.query
+    const query = {}
+    if (status === 'pending') query.riderStatus = 'pending'
+    else if (status === 'approved') query.riderStatus = 'approved'
+    else if (status === 'rejected') query.riderStatus = 'rejected'
+    else query.riderStatus = { $in: ['pending', 'approved', 'rejected'] }
+    const data = await User.find(query).sort({ riderRegTime: -1 }).limit(100)
+    res.json({ code: 0, data })
+  } catch (err) {
+    res.status(500).json({ code: -1, msg: '服务器错误' })
+  }
+})
+
+router.put('/rider-applications/:id/approve', adminAuth, async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id)
+    if (!user) return res.json({ code: -1, msg: '用户不存在' })
+    await User.updateOne({ _id: req.params.id }, {
+      $set: { isRider: true, riderStatus: 'approved' }
+    })
+    // 通知用户
+    await Message.create({
+      toOpenid: user.openid, fromOpenid: 'system', fromName: '系统管理员',
+      type: 'system', title: '骑手注册审核通过',
+      content: '恭喜！您的骑手注册申请已通过审核，现在可以开始接单了。',
+      targetId: '', targetType: 'system', read: false, createTime: new Date()
+    })
+    res.json({ code: 0 })
+  } catch (err) {
+    res.status(500).json({ code: -1, msg: '服务器错误' })
+  }
+})
+
+router.put('/rider-applications/:id/reject', adminAuth, async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id)
+    if (!user) return res.json({ code: -1, msg: '用户不存在' })
+    await User.updateOne({ _id: req.params.id }, {
+      $set: { riderStatus: 'rejected' }
+    })
+    await Message.create({
+      toOpenid: user.openid, fromOpenid: 'system', fromName: '系统管理员',
+      type: 'system', title: '骑手注册审核未通过',
+      content: '您的骑手注册申请未通过审核，请确认信息后重新申请。' + (req.body.reason ? '原因：' + req.body.reason : ''),
+      targetId: '', targetType: 'system', read: false, createTime: new Date()
+    })
+    res.json({ code: 0 })
+  } catch (err) {
+    res.status(500).json({ code: -1, msg: '服务器错误' })
+  }
+})
+
+// ===== 内容审核 =====
+router.get('/pending-reviews', adminAuth, async (req, res) => {
+  try {
+    const [express, errand, market, forum, skill] = await Promise.all([
+      ExpressOrder.find({ reviewStatus: 'pending' }).sort({ createTime: -1 }).limit(50),
+      ErrandTask.find({ reviewStatus: 'pending' }).sort({ createTime: -1 }).limit(50),
+      MarketGoods.find({ reviewStatus: 'pending' }).sort({ createTime: -1 }).limit(50),
+      ForumPost.find({ reviewStatus: 'pending' }).sort({ createTime: -1 }).limit(50),
+      Skill.find({ reviewStatus: 'pending' }).sort({ createTime: -1 }).limit(50)
+    ])
+    res.json({
+      code: 0,
+      data: {
+        express: express.map(d => ({ ...d.toObject(), _type: 'express' })),
+        errand: errand.map(d => ({ ...d.toObject(), _type: 'errand' })),
+        market: market.map(d => ({ ...d.toObject(), _type: 'market' })),
+        forum: forum.map(d => ({ ...d.toObject(), _type: 'forum' })),
+        skill: skill.map(d => ({ ...d.toObject(), _type: 'skill' }))
+      }
+    })
+  } catch (err) {
+    res.status(500).json({ code: -1, msg: '服务器错误' })
+  }
+})
+
+router.put('/review/:type/:id/approve', adminAuth, async (req, res) => {
+  try {
+    const modelMap = { express: ExpressOrder, errand: ErrandTask, market: MarketGoods, forum: ForumPost, skill: Skill }
+    const Model = modelMap[req.params.type]
+    if (!Model) return res.json({ code: -1, msg: '未知类型' })
+    await Model.updateOne({ _id: req.params.id }, { $set: { reviewStatus: 'approved' } })
+    res.json({ code: 0 })
+  } catch (err) {
+    res.status(500).json({ code: -1, msg: '服务器错误' })
+  }
+})
+
+router.put('/review/:type/:id/reject', adminAuth, async (req, res) => {
+  try {
+    const modelMap = { express: ExpressOrder, errand: ErrandTask, market: MarketGoods, forum: ForumPost, skill: Skill }
+    const Model = modelMap[req.params.type]
+    if (!Model) return res.json({ code: -1, msg: '未知类型' })
+    await Model.updateOne({ _id: req.params.id }, { $set: { reviewStatus: 'rejected' } })
+    res.json({ code: 0 })
+  } catch (err) {
+    res.status(500).json({ code: -1, msg: '服务器错误' })
+  }
+})
+
+// ===== 修改后台密码 =====
+router.put('/change-password', adminAuth, async (req, res) => {
+  try {
+    const { oldPassword, newPassword } = req.body
+    if (!oldPassword || !newPassword) return res.json({ code: -1, msg: '请输入旧密码和新密码' })
+    if (newPassword.length < 6) return res.json({ code: -1, msg: '新密码长度至少6位' })
+    const admin = await AdminUser.findById(req.admin.adminId)
+    if (!admin) return res.json({ code: -1, msg: '管理员不存在' })
+    const valid = await bcrypt.compare(oldPassword, admin.passwordHash)
+    if (!valid) return res.json({ code: -1, msg: '旧密码错误' })
+    const salt = await bcrypt.genSalt(10)
+    const passwordHash = await bcrypt.hash(newPassword, salt)
+    await AdminUser.updateOne({ _id: req.admin.adminId }, { $set: { passwordHash } })
+    res.json({ code: 0, msg: '密码修改成功' })
+  } catch (err) {
+    res.status(500).json({ code: -1, msg: '服务器错误' })
+  }
+})
+
 module.exports = router
+

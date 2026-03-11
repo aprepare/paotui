@@ -23,7 +23,9 @@ const routes = [
       { path: 'jobs', name: 'Jobs', component: () => import('../views/Jobs.vue') },
       { path: 'messages', name: 'Messages', component: () => import('../views/Messages.vue') },
       { path: 'site-config', name: 'SiteConfig', component: () => import('../views/SiteConfig.vue') },
-      { path: 'stats', name: 'Stats', component: () => import('../views/Stats.vue') }
+      { path: 'stats', name: 'Stats', component: () => import('../views/Stats.vue') },
+      { path: 'rider-review', name: 'RiderReview', component: () => import('../views/RiderReview.vue') },
+      { path: 'content-review', name: 'ContentReview', component: () => import('../views/ContentReview.vue') }
     ]
   }
 ]

@@ -98,18 +98,26 @@ router.post('/register-rider', auth, async (req, res) => {
     }
     if (!/^1[3-9]\d{9}$/.test(phone)) return res.json({ code: -1, msg: '手机号格式不正确' })
     if (realName.length > 20) return res.json({ code: -1, msg: '姓名过长' })
-    if (studentId.length > 30) return res.json({ code: -1, msg: '学号过长' })
+    if (!/^\d{12}$/.test(studentId)) return res.json({ code: -1, msg: '学号必须为12位数字' })
     const riderId = 'R-' + new Date().toISOString().slice(0, 10).replace(/-/g, '') +
       '-' + String(Math.floor(Math.random() * 100)).padStart(2, '0')
+    // 检查是否已提交过申请
+    const existingUser = await User.findOne({ openid: req.user.openid })
+    if (existingUser && existingUser.riderStatus === 'pending') {
+      return res.json({ code: -1, msg: '您已提交注册申请，请等待审核' })
+    }
+    if (existingUser && existingUser.isRider) {
+      return res.json({ code: -1, msg: '您已是骑手，无需重复注册' })
+    }
     await User.updateOne({ openid: req.user.openid }, {
       $set: {
-        isRider: true,
+        riderStatus: 'pending',
         riderId,
         riderInfo: { realName, phone, studentId, building },
         riderRegTime: new Date()
       }
     })
-    res.json({ code: 0, riderId })
+    res.json({ code: 0, riderId, msg: '注册申请已提交，请等待管理员审核' })
   } catch (err) {
     res.status(500).json({ code: -1, msg: '服务器错误' })
   }

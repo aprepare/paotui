@@ -58,6 +58,15 @@
           <el-menu-item index="/withdrawals">提现审批</el-menu-item>
         </el-sub-menu>
 
+        <el-sub-menu index="review-group">
+          <template #title>
+            <el-icon><CircleCheck /></el-icon>
+            <span>审核管理</span>
+          </template>
+          <el-menu-item index="/rider-review">骑手审核</el-menu-item>
+          <el-menu-item index="/content-review">内容审核</el-menu-item>
+        </el-sub-menu>
+
         <el-sub-menu index="system-group">
           <template #title>
             <el-icon><Setting /></el-icon>
@@ -92,7 +101,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
-import { DataAnalysis, Box, Document, Shop, Wallet, Setting, Fold, Expand } from '@element-plus/icons-vue'
+import { DataAnalysis, Box, Document, Shop, Wallet, Setting, Fold, Expand, CircleCheck } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const auth = useAuthStore()
