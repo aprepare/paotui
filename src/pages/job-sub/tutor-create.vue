@@ -292,8 +292,7 @@ const onSubmit = async () => {
     })
     uni.hideLoading()
     if (res.code === 0) {
-      uni.showToast({ title: '发布成功', icon: 'success' })
-      setTimeout(() => { uni.navigateBack() }, 1000)
+      uni.showModal({ title: '提交成功', content: '您的家教信息已提交，正在等待管理员审核，审核通过后将自动展示。', showCancel: false, success: () => { uni.navigateBack() } })
     } else {
       uni.showToast({ title: res.msg || '发布失败', icon: 'none' })
     }
@@ -321,8 +320,7 @@ const onSubmit = async () => {
     })
     uni.hideLoading()
     if (res2.code === 0) {
-      uni.showToast({ title: '发布成功', icon: 'success' })
-      setTimeout(() => { uni.navigateBack() }, 1000)
+      uni.showModal({ title: '提交成功', content: '您的需求已提交，正在等待管理员审核，审核通过后将自动展示。', showCancel: false, success: () => { uni.navigateBack() } })
     } else {
       uni.showToast({ title: res2.msg || '发布失败', icon: 'none' })
     }

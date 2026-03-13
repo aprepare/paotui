@@ -10,7 +10,7 @@ const Message = require('../models/Message')
 router.get('/list-tutors', async (req, res) => {
     try {
         const { subject } = req.query
-        const where = { type: 'tutor', status: 1 }
+        const where = { type: 'tutor', status: 1, reviewStatus: { $in: ['approved', undefined] } }
         if (subject && subject !== '全部') where.subject = subject
         const data = await TutorPost.find(where).sort({ createTime: -1 }).limit(50)
         res.json({ code: 0, data })
@@ -23,7 +23,7 @@ router.get('/list-tutors', async (req, res) => {
 router.get('/list-demands', async (req, res) => {
     try {
         const { subject } = req.query
-        const where = { type: 'demand', status: 1 }
+        const where = { type: 'demand', status: 1, reviewStatus: { $in: ['approved', undefined] } }
         if (subject && subject !== '全部') where.subject = subject
         const docs = await TutorPost.find(where).sort({ createTime: -1 }).limit(50)
         // 隐藏家长信息
@@ -59,6 +59,7 @@ router.post('/create-tutor', auth, async (req, res) => {
             avatar, verified: false,
             studentCard: studentCard || '',
             phone: phone || '', wechat: wechat || '', qq: qq || '',
+            reviewStatus: 'pending',
             createTime: new Date()
         })
         res.json({ code: 0 })
@@ -84,6 +85,7 @@ router.post('/create-demand', auth, async (req, res) => {
             parentName: uName,
             idCard: idCard || '',
             phone: phone || '', wechat: wechat || '', qq: qq || '',
+            reviewStatus: 'pending',
             createTime: new Date()
         })
         res.json({ code: 0 })
@@ -96,9 +98,14 @@ router.post('/create-demand', auth, async (req, res) => {
 router.post('/:id/apply', auth, async (req, res) => {
     try {
         const postId = req.params.id
+        const { phone: reqPhone } = req.body
         const user = await User.findOne({ openid: req.user.openid })
         const applyName = (user && user.name) || '匿名'
-        const applyPhone = (user && user.phone) || ''
+        const applyPhone = reqPhone || (user && user.phone) || ''
+        // 同步更新用户手机号
+        if (applyPhone && user && !user.phone) {
+            await User.updateOne({ openid: req.user.openid }, { $set: { phone: applyPhone } })
+        }
         const post = await TutorPost.findById(postId)
         if (!post) return res.json({ code: -1, msg: '信息不存在' })
         let contactInfo = applyName
@@ -121,9 +128,14 @@ router.post('/:id/apply', auth, async (req, res) => {
 router.post('/:id/contact', auth, async (req, res) => {
     try {
         const postId = req.params.id
+        const { phone: reqPhone } = req.body
         const user = await User.findOne({ openid: req.user.openid })
         const contactName = (user && user.name) || '匿名'
-        const contactPhone = (user && user.phone) || ''
+        const contactPhone = reqPhone || (user && user.phone) || ''
+        // 同步更新用户手机号
+        if (contactPhone && user && !user.phone) {
+            await User.updateOne({ openid: req.user.openid }, { $set: { phone: contactPhone } })
+        }
         const post = await TutorPost.findById(postId)
         if (!post) return res.json({ code: -1, msg: '信息不存在' })
         let contactInfo = contactName

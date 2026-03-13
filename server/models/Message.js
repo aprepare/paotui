@@ -4,6 +4,7 @@ const messageSchema = new mongoose.Schema({
   toOpenid: String,
   fromOpenid: { type: String, default: '' },
   fromName: { type: String, default: '' },
+  fromPhone: { type: String, default: '' },
   type: String,
   title: { type: String, default: '' },
   content: { type: String, default: '' },

@@ -30,6 +30,7 @@ const FoodShop = require('../models/FoodShop')
 const FoodItem = require('../models/FoodItem')
 const FoodOrder = require('../models/FoodOrder')
 const JobPost = require('../models/JobPost')
+const TutorPost = require('../models/TutorPost')
 
 const DEFAULT_ADMIN_PHONES = []
 
@@ -1694,12 +1695,13 @@ router.put('/rider-applications/:id/reject', adminAuth, async (req, res) => {
 // ===== 内容审核 =====
 router.get('/pending-reviews', adminAuth, async (req, res) => {
   try {
-    const [express, errand, market, forum, skill] = await Promise.all([
+    const [express, errand, market, forum, skill, tutor] = await Promise.all([
       ExpressOrder.find({ reviewStatus: 'pending' }).sort({ createTime: -1 }).limit(50),
       ErrandTask.find({ reviewStatus: 'pending' }).sort({ createTime: -1 }).limit(50),
       MarketGoods.find({ reviewStatus: 'pending' }).sort({ createTime: -1 }).limit(50),
       ForumPost.find({ reviewStatus: 'pending' }).sort({ createTime: -1 }).limit(50),
-      Skill.find({ reviewStatus: 'pending' }).sort({ createTime: -1 }).limit(50)
+      Skill.find({ reviewStatus: 'pending' }).sort({ createTime: -1 }).limit(50),
+      TutorPost.find({ reviewStatus: 'pending' }).sort({ createTime: -1 }).limit(50)
     ])
     res.json({
       code: 0,
@@ -1708,7 +1710,8 @@ router.get('/pending-reviews', adminAuth, async (req, res) => {
         errand: errand.map(d => ({ ...d.toObject(), _type: 'errand' })),
         market: market.map(d => ({ ...d.toObject(), _type: 'market' })),
         forum: forum.map(d => ({ ...d.toObject(), _type: 'forum' })),
-        skill: skill.map(d => ({ ...d.toObject(), _type: 'skill' }))
+        skill: skill.map(d => ({ ...d.toObject(), _type: 'skill' })),
+        tutor: tutor.map(d => ({ ...d.toObject(), _type: 'tutor' }))
       }
     })
   } catch (err) {
@@ -1718,7 +1721,7 @@ router.get('/pending-reviews', adminAuth, async (req, res) => {
 
 router.put('/review/:type/:id/approve', adminAuth, async (req, res) => {
   try {
-    const modelMap = { express: ExpressOrder, errand: ErrandTask, market: MarketGoods, forum: ForumPost, skill: Skill }
+    const modelMap = { express: ExpressOrder, errand: ErrandTask, market: MarketGoods, forum: ForumPost, skill: Skill, tutor: TutorPost }
     const Model = modelMap[req.params.type]
     if (!Model) return res.json({ code: -1, msg: '未知类型' })
     await Model.updateOne({ _id: req.params.id }, { $set: { reviewStatus: 'approved' } })
@@ -1730,7 +1733,7 @@ router.put('/review/:type/:id/approve', adminAuth, async (req, res) => {
 
 router.put('/review/:type/:id/reject', adminAuth, async (req, res) => {
   try {
-    const modelMap = { express: ExpressOrder, errand: ErrandTask, market: MarketGoods, forum: ForumPost, skill: Skill }
+    const modelMap = { express: ExpressOrder, errand: ErrandTask, market: MarketGoods, forum: ForumPost, skill: Skill, tutor: TutorPost }
     const Model = modelMap[req.params.type]
     if (!Model) return res.json({ code: -1, msg: '未知类型' })
     await Model.updateOne({ _id: req.params.id }, { $set: { reviewStatus: 'rejected' } })

@@ -27,6 +27,16 @@
             <text class="item-desc" v-if="item.desc">{{ item.desc }}</text>
             <view class="item-bottom">
               <text class="item-price">¥{{ item.price.toFixed(1) }}</text>
+              <!-- 加减按钮 -->
+              <view class="qty-ctrl">
+                <view class="qty-btn minus" v-if="getQty(item._id) > 0" @click="changeQty(item, -1)">
+                  <text>−</text>
+                </view>
+                <text class="qty-num" v-if="getQty(item._id) > 0">{{ getQty(item._id) }}</text>
+                <view class="qty-btn plus" @click="changeQty(item, 1)">
+                  <text>+</text>
+                </view>
+              </view>
             </view>
           </view>
         </view>
@@ -34,6 +44,48 @@
           <text>暂无菜品</text>
         </view>
       </scroll-view>
+    </view>
+
+    <!-- 购物车弹出蒙层 -->
+    <view class="cart-popup-mask" v-if="showCartPopup" @click="showCartPopup = false"></view>
+
+    <!-- 购物车弹出层 -->
+    <view class="cart-popup" v-if="showCartPopup">
+      <view class="popup-header">
+        <text class="popup-title">已选商品</text>
+        <text class="popup-clear" @click="clearCart">清空</text>
+      </view>
+      <scroll-view :scroll-y="true" class="popup-list">
+        <view class="popup-item" v-for="ci in cartItems" :key="ci.item._id">
+          <text class="pi-name">{{ ci.item.name }}</text>
+          <view class="pi-right">
+            <text class="pi-price">¥{{ (ci.item.price * ci.qty).toFixed(1) }}</text>
+            <view class="qty-ctrl sm">
+              <view class="qty-btn minus" @click="changeQty(ci.item, -1)">
+                <text>−</text>
+              </view>
+              <text class="qty-num">{{ ci.qty }}</text>
+              <view class="qty-btn plus" @click="changeQty(ci.item, 1)">
+                <text>+</text>
+              </view>
+            </view>
+          </view>
+        </view>
+      </scroll-view>
+    </view>
+
+    <!-- 底部购物车栏 -->
+    <view class="cart-bar" v-if="totalCount > 0">
+      <view class="cart-left" @click="showCartPopup = !showCartPopup">
+        <text class="cart-icon">🛒</text>
+        <view class="cart-badge">
+          <text class="badge-num">{{ totalCount }}</text>
+        </view>
+        <text class="cart-total">¥{{ totalPrice.toFixed(1) }}</text>
+      </view>
+      <view class="cart-btn" :class="{disabled: !canOrder}" @click="goConfirm">
+        <text>{{ canOrder ? '去结算' : '¥' + shop.minOrder + '起送' }}</text>
+      </view>
     </view>
   </view>
 </template>
@@ -131,7 +183,7 @@ onLoad((opts) => {
 </script>
 
 <style scoped>
-.menu-page { background: #F0F2F5; min-height: 100vh; display: flex; flex-direction: column; }
+.menu-page { background: #F0F2F5; min-height: 100vh; display: flex; flex-direction: column; padding-bottom: 120rpx; }
 .shop-header { display: flex; align-items: center; background: #fff; padding: 24rpx; }
 .shop-logo { width: 90rpx; height: 90rpx; border-radius: 14rpx; flex-shrink: 0; }
 .shop-info { margin-left: 20rpx; }

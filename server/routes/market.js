@@ -10,7 +10,7 @@ const Message = require('../models/Message')
 router.get('/list', async (req, res) => {
   try {
     const { category, keyword, page = 1, pageSize = 10 } = req.query
-    const query = {}
+    const query = { status: { $ne: 'sold' } }
     if (category && category !== '全部') query.category = category
     query.reviewStatus = { $in: ['approved', undefined] }
     if (keyword) {
@@ -136,6 +136,20 @@ router.delete('/comment/:id', auth, async (req, res) => {
       return res.json({ code: 0 })
     }
     res.json({ code: -1, msg: '无权删除该留言' })
+  } catch (err) {
+    res.status(500).json({ code: -1, msg: '服务器错误' })
+  }
+})
+
+// PATCH /api/market/:id/status - 标记已售 / 重新上架
+router.patch('/:id/status', auth, async (req, res) => {
+  try {
+    const goods = await MarketGoods.findById(req.params.id)
+    if (!goods) return res.json({ code: -1, msg: '记录不存在' })
+    if (goods.openid !== req.user.openid) return res.json({ code: -1, msg: '仅发布者可操作' })
+    const newStatus = req.body.status || 'sold'
+    await MarketGoods.updateOne({ _id: req.params.id }, { $set: { status: newStatus } })
+    res.json({ code: 0 })
   } catch (err) {
     res.status(500).json({ code: -1, msg: '服务器错误' })
   }

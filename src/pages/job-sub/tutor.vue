@@ -573,11 +573,48 @@ const onConfirmPay = async () => {
   }
 }
 
+// 获取用户手机号，如果没有则弹窗要求输入
+const ensurePhone = () => {
+  return new Promise((resolve) => {
+    const userInfo = uni.getStorageSync('userInfo')
+    if (userInfo && userInfo.phone) {
+      resolve(userInfo.phone)
+      return
+    }
+    // 没有手机号，弹窗要求输入
+    uni.showModal({
+      title: '请填写联系电话',
+      content: '',
+      editable: true,
+      placeholderText: '请输入手机号，方便对方联系你',
+      success: (res) => {
+        if (res.confirm && res.content && res.content.trim()) {
+          const phone = res.content.trim()
+          // 保存到本地
+          if (userInfo) {
+            userInfo.phone = phone
+            uni.setStorageSync('userInfo', userInfo)
+          }
+          resolve(phone)
+        } else {
+          resolve('')
+        }
+      },
+      fail: () => resolve('')
+    })
+  })
+}
+
 // 实际执行联系家教（付费后调用）
 const doContactTutor = async (tutor) => {
+  const phone = await ensurePhone()
+  if (!phone) {
+    uni.showToast({ title: '请填写手机号以便对方联系你', icon: 'none' })
+    return
+  }
   if (tutor._id) {
     uni.showLoading({ title: '发送中...' })
-    await callCloud('tutor', 'contact', { postId: tutor._id })
+    await callCloud('tutor', 'contact', { postId: tutor._id, phone })
     uni.hideLoading()
   }
   uni.showToast({ title: '已发送联系请求', icon: 'success' })
@@ -585,9 +622,14 @@ const doContactTutor = async (tutor) => {
 
 // 实际执行应聘（付费后调用）
 const doApplyDemand = async (item) => {
+  const phone = await ensurePhone()
+  if (!phone) {
+    uni.showToast({ title: '请填写手机号以便对方联系你', icon: 'none' })
+    return
+  }
   if (item._id) {
     uni.showLoading({ title: '提交中...' })
-    await callCloud('tutor', 'apply', { postId: item._id })
+    await callCloud('tutor', 'apply', { postId: item._id, phone })
     uni.hideLoading()
   }
   uni.showToast({ title: '已提交应聘申请', icon: 'success' })

@@ -202,7 +202,8 @@ var onMsgClick = async (item) => {
     forum: '/pages/forum-sub/detail?id=',
     express: '/pages/express/detail?id=',
     errand: '/pages/errand/detail?id=',
-    tutor: '/pages/job-sub/tutor?id='
+    tutor: '/pages/job-sub/tutor?id=',
+    market: '/pages/market/detail?id='
   }
   var url = urlMap[targetType]
   if (url) {

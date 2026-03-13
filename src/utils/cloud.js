@@ -141,7 +141,8 @@ export function buildUrl(name, action, data = {}) {
       comment: { path: `/market/${id}/comment`, method: 'POST' },
       deleteComment: { path: `/market/comment/${id}`, method: 'DELETE' },
       myGoods: { path: '/market/my', method: 'GET' },
-      delete: { path: `/market/${id}`, method: 'DELETE' }
+      delete: { path: `/market/${id}`, method: 'DELETE' },
+      updateStatus: { path: `/market/${id}/status`, method: 'PATCH' }
     },
     forum: {
       list: { path: '/forum/list', method: 'GET' },

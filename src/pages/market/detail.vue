@@ -69,6 +69,11 @@
       </view>
     </view>
 
+    <!-- 已售提示 -->
+    <view class="sold-banner" v-if="goods.status === 'sold'">
+      <text class="sold-banner-text">🏷️ 该商品已售出</text>
+    </view>
+
     <!-- 底部操作栏 -->
     <view class="bottom-bar">
       <view class="bottom-left">
@@ -84,8 +89,44 @@
       <view class="contact-btn" @click="contactSeller">
         <text>联系卖家</text>
       </view>
-      <view class="buy-btn" @click="handleWant">
-        <text>我想要</text>
+      <!-- 卖家看到标记已售/重新上架 -->
+      <view class="sold-btn" v-if="isOwner && goods.status !== 'sold'" @click="markSold">
+        <text>标记已售</text>
+      </view>
+      <view class="relist-btn" v-else-if="isOwner && goods.status === 'sold'" @click="markActive">
+        <text>重新上架</text>
+      </view>
+      <!-- 买家看到我想要 -->
+      <view class="buy-btn" v-else :class="{disabled: goods.status === 'sold'}" @click="handleWant">
+        <text>{{ goods.status === 'sold' ? '已售出' : '我想要' }}</text>
+      </view>
+    </view>
+
+    <!-- 联系卖家弹窗 -->
+    <view class="contact-mask" v-if="showContact" @click="showContact = false">
+      <view class="contact-popup" @click.stop>
+        <view class="contact-popup-close" @click="showContact = false"><text>✕</text></view>
+        <text class="contact-popup-title">联系卖家</text>
+        <view class="contact-popup-info">
+          <view class="contact-popup-row">
+            <text class="contact-popup-label">👤 卖家</text>
+            <text class="contact-popup-val">{{ goods.seller.name || '匿名' }}</text>
+          </view>
+          <view class="contact-popup-row" v-if="goods.contact">
+            <text class="contact-popup-label">📱 微信号</text>
+            <text class="contact-popup-val wechat">{{ goods.contactPublic === 1 ? goods.contact : '已隐藏(点击下方按钮查看)' }}</text>
+          </view>
+          <view class="contact-popup-row" v-else>
+            <text class="contact-popup-label">📱 微信号</text>
+            <text class="contact-popup-val gray">卖家未留微信号，请通过留言联系</text>
+          </view>
+        </view>
+        <view class="contact-popup-btn" v-if="goods.contact" @click="copyContact">
+          <text>复制微信号</text>
+        </view>
+        <view class="contact-popup-btn gray-btn" v-else @click="showContact = false; openCommentInput()">
+          <text>去留言</text>
+        </view>
       </view>
     </view>
 
@@ -115,8 +156,9 @@ import { ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { callCloud, checkLogin } from '@/utils/cloud'
 
+const isOwner = ref(false)
 const goods = ref({
-  id: '', title: '',
+  id: '', title: '', status: 'active',
   price: 0, originalPrice: 0,
   condition: '', category: '',
   images: [],
@@ -134,6 +176,7 @@ const commentText = ref('')
 const commentPlaceholder = ref('说点什么...')
 const replyToId = ref('')
 const replyToName = ref('')
+const showContact = ref(false)
 
 const formatTime = (t) => {
   if (!t) return ''
@@ -167,51 +210,69 @@ const toggleFavorite = async () => {
 }
 
 const contactSeller = () => {
+  showContact.value = true
+}
+
+const copyContact = () => {
   var g = goods.value
-  if (g.contactPublic === 1 && g.contact) {
-    uni.showModal({
-      title: '联系卖家',
-      content: '卖家：' + g.seller.name + '\n微信号：' + g.contact,
-      confirmText: '复制微信号',
-      success: (res) => {
-        if (res.confirm) {
-          uni.setClipboardData({ data: g.contact })
-        }
+  var contactStr = g.contact || ''
+  if (g.contactPublic !== 1 && contactStr) {
+    // 隐藏模式，先展示再复制
+    goods.value.contactPublic = 1
+    uni.showToast({ title: '微信号已显示', icon: 'none' })
+    return
+  }
+  if (contactStr) {
+    uni.setClipboardData({
+      data: contactStr,
+      success: () => {
+        uni.showToast({ title: '微信号已复制', icon: 'success' })
       }
-    })
-  } else if (g.contact) {
-    uni.showModal({
-      title: '联系卖家',
-      content: '卖家微信号已隐藏，点击确认查看',
-      success: (res) => {
-        if (res.confirm) {
-          uni.showModal({
-            title: '卖家微信号',
-            content: g.contact,
-            confirmText: '复制微信号',
-            success: (r) => {
-              if (r.confirm) {
-                uni.setClipboardData({ data: g.contact })
-              }
-            }
-          })
-        }
-      }
-    })
-  } else {
-    uni.showModal({
-      title: '联系卖家',
-      content: '卖家：' + g.seller.name + '\n卖家未留微信号，请通过广场私信联系',
-      showCancel: false
     })
   }
 }
 
 const handleWant = async () => {
+  if (goods.value.status === 'sold') {
+    uni.showToast({ title: '该商品已售出', icon: 'none' })
+    return
+  }
   const res = await callCloud('market', 'want', { goodsId: goods.value.id })
   if (res.code === 0) {
     uni.showToast({ title: '已标记想要', icon: 'success' })
   }
+}
+
+const markSold = async () => {
+  uni.showModal({
+    title: '标记已售',
+    content: '确认将该商品标记为已售出？标记后不会出现在商品列表中。',
+    success: async (r) => {
+      if (r.confirm) {
+        const res = await callCloud('market', 'updateStatus', { goodsId: goods.value.id, status: 'sold' })
+        if (res.code === 0) {
+          goods.value.status = 'sold'
+          uni.showToast({ title: '已标记为已售', icon: 'success' })
+        }
+      }
+    }
+  })
+}
+
+const markActive = async () => {
+  uni.showModal({
+    title: '重新上架',
+    content: '确认将该商品重新上架？',
+    success: async (r) => {
+      if (r.confirm) {
+        const res = await callCloud('market', 'updateStatus', { goodsId: goods.value.id, status: 'active' })
+        if (res.code === 0) {
+          goods.value.status = 'active'
+          uni.showToast({ title: '已重新上架', icon: 'success' })
+        }
+      }
+    }
+  })
 }
 
 const openCommentInput = () => {
@@ -292,9 +353,14 @@ const loadDetail = async (id) => {
   const res = await callCloud('market', 'detail', { id: id })
   if (res.code === 0) {
     const d = res.data
+    // 判断是否是卖家本人
+    var userInfo = uni.getStorageSync('userInfo')
+    var myOpenid = (userInfo && userInfo.openid) || uni.getStorageSync('openid') || ''
+    isOwner.value = !!(myOpenid && d.openid === myOpenid)
     goods.value = {
       id: d._id,
       ownerOpenid: d.openid || '',
+      status: d.status || 'active',
       title: d.title || '',
       price: d.price || 0,
       originalPrice: Math.round((d.price || 0) * 1.5),
@@ -373,6 +439,18 @@ const loadDetail = async (id) => {
 .contact-btn text { color: #4A90D9; font-size: 28rpx; }
 .buy-btn { flex: 1; padding: 20rpx; background: linear-gradient(135deg, #FF6B6B, #FF5252); border-radius: 40rpx; text-align: center; }
 .buy-btn text { color: #fff; font-size: 28rpx; font-weight: bold; }
+.buy-btn.disabled { background: #E2E8F0; }
+.buy-btn.disabled text { color: #A0AEC0; }
+
+/* 已售提示 */
+.sold-banner { margin: 0 0 16rpx; padding: 20rpx 24rpx; background: #FFF5F5; border-left: 6rpx solid #FC8181; }
+.sold-banner-text { font-size: 28rpx; color: #E53E3E; font-weight: 600; }
+
+/* 卖家操作按钮 */
+.sold-btn { flex: 1; padding: 20rpx; background: linear-gradient(135deg, #ED8936, #DD6B20); border-radius: 40rpx; text-align: center; }
+.sold-btn text { color: #fff; font-size: 28rpx; font-weight: bold; }
+.relist-btn { flex: 1; padding: 20rpx; background: linear-gradient(135deg, #48BB78, #38A169); border-radius: 40rpx; text-align: center; }
+.relist-btn text { color: #fff; font-size: 28rpx; font-weight: bold; }
 
 /* 留言输入弹窗 */
 .comment-input-mask { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); z-index: 200; display: flex; align-items: flex-end; }
@@ -384,4 +462,20 @@ const loadDetail = async (id) => {
 .comment-send-btn.active { background: linear-gradient(135deg, #4A90D9, #2B6CB0); }
 .comment-send-btn text { font-size: 28rpx; color: #A0AEC0; font-weight: 600; }
 .comment-send-btn.active text { color: #fff; }
+/* 联系卖家弹窗 */
+.contact-mask { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 300; display: flex; align-items: center; justify-content: center; }
+.contact-popup { width: 600rpx; background: #fff; border-radius: 28rpx; padding: 48rpx 36rpx 36rpx; position: relative; animation: fadeIn 0.2s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+.contact-popup-close { position: absolute; top: 20rpx; right: 24rpx; width: 56rpx; height: 56rpx; border-radius: 50%; background: #F0F2F5; display: flex; align-items: center; justify-content: center; }
+.contact-popup-close text { font-size: 28rpx; color: #718096; }
+.contact-popup-title { font-size: 34rpx; font-weight: 800; color: #1A1A2E; display: block; text-align: center; margin-bottom: 28rpx; }
+.contact-popup-info { background: #F7FAFC; border-radius: 16rpx; padding: 24rpx; margin-bottom: 28rpx; }
+.contact-popup-row { display: flex; align-items: center; padding: 12rpx 0; }
+.contact-popup-label { font-size: 26rpx; color: #718096; width: 160rpx; flex-shrink: 0; }
+.contact-popup-val { font-size: 28rpx; color: #2D3748; font-weight: 600; flex: 1; }
+.contact-popup-val.wechat { color: #2B6CB0; }
+.contact-popup-val.gray { color: #A0AEC0; font-weight: 400; font-size: 24rpx; }
+.contact-popup-btn { background: linear-gradient(135deg, #4299E1, #2B6CB0); border-radius: 44rpx; padding: 24rpx; text-align: center; }
+.contact-popup-btn text { color: #fff; font-size: 30rpx; font-weight: 700; }
+.contact-popup-btn.gray-btn { background: linear-gradient(135deg, #A0AEC0, #718096); }
 </style>

@@ -40,11 +40,12 @@ const tabs = [
   { key: 'errand', label: '跑腿任务' },
   { key: 'market', label: '二手商品' },
   { key: 'forum', label: '论坛帖子' },
-  { key: 'skill', label: '技能服务' }
+  { key: 'skill', label: '技能服务' },
+  { key: 'tutor', label: '家教信息' }
 ]
 const activeTab = ref('express')
 const loading = ref(false)
-const allData = ref({ express: [], errand: [], market: [], forum: [], skill: [] })
+const allData = ref({ express: [], errand: [], market: [], forum: [], skill: [], tutor: [] })
 const counts = computed(() => {
   const c = {}
   for (const k of Object.keys(allData.value)) c[k] = allData.value[k].length
@@ -53,11 +54,15 @@ const counts = computed(() => {
 const currentList = computed(() => allData.value[activeTab.value] || [])
 
 function typeLabel(t) {
-  const m = { express: '快递', errand: '跑腿', market: '商品', forum: '帖子', skill: '技能' }
+  const m = { express: '快递', errand: '跑腿', market: '商品', forum: '帖子', skill: '技能', tutor: '家教' }
   return m[t] || t
 }
 
 function getSummary(row) {
+  if (row._type === 'tutor') {
+    if (row.type === 'demand') return '[家长需求] ' + (row.title || row.subject || '')
+    return '[家教自荐] ' + (row.name || '') + ' - ' + (row.subjects?.join('/') || row.subject || '')
+  }
   if (row.title) return row.title
   if (row.content) return row.content.substring(0, 60)
   if (row.pickupPoint) return row.pickupPoint + ' → ' + (row.building || '')
