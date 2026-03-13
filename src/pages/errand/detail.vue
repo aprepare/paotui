@@ -528,7 +528,7 @@ const actionText = computed(() => {
 })
 
 const goKefu = () => {
-  uni.navigateTo({ url: '/pages/kefu/show' })
+  uni.navigateTo({ url: '/pages/kefu/show?img=' + encodeURIComponent('/static/TeamWork.jpg') })
 }
 
 const handleAction = async () => {

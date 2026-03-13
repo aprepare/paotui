@@ -77,7 +77,7 @@ const onServiceTap = (item) => {
 
 const showKefu = () => {
   // 考研专属客服二维码，和首页客服不同
-  uni.navigateTo({ url: '/pages/kefu/show' })
+  uni.navigateTo({ url: '/pages/kefu/show?img=' + encodeURIComponent('/static/TeamWork.jpg') })
 }
 
 const previewImage = (url) => {

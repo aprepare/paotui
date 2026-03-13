@@ -109,15 +109,35 @@ router.post('/register-rider', auth, async (req, res) => {
     if (existingUser && existingUser.isRider) {
       return res.json({ code: -1, msg: '您已是骑手，无需重复注册' })
     }
+    // rejected 状态允许重新提交
     await User.updateOne({ openid: req.user.openid }, {
       $set: {
         riderStatus: 'pending',
         riderId,
         riderInfo: { realName, phone, studentId, building },
-        riderRegTime: new Date()
+        riderRegTime: new Date(),
+        riderRejectReason: ''
       }
     })
     res.json({ code: 0, riderId, msg: '注册申请已提交，请等待管理员审核' })
+  } catch (err) {
+    res.status(500).json({ code: -1, msg: '服务器错误' })
+  }
+})
+
+// GET /api/user/rider-status — 获取骑手审核状态
+router.get('/rider-status', auth, async (req, res) => {
+  try {
+    const user = await User.findOne({ openid: req.user.openid })
+    if (!user) return res.json({ code: 0, data: { status: 'none' } })
+    res.json({
+      code: 0,
+      data: {
+        status: user.riderStatus || 'none',
+        rejectReason: user.riderRejectReason || '',
+        isRider: !!user.isRider
+      }
+    })
   } catch (err) {
     res.status(500).json({ code: -1, msg: '服务器错误' })
   }

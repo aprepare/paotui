@@ -95,4 +95,45 @@ router.get('/price-config', async (req, res) => {
   }
 })
 
+// GET /api/home/express-banner — 获取已审核通过的邮政快递条幅
+router.get('/express-banner', async (req, res) => {
+  try {
+    const ExpressBanner = require('../models/ExpressBanner')
+    const banner = await ExpressBanner.findOne({ status: 1 }).sort({ createTime: -1 })
+    res.json({ code: 0, data: banner || null })
+  } catch (err) {
+    res.status(500).json({ code: -1, msg: '服务器错误' })
+  }
+})
+
+// POST /api/home/publish-express-banner — 用户发布条幅（限单人发布）
+const auth = require('../middleware/auth')
+router.post('/publish-express-banner', auth, async (req, res) => {
+  try {
+    const ExpressBanner = require('../models/ExpressBanner')
+    // 检查是否已有审核通过的条幅
+    const existing = await ExpressBanner.findOne({ status: 1 })
+    if (existing && existing.publisherOpenid !== req.user.openid) {
+      return res.json({ code: -1, msg: '已有取件员发布条幅，无法重复发布' })
+    }
+    const { title, content, wechat } = req.body
+    if (!wechat) return res.json({ code: -1, msg: '请填写微信号' })
+    const User = require('../models/User')
+    const user = await User.findOne({ openid: req.user.openid })
+    const userName = user ? user.name || '用户' : '用户'
+    await ExpressBanner.create({
+      title: title || '寄邮政快递免费上门取件',
+      content: content || '',
+      wechat,
+      publisherOpenid: req.user.openid,
+      publisherName: userName,
+      status: 0,
+      createTime: new Date()
+    })
+    res.json({ code: 0, msg: '发布成功，等待审核' })
+  } catch (err) {
+    res.status(500).json({ code: -1, msg: '服务器错误' })
+  }
+})
+
 module.exports = router

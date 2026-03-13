@@ -7,6 +7,19 @@
       <text class="banner-desc">接单赚零花钱，自由安排时间</text>
     </view>
 
+    <!-- 审核状态提示 -->
+    <view class="status-bar status-pending" v-if="riderStatus === 'pending'">
+      <text class="status-icon">⏳</text>
+      <text class="status-text">您的骑手申请正在审核中，请耐心等待</text>
+    </view>
+    <view class="status-bar status-rejected" v-if="riderStatus === 'rejected'">
+      <text class="status-icon">❌</text>
+      <view class="status-content">
+        <text class="status-text">审核未通过，请修改后重新提交</text>
+        <text class="status-reason" v-if="rejectReason">原因：{{ rejectReason }}</text>
+      </view>
+    </view>
+
     <!-- 实名信息 -->
     <view class="form-section">
       <text class="section-title">📋 实名认证（手机号为必填项）</text>
@@ -96,7 +109,7 @@
 </template>
 
 <script setup>
-import { reactive, ref, computed } from 'vue'
+import { reactive, ref, computed, onMounted } from 'vue'
 import { callCloud, uploadImage, checkLogin } from '@/utils/cloud'
 
 const buildingData = {
@@ -243,6 +256,22 @@ const submit = async () => {
     })
   }
 }
+
+const riderStatus = ref('none')
+const rejectReason = ref('')
+const checkRiderStatus = async () => {
+  try {
+    const res = await callCloud('user', 'getRiderStatus')
+    if (res.code === 0 && res.data) {
+      riderStatus.value = res.data.status || 'none'
+      rejectReason.value = res.data.rejectReason || ''
+    }
+  } catch (e) { }
+}
+
+onMounted(() => {
+  checkRiderStatus()
+})
 </script>
 
 <style scoped>
@@ -290,5 +319,13 @@ const submit = async () => {
 .submit-btn { position: fixed; bottom: 40rpx; left: 24rpx; right: 24rpx; background: linear-gradient(135deg, #FF9800, #F57C00); border-radius: 48rpx; padding: 28rpx; text-align: center; box-shadow: 0 8rpx 24rpx rgba(255,152,0,0.4); }
 .submit-btn.disabled { opacity: 0.5; }
 .submit-btn text { color: #fff; font-size: 32rpx; font-weight: bold; }
+
+.status-bar { margin: 24rpx 24rpx 0; padding: 24rpx; border-radius: 16rpx; display: flex; align-items: center; }
+.status-pending { background: #FFF8E1; border: 1rpx solid #FFE082; }
+.status-rejected { background: #FFF5F5; border: 1rpx solid #FC8181; }
+.status-icon { font-size: 36rpx; margin-right: 16rpx; flex-shrink: 0; }
+.status-content { display: flex; flex-direction: column; }
+.status-text { font-size: 26rpx; color: #333; font-weight: 600; }
+.status-reason { font-size: 24rpx; color: #E53E3E; margin-top: 6rpx; }
 
 </style>

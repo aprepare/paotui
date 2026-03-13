@@ -3,7 +3,7 @@
     <!-- 联系客服发布招聘 -->
     <view class="publish-recruit-btn" @click="onPublishRecruit">
       <text class="publish-recruit-icon">📢</text>
-      <text class="publish-recruit-text">联系客服发布招聘信息</text>
+      <text class="publish-recruit-text">发布招聘后联系客服审核</text>
       <text class="publish-recruit-arrow">›</text>
     </view>
 

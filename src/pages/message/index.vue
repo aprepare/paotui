@@ -118,7 +118,8 @@ var iconMap = {
   order_status: '📦',
   order_cancel: '❌',
   tutor_apply: '📝',
-  tutor_contact: '📞'
+  tutor_contact: '📞',
+  market_comment: '💬'
 }
 var bgMap = {
   like: 'linear-gradient(135deg, #F6AD55, #DD6B20)',
@@ -127,7 +128,8 @@ var bgMap = {
   order_status: 'linear-gradient(135deg, #B794F4, #805AD5)',
   order_cancel: 'linear-gradient(135deg, #FC8181, #E53E3E)',
   tutor_apply: 'linear-gradient(135deg, #F6AD55, #DD6B20)',
-  tutor_contact: 'linear-gradient(135deg, #68D391, #38A169)'
+  tutor_contact: 'linear-gradient(135deg, #68D391, #38A169)',
+  market_comment: 'linear-gradient(135deg, #63B3ED, #2B6CB0)'
 }
 
 var getIcon = (type) => { return iconMap[type] || '🔔' }
@@ -203,7 +205,8 @@ var onMsgClick = async (item) => {
     express: '/pages/express/detail?id=',
     errand: '/pages/errand/detail?id=',
     tutor: '/pages/job-sub/tutor?id=',
-    market: '/pages/market/detail?id='
+    market: '/pages/market/detail?id=',
+    market_comment: '/pages/market/detail?id='
   }
   var url = urlMap[targetType]
   if (url) {

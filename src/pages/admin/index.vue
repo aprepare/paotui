@@ -117,6 +117,43 @@
       </view>
       <view class="empty" v-if="!contentList.length"><text>暂无数据</text></view>
     </view>
+    <view class="section" v-if="currentTab === 'graduate'">
+      <view class="card-title">🎓 考研资料管理</view>
+
+      <!-- 资料列表 -->
+      <view class="list-item" v-for="gr in graduateResources" :key="gr._id">
+        <view class="li-body">
+          <view class="li-top">
+            <text class="li-name">{{ gr.emoji }} {{ gr.title }}</text>
+            <text class="li-badge" :class="gr.status === 1 ? 'green' : 'red'">{{ gr.status === 1 ? '上架' : '下架' }}</text>
+          </view>
+          <text class="li-sub">{{ gr.category }} · {{ gr.size || '未设置大小' }} · {{ gr.link ? '已设链接' : '未设链接' }}</text>
+          <text class="li-sub" v-if="gr.desc">{{ gr.desc }}</text>
+        </view>
+        <view class="li-acts">
+          <text class="act-green" @click.stop="toggleGraduateStatus(gr)">{{ gr.status === 1 ? '下架' : '上架' }}</text>
+          <text class="act-red" @click.stop="deleteGraduateResource(gr)">删除</text>
+        </view>
+      </view>
+      <view class="empty" v-if="!graduateResources.length"><text>暂无资料，请添加</text></view>
+
+      <!-- 添加资料表单 -->
+      <view class="card-title mt">➕ 添加考研资料</view>
+      <view class="form-row"><text class="form-lbl">标题</text><input class="form-ipt" v-model="newResource.title" placeholder="如：考研英语一真题合集" /></view>
+      <view class="form-row"><text class="form-lbl">描述</text><input class="form-ipt" v-model="newResource.desc" placeholder="简短描述" /></view>
+      <view class="form-row">
+        <text class="form-lbl">分类</text>
+        <picker :range="resourceCategories" @change="onPickCategory">
+          <text class="form-ipt picker-text">{{ newResource.category || '请选择分类' }}</text>
+        </picker>
+      </view>
+      <view class="form-row"><text class="form-lbl">文件大小</text><input class="form-ipt" v-model="newResource.size" placeholder="如 256MB" /></view>
+      <view class="form-row"><text class="form-lbl">网盘链接</text><input class="form-ipt" v-model="newResource.link" placeholder="百度网盘/阿里云盘链接" /></view>
+      <view class="form-row"><text class="form-lbl">提取码</text><input class="form-ipt" v-model="newResource.password" placeholder="网盘提取码" /></view>
+      <view class="form-row"><text class="form-lbl">Emoji</text><input class="form-ipt" v-model="newResource.emoji" placeholder="如 📘 📐 📕" /></view>
+      <view class="form-row"><text class="form-lbl">渐变色</text><input class="form-ipt" v-model="newResource.color" placeholder="linear-gradient(135deg, #63B3ED, #2B6CB0)" /></view>
+      <view class="btn-primary" @click="addGraduateResource"><text>添加资料</text></view>
+    </view>
     <view class="section" v-if="currentTab === 'wash'">
       <view class="card-title">🧼 萌马洗护管理</view>
       <view class="chip-row">
@@ -437,6 +474,7 @@ const tabs = [
   { key: 'orders', icon: '📦', label: '订单' },
   { key: 'withdraw', icon: '💰', label: '提现' },
   { key: 'content', icon: '📝', label: '内容' },
+  { key: 'graduate', icon: '🎓', label: '考研' },
   { key: 'wash', icon: '🧼', label: '洗护' },
   { key: 'food', icon: '🍔', label: '外卖' },
   { key: 'config', icon: '🖼️', label: '配置' },
@@ -451,6 +489,7 @@ const switchTab = (key) => {
   if (key === 'withdraw') { wdPage = 1; loadWithdrawals() }
   if (key === 'content') loadContent()
   if (key === 'config') { loadPageConfig(); loadIconConfig() }
+  if (key === 'graduate') loadGraduateResources()
   if (key === 'wash') { loadWashProducts(); loadWashOrders() }
   if (key === 'food') { loadFoodShops(); loadFoodOrders(); loadPrinterConfig() }
   if (key === 'admins') loadAdmins()
@@ -790,6 +829,41 @@ const sendNotice = async () => {
     if (r.confirm) { uni.showLoading({ title: '发送中' }); var res = await callCloud('admin', 'sendNotice', { title: noticeTitle.value, content: noticeContent.value }); uni.hideLoading(); if (res.code === 0) { uni.showToast({ title: res.msg || '发送成功', icon: 'success' }); noticeTitle.value = ''; noticeContent.value = '' } }
   }})
 }
+// ========== 考研资料管理 ==========
+const graduateResources = ref([])
+const resourceCategories = ['英语', '数学', '政治', '专业课', '综合']
+const newResource = reactive({ title: '', desc: '', category: '综合', size: '', link: '', password: '', emoji: '📘', color: 'linear-gradient(135deg, #63B3ED, #2B6CB0)' })
+const onPickCategory = (e) => { newResource.category = resourceCategories[e.detail.value] }
+const loadGraduateResources = async () => {
+  var res = await callCloud('admin', 'resourceList')
+  if (res.code === 0) graduateResources.value = res.data || []
+}
+const addGraduateResource = async () => {
+  if (!newResource.title) { uni.showToast({ title: '请输入标题', icon: 'none' }); return }
+  if (!newResource.link) { uni.showToast({ title: '请输入网盘链接', icon: 'none' }); return }
+  uni.showLoading({ title: '添加中' })
+  var res = await callCloud('admin', 'addResource', { ...newResource })
+  uni.hideLoading()
+  if (res.code === 0) {
+    uni.showToast({ title: '添加成功', icon: 'success' })
+    newResource.title = ''; newResource.desc = ''; newResource.category = '综合'
+    newResource.size = ''; newResource.link = ''; newResource.password = ''
+    newResource.emoji = '📘'; newResource.color = 'linear-gradient(135deg, #63B3ED, #2B6CB0)'
+    loadGraduateResources()
+  }
+}
+const toggleGraduateStatus = async (gr) => {
+  var newStatus = gr.status === 1 ? 0 : 1
+  await callCloud('admin', 'updateResource', { resourceId: gr._id, status: newStatus })
+  uni.showToast({ title: newStatus === 1 ? '已上架' : '已下架', icon: 'success' })
+  loadGraduateResources()
+}
+const deleteGraduateResource = (gr) => {
+  uni.showModal({ title: '确认删除', content: '删除资料 ' + gr.title + '？', success: async (r) => {
+    if (r.confirm) { await callCloud('admin', 'deleteResource', { resourceId: gr._id }); uni.showToast({ title: '已删除', icon: 'success' }); loadGraduateResources() }
+  }})
+}
+
 // ========== 外卖管理 ==========
 const foodTab = ref('shops')
 const foodShops = ref([])

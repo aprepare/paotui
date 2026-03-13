@@ -5,6 +5,7 @@ const User = require('../models/User')
 const Message = require('../models/Message')
 const UserWallet = require('../models/UserWallet')
 const WalletRecord = require('../models/WalletRecord')
+const Stat = require('../models/Stat')
 
 // 订单完成时更新骑手钱包
 async function creditRiderWallet(riderId, amount, orderId, orderType) {
@@ -211,6 +212,9 @@ router.put('/:id/status', auth, async (req, res) => {
     if (Number(status) === 4) updateData.submitTime = new Date()
     if (Number(status) === 2) {
       updateData.completeTime = new Date()
+      // 更新统计：随机增加 1-5 单
+      const randomInc = Math.floor(Math.random() * 5) + 1
+      await Stat.updateOne({ key: 'global' }, { $inc: { todayDelivered: randomInc } }).catch(() => { })
       // 更新骑手钱包
       const earnAmount = (task.price || 0) + (task.tip || 0)
       await creditRiderWallet(task.riderId, earnAmount, req.params.id, 'errand')
@@ -241,16 +245,32 @@ router.post('/:id/cancel', auth, async (req, res) => {
     if (task.openid !== req.user.openid && task.riderId !== req.user.openid) return res.json({ code: -1, msg: '无权取消该任务' })
     await ErrandTask.updateOne({ _id: req.params.id }, { $set: { status: 3, statusText: '已取消', statusColor: '#E53E3E' } })
 
-    // 执行退款 (如果之前已经支付)
-    if (task.status >= 0 && task.outTradeNo && task.openid === req.user.openid) {
-      const { refundOrder } = require('../services/wxpay')
-      try {
-        const outRefundNo = 'ref_' + task.outTradeNo + '_' + Date.now()
-        const totalAmount = Math.round(((task.price || 0) + (task.tip || 0)) * 100)
-        await refundOrder(task.outTradeNo, outRefundNo, totalAmount, totalAmount)
-        console.log(`[wxpay refund] 退款成功: ${task.outTradeNo}`)
-      } catch (refundErr) {
-        console.error(`[wxpay refund] 退款失败: ${task.outTradeNo}`, refundErr.message)
+    // 执行退款
+    if (task.status >= 0 && task.openid === req.user.openid) {
+      const refundAmount = (task.price || 0) + (task.tip || 0)
+      if (task.payType === 'wallet') {
+        // 钱包支付退款：退回余额
+        await UserWallet.updateOne({ openid: task.openid }, {
+          $inc: { balance: refundAmount },
+          $set: { updateTime: new Date() }
+        }, { upsert: true })
+        await WalletRecord.create({
+          openid: task.openid, type: 'income', amount: refundAmount,
+          title: '跑腿任务取消退款', orderId: req.params.id, orderType: 'errand_refund',
+          status: 1, statusText: '已退款', createTime: new Date()
+        })
+        console.log(`[wallet refund] 钱包退款成功: ${task.outTradeNo}, ¥${refundAmount}`)
+      } else if (task.outTradeNo) {
+        // 微信支付退款
+        const { refundOrder } = require('../services/wxpay')
+        try {
+          const outRefundNo = 'ref_' + task.outTradeNo + '_' + Date.now()
+          const totalAmount = Math.round(refundAmount * 100)
+          await refundOrder(task.outTradeNo, outRefundNo, totalAmount, totalAmount)
+          console.log(`[wxpay refund] 退款成功: ${task.outTradeNo}`)
+        } catch (refundErr) {
+          console.error(`[wxpay refund] 退款失败: ${task.outTradeNo}`, refundErr.message)
+        }
       }
     }
     if (task.riderId && task.riderId !== req.user.openid) {

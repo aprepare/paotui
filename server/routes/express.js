@@ -221,7 +221,8 @@ router.put('/:id/status', auth, async (req, res) => {
     const updateData = { status: Number(status), statusText: s.text, statusColor: s.color }
     if (Number(status) === 3) {
       updateData.completeTime = new Date()
-      await Stat.updateOne({ key: 'global' }, { $inc: { todayDelivered: 1 } }).catch(() => { })
+      const randomInc = Math.floor(Math.random() * 5) + 1
+      await Stat.updateOne({ key: 'global' }, { $inc: { todayDelivered: randomInc } }).catch(() => { })
       // 更新骑手钱包
       const earnAmount = (order.price || 0) + (order.tip || 0)
       await creditRiderWallet(order.riderId, earnAmount, req.params.id, 'express')
@@ -258,16 +259,32 @@ router.post('/:id/cancel', auth, async (req, res) => {
       $set: { status: 4, statusText: '已取消', statusColor: '#E53E3E' }
     })
 
-    // 执行退款 (如果之前已经支付)
-    if (order.status >= 0 && order.outTradeNo && order.openid === req.user.openid) {
-      const { refundOrder } = require('../services/wxpay')
-      try {
-        const outRefundNo = 'ref_' + order.outTradeNo + '_' + Date.now()
-        const totalAmount = Math.round(((order.price || 0) + (order.tip || 0)) * 100)
-        await refundOrder(order.outTradeNo, outRefundNo, totalAmount, totalAmount)
-        console.log(`[wxpay refund] 退款成功: ${order.outTradeNo}`)
-      } catch (refundErr) {
-        console.error(`[wxpay refund] 退款失败: ${order.outTradeNo}`, refundErr.message)
+    // 执行退款
+    if (order.status >= 0 && order.openid === req.user.openid) {
+      const refundAmount = (order.price || 0) + (order.tip || 0)
+      if (order.payType === 'wallet') {
+        // 钱包支付退款：退回余额
+        await UserWallet.updateOne({ openid: order.openid }, {
+          $inc: { balance: refundAmount },
+          $set: { updateTime: new Date() }
+        }, { upsert: true })
+        await WalletRecord.create({
+          openid: order.openid, type: 'income', amount: refundAmount,
+          title: '快递订单取消退款', orderId: req.params.id, orderType: 'express_refund',
+          status: 1, statusText: '已退款', createTime: new Date()
+        })
+        console.log(`[wallet refund] 钱包退款成功: ${order.outTradeNo}, ¥${refundAmount}`)
+      } else if (order.outTradeNo) {
+        // 微信支付退款
+        const { refundOrder } = require('../services/wxpay')
+        try {
+          const outRefundNo = 'ref_' + order.outTradeNo + '_' + Date.now()
+          const totalAmount = Math.round(refundAmount * 100)
+          await refundOrder(order.outTradeNo, outRefundNo, totalAmount, totalAmount)
+          console.log(`[wxpay refund] 退款成功: ${order.outTradeNo}`)
+        } catch (refundErr) {
+          console.error(`[wxpay refund] 退款失败: ${order.outTradeNo}`, refundErr.message)
+        }
       }
     }
     const cancelUser = await User.findOne({ openid: req.user.openid })

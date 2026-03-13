@@ -31,6 +31,7 @@ const FoodItem = require('../models/FoodItem')
 const FoodOrder = require('../models/FoodOrder')
 const JobPost = require('../models/JobPost')
 const TutorPost = require('../models/TutorPost')
+const GraduateResource = require('../models/GraduateResource')
 
 const DEFAULT_ADMIN_PHONES = []
 
@@ -627,6 +628,71 @@ router.post('/delete-wash-product', auth, async (req, res) => {
     if (!await checkAdminByOpenid(req.user.openid)) return res.json({ code: -1, msg: '无权限' })
     await WashProduct.deleteOne({ _id: req.body.productId })
     res.json({ code: 0 })
+  } catch (err) {
+    res.status(500).json({ code: -1, msg: '服务器错误' })
+  }
+})
+
+// ===== 考研资料管理 =====
+router.post('/resource-list', auth, async (req, res) => {
+  try {
+    if (!await checkAdminByOpenid(req.user.openid)) return res.json({ code: -1, msg: '无权限' })
+    const data = await GraduateResource.find().sort({ sort: 1, createTime: -1 })
+    res.json({ code: 0, data })
+  } catch (err) {
+    res.status(500).json({ code: -1, msg: '服务器错误' })
+  }
+})
+
+router.post('/add-resource', auth, async (req, res) => {
+  try {
+    if (!await checkAdminByOpenid(req.user.openid)) return res.json({ code: -1, msg: '无权限' })
+    const { title, desc, category, size, link, password, emoji, color } = req.body
+    if (!title) return res.json({ code: -1, msg: '资料标题不能为空' })
+    await GraduateResource.create({
+      title, desc: desc || '', category: category || '综合',
+      size: size || '', link: link || '', password: password || '',
+      emoji: emoji || '📘', color: color || 'linear-gradient(135deg, #63B3ED, #2B6CB0)',
+      status: 1, sort: 0
+    })
+    res.json({ code: 0 })
+  } catch (err) {
+    res.status(500).json({ code: -1, msg: '服务器错误' })
+  }
+})
+
+router.post('/update-resource', auth, async (req, res) => {
+  try {
+    if (!await checkAdminByOpenid(req.user.openid)) return res.json({ code: -1, msg: '无权限' })
+    const { resourceId } = req.body
+    if (!resourceId) return res.json({ code: -1, msg: '缺少资料ID' })
+    const allowedFields = ['title', 'desc', 'category', 'size', 'link', 'password', 'emoji', 'color', 'status', 'sort']
+    const update = {}
+    for (const key of allowedFields) {
+      if (req.body[key] !== undefined) update[key] = req.body[key]
+    }
+    await GraduateResource.updateOne({ _id: resourceId }, { $set: update })
+    res.json({ code: 0 })
+  } catch (err) {
+    res.status(500).json({ code: -1, msg: '服务器错误' })
+  }
+})
+
+router.post('/delete-resource', auth, async (req, res) => {
+  try {
+    if (!await checkAdminByOpenid(req.user.openid)) return res.json({ code: -1, msg: '无权限' })
+    await GraduateResource.deleteOne({ _id: req.body.resourceId })
+    res.json({ code: 0 })
+  } catch (err) {
+    res.status(500).json({ code: -1, msg: '服务器错误' })
+  }
+})
+
+// 考研资料公共接口（用户端获取已上架资料）
+router.post('/resource-list-public', auth, async (req, res) => {
+  try {
+    const data = await GraduateResource.find({ status: 1 }).sort({ sort: 1, createTime: -1 })
+    res.json({ code: 0, data })
   } catch (err) {
     res.status(500).json({ code: -1, msg: '服务器错误' })
   }
@@ -1757,6 +1823,103 @@ router.put('/change-password', adminAuth, async (req, res) => {
     const passwordHash = await bcrypt.hash(newPassword, salt)
     await AdminUser.updateOne({ _id: req.admin.adminId }, { $set: { passwordHash } })
     res.json({ code: 0, msg: '密码修改成功' })
+  } catch (err) {
+    res.status(500).json({ code: -1, msg: '服务器错误' })
+  }
+})
+
+// ===== 骑手审核（小程序端） =====
+router.post('/rider-list', auth, async (req, res) => {
+  try {
+    if (!await checkAdminByOpenid(req.user.openid)) return res.json({ code: -1, msg: '无权限' })
+    const { status } = req.body // pending / approved / rejected
+    const query = {}
+    if (status === 'pending') query.riderStatus = 'pending'
+    else if (status === 'rejected') query.riderStatus = 'rejected'
+    else query.riderStatus = { $in: ['pending', 'rejected'] }
+    const riders = await User.find(query).sort({ riderRegTime: -1 }).limit(50)
+    const data = riders.map(u => ({
+      _id: u._id, openid: u.openid, name: u.name || '', avatar: u.avatar || '',
+      riderStatus: u.riderStatus, riderInfo: u.riderInfo || {},
+      riderRegTime: u.riderRegTime, riderId: u.riderId || '',
+      riderRejectReason: u.riderRejectReason || ''
+    }))
+    res.json({ code: 0, data })
+  } catch (err) {
+    res.status(500).json({ code: -1, msg: '服务器错误' })
+  }
+})
+
+router.post('/approve-rider', auth, async (req, res) => {
+  try {
+    if (!await checkAdminByOpenid(req.user.openid)) return res.json({ code: -1, msg: '无权限' })
+    const { userId } = req.body
+    await User.updateOne({ _id: userId }, {
+      $set: { isRider: true, riderStatus: 'approved', riderRejectReason: '' }
+    })
+    res.json({ code: 0 })
+  } catch (err) {
+    res.status(500).json({ code: -1, msg: '服务器错误' })
+  }
+})
+
+router.post('/reject-rider', auth, async (req, res) => {
+  try {
+    if (!await checkAdminByOpenid(req.user.openid)) return res.json({ code: -1, msg: '无权限' })
+    const { userId, reason } = req.body
+    await User.updateOne({ _id: userId }, {
+      $set: { isRider: false, riderStatus: 'rejected', riderRejectReason: reason || '资料不完整' }
+    })
+    // 发送消息通知
+    const u = await User.findById(userId)
+    if (u) {
+      await Message.create({
+        toOpenid: u.openid, fromOpenid: req.user.openid, fromName: '系统管理员',
+        type: 'system', title: '骑手审核未通过',
+        content: '您的骑手注册申请未通过审核，原因：' + (reason || '资料不完整') + '。请修改后重新提交。',
+        targetId: '', targetType: 'system', read: false, createTime: new Date()
+      })
+    }
+    res.json({ code: 0 })
+  } catch (err) {
+    res.status(500).json({ code: -1, msg: '服务器错误' })
+  }
+})
+
+// ===== 邮政快递条幅管理（小程序端） =====
+router.post('/express-banner-list', auth, async (req, res) => {
+  try {
+    if (!await checkAdminByOpenid(req.user.openid)) return res.json({ code: -1, msg: '无权限' })
+    const ExpressBanner = require('../models/ExpressBanner')
+    const data = await ExpressBanner.find().sort({ createTime: -1 }).limit(20)
+    res.json({ code: 0, data })
+  } catch (err) {
+    res.status(500).json({ code: -1, msg: '服务器错误' })
+  }
+})
+
+router.post('/review-express-banner', auth, async (req, res) => {
+  try {
+    if (!await checkAdminByOpenid(req.user.openid)) return res.json({ code: -1, msg: '无权限' })
+    const ExpressBanner = require('../models/ExpressBanner')
+    const { bannerId, status } = req.body // status: 1=通过  2=拒绝
+    if (!bannerId) return res.json({ code: -1, msg: '缺少条幅ID' })
+    await ExpressBanner.updateOne({ _id: bannerId }, { $set: { status: Number(status) || 0 } })
+    res.json({ code: 0 })
+  } catch (err) {
+    res.status(500).json({ code: -1, msg: '服务器错误' })
+  }
+})
+
+// ===== 外卖配送费配置 =====
+router.post('/save-food-delivery-fee', auth, async (req, res) => {
+  try {
+    if (!await checkAdminByOpenid(req.user.openid)) return res.json({ code: -1, msg: '无权限' })
+    const { foodDeliveryFee } = req.body
+    await PageConfig.updateOne({ page: 'price' }, {
+      $set: { 'config.foodDeliveryFee': parseFloat(foodDeliveryFee) || 0, updateTime: new Date() }
+    }, { upsert: true })
+    res.json({ code: 0 })
   } catch (err) {
     res.status(500).json({ code: -1, msg: '服务器错误' })
   }

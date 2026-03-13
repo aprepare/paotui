@@ -97,7 +97,8 @@ export function buildUrl(name, action, data = {}) {
       verifySmsCode: { path: '/user/sms/verify', method: 'POST' },
       getPhoneByCode: { path: '/user/phone-by-code', method: 'POST' },
       getWallet: { path: '/user/getWallet', method: 'POST' },
-      applyWithdraw: { path: '/user/applyWithdraw', method: 'POST' }
+      applyWithdraw: { path: '/user/applyWithdraw', method: 'POST' },
+      getRiderStatus: { path: '/user/rider-status', method: 'GET' }
     },
     express: {
       list: { path: '/express/list', method: 'GET' },
@@ -187,7 +188,9 @@ export function buildUrl(name, action, data = {}) {
       getLiveData: { path: '/home/live-data', method: 'GET' },
       getLatestOrders: { path: '/home/latest-orders', method: 'GET' },
       getPageConfig: { path: '/home/page-config', method: 'GET' },
-      priceConfig: { path: '/home/price-config', method: 'GET' }
+      priceConfig: { path: '/home/price-config', method: 'GET' },
+      getExpressBanner: { path: '/home/express-banner', method: 'GET' },
+      publishExpressBanner: { path: '/home/publish-express-banner', method: 'POST' }
     },
     skill: {
       list: { path: '/skill/list', method: 'GET' },
@@ -242,6 +245,7 @@ export function buildUrl(name, action, data = {}) {
       myOrders: { path: '/wash/my-orders', method: 'GET' },
       orderDetail: { path: `/wash/order/${id}`, method: 'GET' },
       cancelOrder: { path: `/wash/order/${id}/cancel`, method: 'POST' },
+      verify: { path: '/wash/verify', method: 'POST' },
       adminOrderList: { path: '/wash/admin/orders', method: 'GET' },
       updateOrderStatus: { path: `/wash/admin/order/${id}/status`, method: 'PUT' }
     },
@@ -293,7 +297,18 @@ export function buildUrl(name, action, data = {}) {
       washProductList: { path: '/admin/wash-product-list', method: 'POST' },
       addWashProduct: { path: '/admin/add-wash-product', method: 'POST' },
       updateWashProduct: { path: '/admin/update-wash-product', method: 'POST' },
-      deleteWashProduct: { path: '/admin/delete-wash-product', method: 'POST' }
+      deleteWashProduct: { path: '/admin/delete-wash-product', method: 'POST' },
+      resourceList: { path: '/admin/resource-list', method: 'POST' },
+      addResource: { path: '/admin/add-resource', method: 'POST' },
+      updateResource: { path: '/admin/update-resource', method: 'POST' },
+      deleteResource: { path: '/admin/delete-resource', method: 'POST' },
+      resourceListPublic: { path: '/admin/resource-list-public', method: 'POST' },
+      riderList: { path: '/admin/rider-list', method: 'POST' },
+      approveRider: { path: '/admin/approve-rider', method: 'POST' },
+      rejectRider: { path: '/admin/reject-rider', method: 'POST' },
+      expressBannerList: { path: '/admin/express-banner-list', method: 'POST' },
+      reviewExpressBanner: { path: '/admin/review-express-banner', method: 'POST' },
+      saveFoodDeliveryFee: { path: '/admin/save-food-delivery-fee', method: 'POST' }
     }
   }
 

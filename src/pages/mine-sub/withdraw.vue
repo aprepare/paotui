@@ -25,9 +25,14 @@
         </view>
         <view class="input-tips">
           <text class="tip-item tip-warn">· 最低提现金额 100.00 元</text>
-          <text class="tip-item">· 提交后请截图保存提现凭证</text>
+          <text class="tip-item tip-warn">· 提现需联系客服线下完成，请截图保存凭证</text>
           <text class="tip-item">· 凭提现凭证联系管理员线下提现</text>
           <text class="tip-item">· 管理员核实后将发放现金/转账</text>
+        </view>
+        <view class="kefu-tip-bar" @click="goKefu">
+          <text class="kefu-tip-icon">💬</text>
+          <text class="kefu-tip-text">联系客服完成提现</text>
+          <text class="kefu-tip-arrow">›</text>
         </view>
       </view>
 
@@ -117,6 +122,7 @@ const onSubmit = () => {
           if (res.code === 0 && res.data) {
             voucherData.value = res.data
             showVoucher.value = true
+            await loadBalance()
             await nextTick()
             setTimeout(() => { drawVoucher() }, 300)
           } else {
@@ -288,6 +294,10 @@ const goBack = () => {
   uni.navigateBack()
 }
 
+const goKefu = () => {
+  uni.navigateTo({ url: '/pages/kefu/show' })
+}
+
 onLoad(() => {
   loadBalance()
 })
@@ -316,6 +326,11 @@ onLoad(() => {
 .input-tips { padding-top: 20rpx; border-top: 1rpx solid #F0F2F5; }
 .tip-item { font-size: 22rpx; color: #A0AEC0; display: block; line-height: 1.8; }
 .tip-warn { color: #DD6B20; font-weight: 600; }
+
+.kefu-tip-bar { display: flex; align-items: center; margin-top: 28rpx; padding: 24rpx; background: linear-gradient(135deg, #EBF8FF, #BEE3F8); border-radius: 16rpx; border: 1rpx solid #90CDF4; }
+.kefu-tip-icon { font-size: 36rpx; margin-right: 16rpx; }
+.kefu-tip-text { flex: 1; font-size: 28rpx; color: #2B6CB0; font-weight: 700; }
+.kefu-tip-arrow { font-size: 32rpx; color: #4299E1; font-weight: 700; }
 
 .submit-bar { position: fixed; bottom: 0; left: 0; right: 0; padding: 20rpx 28rpx; padding-bottom: calc(20rpx + env(safe-area-inset-bottom)); background: #fff; box-shadow: 0 -2rpx 8rpx rgba(0,0,0,0.04); }
 .submit-btn { background: linear-gradient(135deg, #4299E1, #2B6CB0); border-radius: 48rpx; padding: 28rpx; text-align: center; box-shadow: 0 8rpx 24rpx rgba(43,108,176,0.3); }

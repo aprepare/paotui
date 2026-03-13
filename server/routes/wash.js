@@ -141,11 +141,14 @@ router.post('/order', auth, async (req, res) => {
             if (!product) return res.json({ code: -1, msg: '商品不存在' })
         }
 
-        const deliveryFee = needDelivery ? 3 : 0
+        // 配送费按双计费：基础3元 + 每增加一双加2元
+        const deliveryFee = needDelivery ? (3 + Math.max(0, quantity - 1) * 2) : 0
         const itemPrice = (product.price || 0) * quantity
         const totalPrice = itemPrice + deliveryFee
 
         const outTradeNo = 'wash_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6)
+        // 生成6位核销码
+        const verifyCode = String(Math.floor(100000 + Math.random() * 900000))
 
         // 钱包支付
         if (payType === 'wallet') {
@@ -164,7 +167,7 @@ router.post('/order', auth, async (req, res) => {
                 itemPrice, deliveryFee, totalPrice, needDelivery,
                 address: needDelivery ? address.trim() : '', phone, userName: userName || '',
                 remark: remark || '', status: 0, statusText: '待处理', createTime: new Date(),
-                outTradeNo, payType: 'wallet'
+                outTradeNo, payType: 'wallet', verifyCode, verified: false
             })
             // 如果选了跑腿取送，自动创建跑腿任务
             if (needDelivery) {
@@ -182,7 +185,7 @@ router.post('/order', auth, async (req, res) => {
                 })
                 await WashOrder.updateOne({ _id: order._id }, { $set: { errandTaskId: errand._id.toString() } })
             }
-            return res.json({ code: 0, data: { orderId: order._id }, walletPaid: true })
+            return res.json({ code: 0, data: { orderId: order._id, verifyCode }, walletPaid: true })
         }
 
         // 微信支付
@@ -192,7 +195,7 @@ router.post('/order', auth, async (req, res) => {
             itemPrice, deliveryFee, totalPrice, needDelivery,
             address: needDelivery ? address.trim() : '', phone, userName: userName || '',
             remark: remark || '', status: -1, statusText: '待支付', createTime: new Date(),
-            outTradeNo, payType: 'wxpay'
+            outTradeNo, payType: 'wxpay', verifyCode, verified: false
         })
 
         const { createJSAPIOrder } = require('../services/wxpay')
@@ -203,7 +206,7 @@ router.post('/order', auth, async (req, res) => {
             '萌马洗护-' + (product.name || '洗护服务')
         )
 
-        res.json({ code: 0, data: { orderId: order._id }, payment })
+        res.json({ code: 0, data: { orderId: order._id, verifyCode }, payment })
     } catch (err) {
         res.status(500).json({ code: -1, msg: '下单失败: ' + err.message })
     }
@@ -276,6 +279,33 @@ router.post('/order/:id/cancel', auth, async (req, res) => {
     }
 })
 
+// POST /api/wash/verify — 核销订单
+router.post('/verify', auth, async (req, res) => {
+    try {
+        const { verifyCode } = req.body
+        if (!verifyCode || verifyCode.length !== 6) return res.json({ code: -1, msg: '请输入6位核销码' })
+        const order = await WashOrder.findOne({ verifyCode, status: { $in: [0, 1] } })
+        if (!order) return res.json({ code: -1, msg: '核销码无效或订单已处理' })
+        if (order.verified) return res.json({ code: -1, msg: '该订单已核销' })
+        await WashOrder.updateOne({ _id: order._id }, {
+            $set: { verified: true, verifyTime: new Date(), status: 2, statusText: '已完成' }
+        })
+        res.json({
+            code: 0, msg: '核销成功',
+            data: {
+                orderId: order._id,
+                productName: order.productName,
+                quantity: order.quantity,
+                totalPrice: order.totalPrice,
+                userName: order.userName || '',
+                phone: order.phone || ''
+            }
+        })
+    } catch (err) {
+        res.status(500).json({ code: -1, msg: '核销失败' })
+    }
+})
+
 // ========== 管理员 ==========
 // GET /api/wash/admin/orders
 router.get('/admin/orders', adminAuth, async (req, res) => {
@@ -307,3 +337,4 @@ router.put('/admin/order/:id/status', adminAuth, async (req, res) => {
 })
 
 module.exports = router
+

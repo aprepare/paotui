@@ -5,10 +5,22 @@
       <!-- 送达数据卡片 -->
       <view class="hero-card">
         <view class="hero-left">
-          <text class="hero-title">已成功送达</text>
-          <view class="hero-num-row">
-            <text class="hero-num">{{ live.todayDelivered }}</text>
-            <text class="hero-unit">件</text>
+          <view class="hero-stats">
+            <view class="hero-stat-item">
+              <text class="hero-title">今日送达</text>
+              <view class="hero-num-row">
+                <text class="hero-num">{{ live.todayDelivered }}</text>
+                <text class="hero-unit">件</text>
+              </view>
+            </view>
+            <view class="hero-stat-divider"></view>
+            <view class="hero-stat-item">
+              <text class="hero-title">历史总送达</text>
+              <view class="hero-num-row">
+                <text class="hero-num">{{ live.totalDelivered }}</text>
+                <text class="hero-unit">件</text>
+              </view>
+            </view>
           </view>
           <text class="hero-sub">实时更新</text>
         </view>
@@ -65,6 +77,18 @@
       </view>
       <view v-if="filteredOrders.length === 0" class="empty-orders">
         <text>该楼栋暂无订单</text>
+      </view>
+    </view>
+
+    <!-- 邮政快递条幅 -->
+    <view class="express-banner-section" v-if="expressBanner" @click="onExpressBannerTap">
+      <view class="express-banner-bar">
+        <text class="express-banner-icon">📮</text>
+        <view class="express-banner-text">
+          <text class="express-banner-title">{{ expressBanner.title || '寄邮政快递免费上门取件' }}</text>
+          <text class="express-banner-sub" v-if="expressBanner.content">{{ expressBanner.content }}</text>
+        </view>
+        <text class="express-banner-arrow">›</text>
       </view>
     </view>
 
@@ -150,7 +174,7 @@ const loadPageConfig = async () => {
   } catch (e) { /* 使用默认配置 */ }
 }
 
-const live = reactive({ updatedAt: '加载中', todayDelivered: 0 })
+const live = reactive({ updatedAt: '加载中', todayDelivered: 0, totalDelivered: 0 })
 
 const refreshLive = async () => {
   const now = new Date()
@@ -161,6 +185,7 @@ const refreshLive = async () => {
   const res = await callCloud('home', 'getLiveData')
   if (res.code === 0) {
     live.todayDelivered = res.data.todayDelivered || 0
+    live.totalDelivered = res.data.totalOrders || 0
   }
 }
 
@@ -241,10 +266,29 @@ const filteredOrders = computed(() => {
   return list.slice(0, 5)
 })
 
+const expressBanner = ref(null)
+const loadExpressBanner = async () => {
+  try {
+    const res = await callCloud('home', 'getExpressBanner')
+    if (res.code === 0 && res.data) expressBanner.value = res.data
+  } catch (e) { }
+}
+const onExpressBannerTap = () => {
+  if (expressBanner.value && expressBanner.value.wechat) {
+    uni.setClipboardData({
+      data: expressBanner.value.wechat,
+      success: () => {
+        uni.showToast({ title: '微信号已复制: ' + expressBanner.value.wechat, icon: 'none' })
+      }
+    })
+  }
+}
+
 onLoad(() => {
   refreshLive()
   loadOrders()
   loadPageConfig()
+  loadExpressBanner()
   liveTimer = setInterval(refreshLive, 30000)
 })
 onShow(() => {
@@ -252,7 +296,7 @@ onShow(() => {
   loadOrders() })
 onUnload(() => { if (liveTimer) clearInterval(liveTimer) })
 onPullDownRefresh(async () => {
-  await Promise.all([refreshLive(), loadOrders()])
+  await Promise.all([refreshLive(), loadOrders(), loadExpressBanner()])
   uni.stopPullDownRefresh()
 })
 
@@ -278,18 +322,29 @@ const goDetail = (id, orderType) => {
 /* 送达卡片 */
 .hero-card { margin: 0 28rpx; background: rgba(255,255,255,0.12); backdrop-filter: blur(20px); border: 1rpx solid rgba(255,255,255,0.18); border-radius: 20rpx; padding: 36rpx 12rpx 36rpx 32rpx; display: flex; align-items: center; }
 .hero-left { flex: 1; display: flex; flex-direction: column; }
-.hero-title { font-size: 34rpx; color: rgba(255,255,255,0.85); font-weight: 600; }
-.hero-num-row { display: flex; align-items: baseline; margin-top: 12rpx; }
-.hero-num { font-size: 72rpx; font-weight: 800; color: #fff; line-height: 1; }
-.hero-unit { font-size: 34rpx; color: rgba(255,255,255,0.85); font-weight: 600; margin-left: 6rpx; }
-.hero-sub { font-size: 26rpx; color: rgba(255,255,255,0.5); margin-top: 10rpx; }
-.hero-right { width: 240rpx; height: 220rpx; border-radius: 20rpx; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; overflow: hidden; }
-.hero-gif { width: 210rpx; height: 210rpx; }
-.hero-emoji { font-size: 80rpx; }
+.hero-stats { display: flex; align-items: center; }
+.hero-stat-item { flex: 1; display: flex; flex-direction: column; align-items: center; }
+.hero-stat-divider { width: 2rpx; height: 70rpx; background: rgba(255,255,255,0.25); margin: 0 12rpx; }
+.hero-title { font-size: 24rpx; color: rgba(255,255,255,0.75); font-weight: 600; }
+.hero-num-row { display: flex; align-items: baseline; margin-top: 8rpx; }
+.hero-num { font-size: 52rpx; font-weight: 800; color: #fff; line-height: 1; }
+.hero-unit { font-size: 24rpx; color: rgba(255,255,255,0.85); font-weight: 600; margin-left: 4rpx; }
+.hero-sub { font-size: 22rpx; color: rgba(255,255,255,0.5); margin-top: 12rpx; }
+.hero-right { width: 200rpx; height: 180rpx; border-radius: 20rpx; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.hero-gif { width: 180rpx; height: 180rpx; }
 
 /* 通用区块 */
 .section { padding: 28rpx 28rpx 0; }
 .section-label { font-size: 32rpx; font-weight: 700; color: #1A1A2E; display: block; margin-bottom: 20rpx; letter-spacing: 1rpx; }
+
+/* 邮政快递条幅 */
+.express-banner-section { padding: 20rpx 28rpx 0; }
+.express-banner-bar { display: flex; align-items: center; background: linear-gradient(135deg, #43A047, #2E7D32); border-radius: 16rpx; padding: 24rpx 28rpx; box-shadow: 0 4rpx 16rpx rgba(67,160,71,0.3); }
+.express-banner-icon { font-size: 40rpx; margin-right: 16rpx; }
+.express-banner-text { flex: 1; display: flex; flex-direction: column; }
+.express-banner-title { font-size: 28rpx; font-weight: 700; color: #fff; }
+.express-banner-sub { font-size: 22rpx; color: rgba(255,255,255,0.8); margin-top: 4rpx; }
+.express-banner-arrow { font-size: 36rpx; color: rgba(255,255,255,0.6); }
 .section-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20rpx; }
 .section-link { font-size: 26rpx; color: #fff; font-weight: 700; background: linear-gradient(135deg, #4299E1, #2B6CB0); padding: 10rpx 24rpx; border-radius: 24rpx; }
 
