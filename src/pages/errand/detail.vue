@@ -612,7 +612,7 @@ const maskPhone = (phone) => {
 
 const callUser = () => {
   if (task.value.phone) {
-    uni.makePhoneCall({ phoneNumber: task.value.phone })
+    uni.makePhoneCall({ phoneNumber: task.value.phone, fail: function() {} })
   } else {
     uni.showToast({ title: '暂无联系电话', icon: 'none' })
   }
@@ -620,7 +620,7 @@ const callUser = () => {
 
 const callRunner = () => {
   if (task.value.runner && task.value.runner.phone) {
-    uni.makePhoneCall({ phoneNumber: task.value.runner.phone })
+    uni.makePhoneCall({ phoneNumber: task.value.runner.phone, fail: function() {} })
   } else {
     uni.showToast({ title: '暂无联系电话', icon: 'none' })
   }

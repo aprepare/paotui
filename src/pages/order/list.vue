@@ -342,7 +342,7 @@ var goDetail = function(order) {
   else uni.navigateTo({ url: '/pages/express/detail?id=' + order.id })
 }
 var callPhone = function(phone) {
-  uni.makePhoneCall({ phoneNumber: phone })
+  uni.makePhoneCall({ phoneNumber: phone, fail: function() {} })
 }
 var goRegister = function() { uni.navigateTo({ url: '/pages/express/rider-register' }) }
 

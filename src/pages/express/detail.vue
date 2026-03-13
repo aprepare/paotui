@@ -625,7 +625,7 @@ var uploadPhoto = function(type) {
 
 var callRunner = function() {
   if (order.value.runner && order.value.runner.phone) {
-    uni.makePhoneCall({ phoneNumber: order.value.runner.phone })
+    uni.makePhoneCall({ phoneNumber: order.value.runner.phone, fail: function() {} })
   } else {
     uni.showToast({ title: '暂无联系电话', icon: 'none' })
   }

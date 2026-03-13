@@ -108,7 +108,7 @@ var applyMsg = ref(null)
 
 var makePhoneCall = (phone) => {
   if (!phone) return
-  uni.makePhoneCall({ phoneNumber: phone })
+  uni.makePhoneCall({ phoneNumber: phone, fail: function() {} })
 }
 
 var iconMap = {
