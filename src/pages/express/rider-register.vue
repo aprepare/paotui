@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <view class="rider-register">
     <!-- 顶部说明 -->
     <view class="header-banner">
@@ -213,8 +213,8 @@ const submit = async () => {
     uni.showToast({ title: '请输入学号', icon: 'none' })
     return
   }
-  if (!/^\d{8,12}$/.test(form.studentId)) {
-    uni.showToast({ title: '学号为8-12位数字', icon: 'none' })
+  if (!/^\d{12}$/.test(form.studentId)) {
+    uni.showToast({ title: '学号必须为12位数字', icon: 'none' })
     return
   }
   if (!form.building) {
@@ -235,13 +235,12 @@ const submit = async () => {
   })
   submitting.value = false
   if (res.code === 0) {
-    uni.setStorageSync('isRider', true)
-    const userInfo = uni.getStorageSync('userInfo') || {}
-    userInfo.isRider = true
-    userInfo.riderId = res.riderId
-    uni.setStorageSync('userInfo', userInfo)
-    uni.showToast({ title: '注册成功！', icon: 'success' })
-    setTimeout(() => { uni.navigateBack() }, 1500)
+    uni.showModal({
+      title: '提交成功',
+      content: '注册申请已提交，请等待管理员审核。审核通过后即可开始接单。',
+      showCancel: false,
+      success: () => { uni.navigateBack() }
+    })
   }
 }
 </script>

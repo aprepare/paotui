@@ -138,8 +138,11 @@ export function buildUrl(name, action, data = {}) {
       detail: { path: `/market/${id}`, method: 'GET' },
       create: { path: '/market', method: 'POST' },
       want: { path: `/market/${id}/want`, method: 'POST' },
+      comment: { path: `/market/${id}/comment`, method: 'POST' },
+      deleteComment: { path: `/market/comment/${id}`, method: 'DELETE' },
       myGoods: { path: '/market/my', method: 'GET' },
-      delete: { path: `/market/${id}`, method: 'DELETE' }
+      delete: { path: `/market/${id}`, method: 'DELETE' },
+      updateStatus: { path: `/market/${id}/status`, method: 'PATCH' }
     },
     forum: {
       list: { path: '/forum/list', method: 'GET' },

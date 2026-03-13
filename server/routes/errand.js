@@ -24,7 +24,7 @@ async function creditRiderWallet(riderId, amount, orderId, orderType) {
 router.get('/list', async (req, res) => {
   try {
     const { status, page = 1, pageSize = 10 } = req.query
-    const where = {}
+    const where = { reviewStatus: { $in: ['approved', undefined] } }
     if (status !== undefined && status !== '-1') where.status = Number(status)
     const total = await ErrandTask.countDocuments(where)
     const data = await ErrandTask.find(where).sort({ createTime: -1 })
@@ -136,7 +136,7 @@ router.post('/', auth, async (req, res) => {
         openid: req.user.openid, title, desc, fromAddr: fromAddr || '', toAddr: toAddr || '',
         price: price || 5, tip: tip || 0, contact: phone || '', publisher: userName,
         status: 0, statusText: '待接单', statusColor: '#DD6B20', createTime: new Date(),
-        outTradeNo, payType: 'wallet'
+        outTradeNo, payType: 'wallet', reviewStatus: 'pending'
       })
       return res.json({ code: 0, id: task._id, walletPaid: true })
     }
@@ -146,7 +146,7 @@ router.post('/', auth, async (req, res) => {
       openid: req.user.openid, title, desc, fromAddr: fromAddr || '', toAddr: toAddr || '',
       price: price || 5, tip: tip || 0, contact: phone || '', publisher: userName,
       status: -1, statusText: '待支付', statusColor: '#A0AEC0', createTime: new Date(),
-      outTradeNo
+      outTradeNo, reviewStatus: 'pending'
     })
 
     const { createJSAPIOrder } = require('../services/wxpay')

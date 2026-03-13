@@ -12,7 +12,7 @@ const UNLOCK_PRICE = 1 // 解锁联系方式费用
 router.get('/list', async (req, res) => {
   try {
     const { category, keyword } = req.query
-    const query = { status: 0 }
+    const query = { status: 0, reviewStatus: { $in: ['approved', undefined] } }
     if (category && category !== '全部') query.category = category
     if (keyword) query.title = { $regex: keyword, $options: 'i' }
     const data = await Skill.find(query).sort({ createTime: -1 }).limit(20)
@@ -82,7 +82,8 @@ router.post('/', auth, async (req, res) => {
       openid: req.user.openid, publisher: userName, title, category: category || '其他',
       desc: desc || '', price: price || 0, priceUnit: priceUnit || '次',
       works: works || [], contact: contact || '', contactType: contactType || '微信',
-      status: 0, views: 0, createTime: new Date()
+      status: 0, views: 0, createTime: new Date(),
+      reviewStatus: 'pending'
     })
     res.json({ code: 0, data: { id: skill._id } })
   } catch (err) {

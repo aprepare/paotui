@@ -26,7 +26,7 @@ async function creditRiderWallet(riderId, amount, orderId, orderType) {
 router.get('/list', async (req, res) => {
   try {
     const { status, building, page = 1, pageSize = 10 } = req.query
-    const where = {}
+    const where = { reviewStatus: { $in: ['approved', undefined] } }
     if (status !== undefined && status !== '-1') where.status = Number(status)
     if (building && building !== '全部') where.building = building
     const total = await ExpressOrder.countDocuments(where)
@@ -143,7 +143,7 @@ router.post('/', auth, async (req, res) => {
         price: price || 2, tip: tip || 0, totalPrice, remark: remark || '',
         status: 0, statusText: '待接单', statusColor: '#DD6B20',
         destLat: destLat || 0, destLng: destLng || 0, createTime: new Date(),
-        outTradeNo, payType: 'wallet'
+        outTradeNo, payType: 'wallet', reviewStatus: 'pending'
       })
       await Stat.updateOne({ key: 'global' }, { $inc: { totalOrders: 1 } }).catch(() => { })
       return res.json({ code: 0, id: order._id, walletPaid: true })
@@ -156,7 +156,7 @@ router.post('/', auth, async (req, res) => {
       price: price || 2, tip: tip || 0, totalPrice: totalPrice, remark: remark || '',
       status: -1, statusText: '待支付', statusColor: '#A0AEC0',
       destLat: destLat || 0, destLng: destLng || 0, createTime: new Date(),
-      outTradeNo
+      outTradeNo, reviewStatus: 'pending'
     })
     await Stat.updateOne({ key: 'global' }, { $inc: { totalOrders: 1 } }).catch(() => { })
 

@@ -98,7 +98,12 @@ router.post('/:id/leave', auth, async (req, res) => {
     const member = await TeamMember.findOne({ activityId: req.params.id, openid: req.user.openid })
     if (!member) return res.json({ code: -1, msg: '未加入该活动' })
     await TeamMember.deleteOne({ _id: member._id })
-    await TeamActivity.updateOne({ _id: req.params.id }, { $inc: { current: -1 } })
+    const leaveUpdate = { $inc: { current: -1 } }
+    // 退出后人数不再满员，恢复 tag 为"招募中"
+    if (activity.current <= activity.max && activity.tag === '已满员') {
+      leaveUpdate.$set = { tag: '招募中' }
+    }
+    await TeamActivity.updateOne({ _id: req.params.id }, leaveUpdate)
     res.json({ code: 0 })
   } catch (err) {
     res.status(500).json({ code: -1, msg: '服务器错误' })

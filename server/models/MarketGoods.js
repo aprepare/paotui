@@ -13,6 +13,7 @@ const marketGoodsSchema = new mongoose.Schema({
   contactPublic: { type: Number, default: 0 },
   views: { type: Number, default: 0 },
   wants: { type: Number, default: 0 },
+  comments: { type: Number, default: 0 },
   wantUsers: [String],
   publisher: { type: String, default: '' },
   status: { type: String, default: 'active' },

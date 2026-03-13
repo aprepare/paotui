@@ -10,7 +10,7 @@ const Message = require('../models/Message')
 router.get('/list', async (req, res) => {
   try {
     const { keyword, page = 1, pageSize = 10 } = req.query
-    const query = {}
+    const query = { reviewStatus: { $in: ['approved', undefined] } }
     if (keyword) query.content = { $regex: keyword, $options: 'i' }
     const data = await ForumPost.find(query).sort({ createTime: -1 })
       .skip((Number(page) - 1) * Number(pageSize)).limit(Number(pageSize))
@@ -53,7 +53,8 @@ router.post('/', auth, async (req, res) => {
     const post = await ForumPost.create({
       openid: req.user.openid, nickname: user ? user.name || '匿名' : '匿名',
       avatar: user ? user.avatar || '' : '', content, images: images || [],
-      likes: 0, comments: 0, likedBy: [], createTime: new Date()
+      likes: 0, comments: 0, likedBy: [], createTime: new Date(),
+      reviewStatus: 'pending'
     })
     res.json({ code: 0, id: post._id })
   } catch (err) {

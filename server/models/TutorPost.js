@@ -30,6 +30,7 @@ const tutorPostSchema = new mongoose.Schema({
     budget: Number,
     parentName: String,
     idCard: String,
+    reviewStatus: { type: String, default: 'pending' },
     createTime: { type: Date, default: Date.now }
 })
 
