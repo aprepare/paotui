@@ -457,6 +457,19 @@
         <textarea class="form-textarea" v-model="noticeContent" placeholder="公告内容"></textarea>
       </view>
       <view class="btn-primary" @click="sendNotice"><text>发送给所有用户</text></view>
+      <view class="card-title mt">📮 邮政条幅发布授权</view>
+      <view class="icon-tip"><text>授权的用户可以点击首页条幅进入发布界面</text></view>
+      <view class="list-item" v-for="au in bannerAuthUsers" :key="au.openid">
+        <view class="li-body">
+          <view class="li-top"><text class="li-name">{{ au.name || '未知用户' }}</text></view>
+          <text class="li-sub">{{ au.openid }}</text>
+        </view>
+        <view class="li-acts"><text class="act-red" @click.stop="removeBannerAuth(au)">移除</text></view>
+      </view>
+      <view class="empty" v-if="!bannerAuthUsers.length"><text>暂无授权用户</text></view>
+      <view class="card-title mt">➕ 添加授权用户</view>
+      <view class="form-row"><text class="form-lbl">OpenID</text><input class="form-ipt" v-model="newBannerAuthOpenid" placeholder="输入用户的OpenID" /></view>
+      <view class="btn-primary" @click="addBannerAuth"><text>添加授权</text></view>
     </view>
   </scroll-view>
 </view>
@@ -492,7 +505,7 @@ const switchTab = (key) => {
   if (key === 'graduate') loadGraduateResources()
   if (key === 'wash') { loadWashProducts(); loadWashOrders() }
   if (key === 'food') { loadFoodShops(); loadFoodOrders(); loadPrinterConfig() }
-  if (key === 'admins') loadAdmins()
+  if (key === 'admins') { loadAdmins(); loadBannerAuth() }
 }
 const dash = reactive({ userCount: 0, expressCount: 0, errandCount: 0, carpoolCount: 0, forumCount: 0, marketCount: 0, teamCount: 0, riderCount: 0, pendingExpress: 0, pendingErrand: 0, todayDelivered: 0, totalOrders: 0 })
 const editStats = reactive({ todayDelivered: '', totalOrders: '' })
@@ -829,6 +842,34 @@ const sendNotice = async () => {
     if (r.confirm) { uni.showLoading({ title: '发送中' }); var res = await callCloud('admin', 'sendNotice', { title: noticeTitle.value, content: noticeContent.value }); uni.hideLoading(); if (res.code === 0) { uni.showToast({ title: res.msg || '发送成功', icon: 'success' }); noticeTitle.value = ''; noticeContent.value = '' } }
   }})
 }
+
+// ========== 条幅发布授权 ==========
+const bannerAuthUsers = ref([])
+const newBannerAuthOpenid = ref('')
+const loadBannerAuth = async () => {
+  var res = await callCloud('admin', 'getExpressBannerAuth')
+  if (res.code === 0) bannerAuthUsers.value = res.data || []
+}
+const addBannerAuth = async () => {
+  if (!newBannerAuthOpenid.value.trim()) { uni.showToast({ title: '请输入OpenID', icon: 'none' }); return }
+  var openids = bannerAuthUsers.value.map(u => u.openid)
+  if (openids.includes(newBannerAuthOpenid.value.trim())) { uni.showToast({ title: '该用户已授权', icon: 'none' }); return }
+  openids.push(newBannerAuthOpenid.value.trim())
+  uni.showLoading({ title: '保存中' })
+  var res = await callCloud('admin', 'saveExpressBannerAuth', { authorizedOpenids: openids })
+  uni.hideLoading()
+  if (res.code === 0) { uni.showToast({ title: '添加成功', icon: 'success' }); newBannerAuthOpenid.value = ''; loadBannerAuth() }
+}
+const removeBannerAuth = (au) => {
+  uni.showModal({ title: '确认移除', content: '确定移除 ' + (au.name || au.openid) + ' 的条幅发布授权？', success: async (r) => {
+    if (r.confirm) {
+      var openids = bannerAuthUsers.value.filter(u => u.openid !== au.openid).map(u => u.openid)
+      var res = await callCloud('admin', 'saveExpressBannerAuth', { authorizedOpenids: openids })
+      if (res.code === 0) { uni.showToast({ title: '已移除', icon: 'success' }); loadBannerAuth() }
+    }
+  }})
+}
+
 // ========== 考研资料管理 ==========
 const graduateResources = ref([])
 const resourceCategories = ['英语', '数学', '政治', '专业课', '综合']

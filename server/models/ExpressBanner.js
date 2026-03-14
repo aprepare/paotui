@@ -1,7 +1,7 @@
 const mongoose = require('mongoose')
 
 const expressBannerSchema = new mongoose.Schema({
-    title: { type: String, default: '寄邮政快递免费上门取件' },
+    title: { type: String, default: '寄邮政快递免费上组团门口取件' },
     content: { type: String, default: '' },
     wechat: { type: String, default: '' },
     publisherOpenid: { type: String, required: true },

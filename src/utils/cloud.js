@@ -190,7 +190,8 @@ export function buildUrl(name, action, data = {}) {
       getPageConfig: { path: '/home/page-config', method: 'GET' },
       priceConfig: { path: '/home/price-config', method: 'GET' },
       getExpressBanner: { path: '/home/express-banner', method: 'GET' },
-      publishExpressBanner: { path: '/home/publish-express-banner', method: 'POST' }
+      publishExpressBanner: { path: '/home/publish-express-banner', method: 'POST' },
+      checkExpressPublisher: { path: '/home/check-express-publisher', method: 'GET' }
     },
     skill: {
       list: { path: '/skill/list', method: 'GET' },
@@ -308,7 +309,9 @@ export function buildUrl(name, action, data = {}) {
       rejectRider: { path: '/admin/reject-rider', method: 'POST' },
       expressBannerList: { path: '/admin/express-banner-list', method: 'POST' },
       reviewExpressBanner: { path: '/admin/review-express-banner', method: 'POST' },
-      saveFoodDeliveryFee: { path: '/admin/save-food-delivery-fee', method: 'POST' }
+      saveFoodDeliveryFee: { path: '/admin/save-food-delivery-fee', method: 'POST' },
+      getExpressBannerAuth: { path: '/admin/get-express-banner-auth', method: 'POST' },
+      saveExpressBannerAuth: { path: '/admin/save-express-banner-auth', method: 'POST' }
     }
   }
 

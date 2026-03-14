@@ -369,6 +369,23 @@
             </el-form-item>
           </el-form>
         </el-card>
+
+        <!-- 外卖基础配送费 -->
+        <el-card style="margin-top:20px">
+          <template #header>
+            <span style="font-weight:bold;font-size:16px">🍔 福利外卖</span>
+          </template>
+          <el-form label-width="180px" size="default">
+            <el-form-item label="基础配送费（元）">
+              <el-input-number v-model="priceForm.foodDeliveryFee" :min="0" :step="1" :precision="2" />
+              <span style="margin-left:8px;color:#999;font-size:12px">新商家的默认配送费，默认 3</span>
+            </el-form-item>
+            <el-form-item>
+              <el-button type="warning" @click="batchUpdateShopFee">应用到所有现有商家</el-button>
+              <span style="margin-left:8px;color:#999;font-size:12px">将上方配送费一键更新到所有已有商家</span>
+            </el-form-item>
+          </el-form>
+        </el-card>
       </el-tab-pane>
 
       <!-- ===== 屏蔽词管理 ===== -->
@@ -413,6 +430,56 @@
             <el-tag v-for="(word, i) in bannedWords" :key="i" closable size="large" @close="bannedWords.splice(i, 1)" style="font-size:14px">{{ word }}</el-tag>
           </div>
         </el-card>
+      </el-tab-pane>
+
+      <!-- ===== 版本历史与回滚 ===== -->
+      <el-tab-pane label="版本历史" name="history">
+        <div style="margin:12px 0;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <el-button type="primary" :loading="historyLoading" @click="loadHistory">刷新列表</el-button>
+          <el-select v-model="historyFilter" placeholder="筛选配置类型" clearable style="width:200px" @change="loadHistory">
+            <el-option label="全部" value="" />
+            <el-option label="⚙️ 首页配置" value="home" />
+            <el-option label="🎁 福利页配置" value="welfare" />
+            <el-option label="💼 兼职页配置" value="job" />
+            <el-option label="💰 价格配置" value="price" />
+            <el-option label="🚫 屏蔽词" value="bannedWords" />
+            <el-option label="📋 TabBar配置" value="tabbar" />
+          </el-select>
+          <el-tag type="info">共 {{ historyList.length }} 条记录（每类配置最多保留 20 个版本）</el-tag>
+        </div>
+
+        <el-alert type="info" :closable="false" style="margin-bottom:16px">
+          <template #title>每次保存配置时，系统会自动将保存前的配置存为版本快照。可以随时回滚到任意历史版本。 <b>回滚前当前配置也会被自动存储</b>，所以回滚操作本身也可以被撤销。</template>
+        </el-alert>
+
+        <el-empty v-if="!historyLoading && historyList.length === 0" description="暂无版本历史记录" />
+
+        <el-timeline v-else>
+          <el-timeline-item v-for="item in historyList" :key="item._id" :timestamp="formatTime(item.createTime)" placement="top">
+            <el-card shadow="hover" style="margin-bottom:4px">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
+                <div style="flex:1">
+                  <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+                    <el-tag :type="pageTagType(item.page)" size="small">{{ pageLabel(item.page) }}</el-tag>
+                    <span style="font-weight:bold;font-size:15px">v{{ item.version }}</span>
+                    <el-tag size="small" type="info">操作人: {{ item.operator }}</el-tag>
+                  </div>
+                  <div style="color:#666;font-size:13px;margin-bottom:4px">📋 {{ item.summary }}</div>
+                  <el-button size="small" text type="primary" @click="toggleDetail(item._id)">
+                    {{ expandedIds.includes(item._id) ? '收起详情' : '查看详情' }}
+                  </el-button>
+                  <div v-if="expandedIds.includes(item._id)" style="margin-top:8px;max-height:300px;overflow:auto;background:#f5f7fa;border-radius:6px;padding:12px;font-size:12px">
+                    <pre style="margin:0;white-space:pre-wrap;word-break:break-all">{{ JSON.stringify(item.config, null, 2) }}</pre>
+                  </div>
+                </div>
+                <div style="display:flex;gap:6px;flex-shrink:0">
+                  <el-button type="warning" size="small" @click="rollbackConfig(item)">回滚到此版本</el-button>
+                  <el-button type="danger" size="small" text @click="deleteHistory(item._id)">删除</el-button>
+                </div>
+              </div>
+            </el-card>
+          </el-timeline-item>
+        </el-timeline>
       </el-tab-pane>
 
       <!-- ===== 修改密码 ===== -->
@@ -548,7 +615,8 @@ const priceForm = ref({
   expressLargeFee: 20,
   tutorViewFee: 0.01,
   skillViewFee: 1,
-  washDeliveryFee: 3
+  washDeliveryFee: 3,
+  foodDeliveryFee: 3
 })
 
 const heroImage = ref('/static/kuaidi.jpg')
@@ -708,6 +776,7 @@ function onTabChange(tab) {
   else if (tab === 'job') loadJob()
   else if (tab === 'price') loadPrice()
   else if (tab === 'bannedWords') loadBannedWords()
+  else if (tab === 'history') loadHistory()
 }
 
 async function loadJob() {
@@ -784,7 +853,8 @@ async function loadPrice() {
           expressLargeFee: cfg.expressLargeFee ?? 20,
           tutorViewFee: cfg.tutorViewFee ?? 0.01,
           skillViewFee: cfg.skillViewFee ?? 1,
-          washDeliveryFee: cfg.washDeliveryFee ?? 3
+          washDeliveryFee: cfg.washDeliveryFee ?? 3,
+          foodDeliveryFee: cfg.foodDeliveryFee ?? 3
         }
       }
       priceLoaded.value = true
@@ -809,6 +879,22 @@ async function savePrice() {
     ElMessage.success('价格配置已保存')
   } catch (e) {
     ElMessage.error('保存失败')
+  }
+}
+
+async function batchUpdateShopFee() {
+  try {
+    await ElMessageBox.confirm(
+      `确认将所有商家的配送费更新为 ¥${priceForm.value.foodDeliveryFee}？`,
+      '批量更新配送费', { type: 'warning' }
+    )
+  } catch { return }
+  try {
+    const { data } = await api.put('/admin/batch-update-shop-delivery-fee', { deliveryFee: priceForm.value.foodDeliveryFee })
+    if (data.code === 0) ElMessage.success(data.msg || '更新成功')
+    else ElMessage.error(data.msg || '更新失败')
+  } catch (e) {
+    ElMessage.error('更新失败')
   }
 }
 
@@ -947,4 +1033,95 @@ async function saveBannedWords() {
 }
 
 onMounted(loadHome)
+
+// ===== 版本历史管理 =====
+const historyList = ref([])
+const historyLoading = ref(false)
+const historyFilter = ref('')
+const expandedIds = ref([])
+
+const pageLabels = {
+  home: '⚙️ 首页配置',
+  welfare: '🎁 福利页',
+  job: '💼 兼职页',
+  price: '💰 价格',
+  bannedWords: '🚫 屏蔽词',
+  tabbar: '📋 TabBar'
+}
+const pageTagTypes = {
+  home: '',
+  welfare: 'success',
+  job: 'warning',
+  price: 'danger',
+  bannedWords: 'info',
+  tabbar: ''
+}
+
+function pageLabel(page) { return pageLabels[page] || page }
+function pageTagType(page) { return pageTagTypes[page] || 'info' }
+
+function formatTime(t) {
+  if (!t) return ''
+  const d = new Date(t)
+  const pad = n => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+}
+
+function toggleDetail(id) {
+  const idx = expandedIds.value.indexOf(id)
+  if (idx >= 0) expandedIds.value.splice(idx, 1)
+  else expandedIds.value.push(id)
+}
+
+async function loadHistory() {
+  historyLoading.value = true
+  try {
+    const params = {}
+    if (historyFilter.value) params.page = historyFilter.value
+    const { data } = await api.get('/admin/config-history', { params })
+    if (data.code === 0) {
+      historyList.value = data.data || []
+    }
+  } catch (e) {
+    ElMessage.error('加载版本历史失败')
+  }
+  historyLoading.value = false
+}
+
+async function rollbackConfig(item) {
+  try {
+    await ElMessageBox.confirm(
+      `确定要回滚「${pageLabel(item.page)}」到 v${item.version} 吗？\n\n该版本内容：${item.summary}\n\n回滚前当前配置会自动存储为新版本，可再次回滚撤销。`,
+      '确认回滚', { type: 'warning', confirmButtonText: '确定回滚', cancelButtonText: '取消' }
+    )
+  } catch { return }
+  try {
+    const { data } = await api.put('/admin/config-rollback/' + item._id)
+    if (data.code === 0) {
+      ElMessage.success(data.msg || '回滚成功')
+      await loadHistory()
+    } else {
+      ElMessage.error(data.msg || '回滚失败')
+    }
+  } catch (e) {
+    ElMessage.error('回滚失败')
+  }
+}
+
+async function deleteHistory(id) {
+  try {
+    await ElMessageBox.confirm('确定要删除这条历史记录吗？删除后无法恢复。', '确认删除', { type: 'warning' })
+  } catch { return }
+  try {
+    const { data } = await api.delete('/admin/config-history/' + id)
+    if (data.code === 0) {
+      ElMessage.success('已删除')
+      historyList.value = historyList.value.filter(h => h._id !== id)
+    } else {
+      ElMessage.error(data.msg || '删除失败')
+    }
+  } catch (e) {
+    ElMessage.error('删除失败')
+  }
+}
 </script>

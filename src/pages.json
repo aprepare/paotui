@@ -96,6 +96,14 @@
 						"navigationBarBackgroundColor": "#2B6CB0",
 						"navigationBarTextStyle": "white"
 					}
+				},
+				{
+					"path": "publish-banner",
+					"style": {
+						"navigationBarTitleText": "发布条幅",
+						"navigationBarBackgroundColor": "#2E7D32",
+						"navigationBarTextStyle": "white"
+					}
 				}
 			]
 		},
@@ -491,6 +499,35 @@
 					"style": {
 						"navigationBarTitleText": "管理后台",
 						"navigationBarBackgroundColor": "#1A1A2E",
+						"navigationBarTextStyle": "white"
+					}
+				}
+			]
+		},
+		{
+			"root": "pages/carpool",
+			"pages": [
+				{
+					"path": "index",
+					"style": {
+						"navigationBarTitleText": "校园拼车",
+						"navigationBarBackgroundColor": "#2B6CB0",
+						"navigationBarTextStyle": "white"
+					}
+				},
+				{
+					"path": "create",
+					"style": {
+						"navigationBarTitleText": "发起拼车",
+						"navigationBarBackgroundColor": "#2B6CB0",
+						"navigationBarTextStyle": "white"
+					}
+				},
+				{
+					"path": "detail",
+					"style": {
+						"navigationBarTitleText": "拼车详情",
+						"navigationBarBackgroundColor": "#2B6CB0",
 						"navigationBarTextStyle": "white"
 					}
 				}

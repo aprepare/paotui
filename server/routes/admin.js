@@ -32,8 +32,105 @@ const FoodOrder = require('../models/FoodOrder')
 const JobPost = require('../models/JobPost')
 const TutorPost = require('../models/TutorPost')
 const GraduateResource = require('../models/GraduateResource')
+const ConfigHistory = require('../models/ConfigHistory')
 
 const DEFAULT_ADMIN_PHONES = []
+
+// 页面配置名称映射
+const PAGE_NAME_MAP = {
+  home: '首页配置',
+  welfare: '福利页配置',
+  job: '兼职页配置',
+  price: '价格配置',
+  bannedWords: '屏蔽词',
+  tabbar: 'TabBar配置'
+}
+
+// 根据配置类型生成变更摘要
+function generateConfigSummary(page, config) {
+  try {
+    switch (page) {
+      case 'home': {
+        const parts = []
+        if (config.heroImage) parts.push('顶部形象图')
+        if (Array.isArray(config.banners)) parts.push(`${config.banners.length}个轮播图`)
+        if (Array.isArray(config.actions)) parts.push(`${config.actions.length}个快捷操作`)
+        return parts.length > 0 ? parts.join(', ') : '空配置'
+      }
+      case 'welfare': {
+        const parts = []
+        if (Array.isArray(config.services)) parts.push(`${config.services.length}个服务入口`)
+        if (Array.isArray(config.banners)) parts.push(`${config.banners.length}个轮播图`)
+        return parts.length > 0 ? parts.join(', ') : '空配置'
+      }
+      case 'job': {
+        const parts = []
+        if (Array.isArray(config.categories)) parts.push(`${config.categories.length}个分类`)
+        if (config.seasonBanner) parts.push('寒暑假横幅')
+        if (Array.isArray(config.hotJobs) && config.hotJobs.length > 0) parts.push(`${config.hotJobs.length}个热招岗位`)
+        return parts.length > 0 ? parts.join(', ') : '空配置'
+      }
+      case 'price': {
+        const parts = []
+        if (config.expressSmallFee !== undefined) parts.push(`小件¥${config.expressSmallFee}`)
+        if (config.expressMediumFee !== undefined) parts.push(`大件¥${config.expressMediumFee}`)
+        if (config.expressLargeFee !== undefined) parts.push(`超大件¥${config.expressLargeFee}`)
+        if (config.tutorViewFee !== undefined) parts.push(`家教查看¥${config.tutorViewFee}`)
+        if (config.skillViewFee !== undefined) parts.push(`技能查看¥${config.skillViewFee}`)
+        if (config.washDeliveryFee !== undefined) parts.push(`洗鞋跑腿¥${config.washDeliveryFee}`)
+        if (config.foodDeliveryFee !== undefined) parts.push(`外卖配送¥${config.foodDeliveryFee}`)
+        return parts.length > 0 ? parts.join(', ') : '空配置'
+      }
+      case 'bannedWords': {
+        const words = config.words || []
+        return `${words.length}个屏蔽词`
+      }
+      case 'tabbar': {
+        const tabs = config.tabs || []
+        return `${tabs.length}个Tab项`
+      }
+      default:
+        return JSON.stringify(config).substring(0, 100)
+    }
+  } catch (e) {
+    return '未知配置'
+  }
+}
+
+// 保存配置变更之前，将旧配置存入历史记录
+async function saveConfigHistory(page, operator) {
+  try {
+    const oldCfg = await PageConfig.findOne({ page })
+    if (!oldCfg) return // 第一次保存，没有旧版本需要记录
+
+    // 获取当前最大版本号
+    const lastHistory = await ConfigHistory.findOne({ page }).sort({ version: -1 })
+    const nextVersion = lastHistory ? lastHistory.version + 1 : 1
+
+    const summary = generateConfigSummary(page, oldCfg.config || {})
+
+    await ConfigHistory.create({
+      page,
+      version: nextVersion,
+      config: oldCfg.config || {},
+      sections: oldCfg.sections || [],
+      summary: `${PAGE_NAME_MAP[page] || page} — ${summary}`,
+      operator: operator || 'admin',
+      createTime: new Date()
+    })
+
+    // 只保留最近 20 个版本，超出的自动清理
+    const count = await ConfigHistory.countDocuments({ page })
+    if (count > 20) {
+      const oldest = await ConfigHistory.find({ page }).sort({ version: 1 }).limit(count - 20)
+      const idsToDelete = oldest.map(h => h._id)
+      await ConfigHistory.deleteMany({ _id: { $in: idsToDelete } })
+    }
+  } catch (err) {
+    console.error('[saveConfigHistory] error:', err)
+    // 历史记录保存失败不影响主流程
+  }
+}
 
 // 检查是否为管理员（基于手机号）
 async function checkAdminByOpenid(openid) {
@@ -374,6 +471,7 @@ router.post('/save-page-config', auth, async (req, res) => {
     const config = {}
     if (banners) config.banners = banners
     if (actions) config.actions = actions
+    await saveConfigHistory('home', 'mp-admin')
     await PageConfig.updateOne({ page: 'home' }, { $set: { page: 'home', config, updateTime: new Date() } }, { upsert: true })
     res.json({ code: 0 })
   } catch (err) {
@@ -400,6 +498,7 @@ router.post('/save-welfare-config', auth, async (req, res) => {
     const wConfig = {}
     if (services) wConfig.services = services
     if (banners) wConfig.banners = banners
+    await saveConfigHistory('welfare', 'mp-admin')
     await PageConfig.updateOne({ page: 'welfare' }, { $set: { page: 'welfare', config: wConfig, updateTime: new Date() } }, { upsert: true })
     res.json({ code: 0 })
   } catch (err) {
@@ -435,6 +534,7 @@ router.post('/save-tabbar-config', auth, async (req, res) => {
     if (!await checkAdminByOpenid(req.user.openid)) return res.json({ code: -1, msg: '无权限' })
     const { tabs } = req.body
     const tbConfig = { tabs: tabs || [] }
+    await saveConfigHistory('tabbar', 'mp-admin')
     await PageConfig.updateOne({ page: 'tabbar' }, { $set: { page: 'tabbar', config: tbConfig, updateTime: new Date() } }, { upsert: true })
     res.json({ code: 0 })
   } catch (err) {
@@ -1488,6 +1588,7 @@ router.put('/home-config', adminAuth, async (req, res) => {
     const update = { updateTime: new Date() }
     if (sections) update.sections = sections
     if (config) update.config = config
+    await saveConfigHistory('home', req.admin?.username || 'admin')
     await PageConfig.updateOne({ page: 'home' }, { $set: update }, { upsert: true })
     res.json({ code: 0 })
   } catch (err) {
@@ -1511,6 +1612,7 @@ router.put('/welfare-config', adminAuth, async (req, res) => {
     const update = { updateTime: new Date() }
     if (sections) update.sections = sections
     if (config) update.config = config
+    await saveConfigHistory('welfare', req.admin?.username || 'admin')
     await PageConfig.updateOne({ page: 'welfare' }, { $set: update }, { upsert: true })
     res.json({ code: 0 })
   } catch (err) {
@@ -1533,6 +1635,7 @@ router.put('/job-config', adminAuth, async (req, res) => {
     const { config } = req.body
     const update = { updateTime: new Date() }
     if (config) update.config = config
+    await saveConfigHistory('job', req.admin?.username || 'admin')
     await PageConfig.updateOne({ page: 'job' }, { $set: update }, { upsert: true })
     res.json({ code: 0 })
   } catch (err) {
@@ -1556,6 +1659,7 @@ router.put('/price-config', adminAuth, async (req, res) => {
     const { config } = req.body
     const update = { updateTime: new Date() }
     if (config) update.config = config
+    await saveConfigHistory('price', req.admin?.username || 'admin')
     await PageConfig.updateOne({ page: 'price' }, { $set: update }, { upsert: true })
     res.json({ code: 0 })
   } catch (err) {
@@ -1658,6 +1762,7 @@ router.put('/banned-words', adminAuth, async (req, res) => {
     if (!Array.isArray(words)) return res.json({ code: -1, msg: '参数格式错误' })
     // 过滤空字符串，去重，去除前后空格
     const cleanWords = [...new Set(words.map(w => (w || '').trim()).filter(w => w.length > 0))]
+    await saveConfigHistory('bannedWords', req.admin?.username || 'admin')
     await PageConfig.updateOne(
       { page: 'bannedWords' },
       { $set: { page: 'bannedWords', config: { words: cleanWords }, updateTime: new Date() } },
@@ -1690,6 +1795,7 @@ router.post('/save-banned-words', auth, async (req, res) => {
     const { words } = req.body
     if (!Array.isArray(words)) return res.json({ code: -1, msg: '参数格式错误' })
     const cleanWords = [...new Set(words.map(w => (w || '').trim()).filter(w => w.length > 0))]
+    await saveConfigHistory('bannedWords', 'mp-admin')
     await PageConfig.updateOne(
       { page: 'bannedWords' },
       { $set: { page: 'bannedWords', config: { words: cleanWords }, updateTime: new Date() } },
@@ -1916,10 +2022,127 @@ router.post('/save-food-delivery-fee', auth, async (req, res) => {
   try {
     if (!await checkAdminByOpenid(req.user.openid)) return res.json({ code: -1, msg: '无权限' })
     const { foodDeliveryFee } = req.body
+    await saveConfigHistory('price', 'mp-admin')
     await PageConfig.updateOne({ page: 'price' }, {
       $set: { 'config.foodDeliveryFee': parseFloat(foodDeliveryFee) || 0, updateTime: new Date() }
     }, { upsert: true })
     res.json({ code: 0 })
+  } catch (err) {
+    res.status(500).json({ code: -1, msg: '服务器错误' })
+  }
+})
+
+// 批量更新所有商家配送费
+router.put('/batch-update-shop-delivery-fee', auth, async (req, res) => {
+  try {
+    if (!await checkAdminByOpenid(req.user.openid)) return res.json({ code: -1, msg: '无权限' })
+    const { deliveryFee } = req.body
+    const fee = parseFloat(deliveryFee)
+    if (isNaN(fee) || fee < 0) return res.json({ code: -1, msg: '配送费数值无效' })
+    const result = await FoodShop.updateMany({}, { $set: { deliveryFee: fee } })
+    res.json({ code: 0, msg: `已更新 ${result.modifiedCount} 个商家的配送费为 ¥${fee}` })
+  } catch (err) {
+    res.status(500).json({ code: -1, msg: '服务器错误' })
+  }
+})
+
+// ===== 配置版本历史与回滚 =====
+router.get('/config-history', adminAuth, async (req, res) => {
+  try {
+    const { page } = req.query // 可选筛选，如 page=home
+    const query = {}
+    if (page) query.page = page
+    const data = await ConfigHistory.find(query).sort({ createTime: -1 }).limit(100)
+    res.json({ code: 0, data })
+  } catch (err) {
+    res.status(500).json({ code: -1, msg: '服务器错误' })
+  }
+})
+
+router.get('/config-history/:id', adminAuth, async (req, res) => {
+  try {
+    const history = await ConfigHistory.findById(req.params.id)
+    if (!history) return res.json({ code: -1, msg: '版本记录不存在' })
+    res.json({ code: 0, data: history })
+  } catch (err) {
+    res.status(500).json({ code: -1, msg: '服务器错误' })
+  }
+})
+
+router.put('/config-rollback/:id', adminAuth, async (req, res) => {
+  try {
+    const history = await ConfigHistory.findById(req.params.id)
+    if (!history) return res.json({ code: -1, msg: '版本记录不存在' })
+
+    // 回滚前先把当前的配置存为历史（这样回滚操作本身也可以被回滚）
+    await saveConfigHistory(history.page, req.admin?.username || 'admin')
+
+    // 用历史版本覆盖当前配置
+    const update = {
+      config: history.config || {},
+      updateTime: new Date()
+    }
+    if (history.sections && Array.isArray(history.sections) && history.sections.length > 0) {
+      update.sections = history.sections
+    }
+    await PageConfig.updateOne(
+      { page: history.page },
+      { $set: update },
+      { upsert: true }
+    )
+
+    // 如果是屏蔽词回滚，清除内存缓存
+    if (history.page === 'bannedWords') {
+      try {
+        const { clearBannedWordsCache } = require('../services/wechat')
+        clearBannedWordsCache()
+      } catch (e) { /* ignore */ }
+    }
+
+    res.json({ code: 0, msg: `已回滚到 v${history.version}` })
+  } catch (err) {
+    res.status(500).json({ code: -1, msg: '服务器错误' })
+  }
+})
+
+router.delete('/config-history/:id', adminAuth, async (req, res) => {
+  try {
+    await ConfigHistory.deleteOne({ _id: req.params.id })
+    res.json({ code: 0 })
+  } catch (err) {
+    res.status(500).json({ code: -1, msg: '服务器错误' })
+  }
+})
+
+// ===== 条幅发布授权管理（小程序端） =====
+router.post('/get-express-banner-auth', auth, async (req, res) => {
+  try {
+    if (!await checkAdminByOpenid(req.user.openid)) return res.json({ code: -1, msg: '无权限' })
+    const doc = await PageConfig.findOne({ page: 'expressBannerAuth' })
+    const authorizedOpenids = (doc && doc.config && doc.config.authorizedOpenids) || []
+    // 查询用户名
+    const users = await User.find({ openid: { $in: authorizedOpenids } }, 'openid name avatar')
+    const data = authorizedOpenids.map(oid => {
+      const u = users.find(x => x.openid === oid)
+      return { openid: oid, name: u ? u.name : '未知用户', avatar: u ? u.avatar : '' }
+    })
+    res.json({ code: 0, data })
+  } catch (err) {
+    res.status(500).json({ code: -1, msg: '服务器错误' })
+  }
+})
+
+router.post('/save-express-banner-auth', auth, async (req, res) => {
+  try {
+    if (!await checkAdminByOpenid(req.user.openid)) return res.json({ code: -1, msg: '无权限' })
+    const { authorizedOpenids } = req.body
+    if (!Array.isArray(authorizedOpenids)) return res.json({ code: -1, msg: '参数格式错误' })
+    await PageConfig.updateOne(
+      { page: 'expressBannerAuth' },
+      { $set: { page: 'expressBannerAuth', config: { authorizedOpenids }, updateTime: new Date() } },
+      { upsert: true }
+    )
+    res.json({ code: 0, msg: `已保存 ${authorizedOpenids.length} 个授权用户` })
   } catch (err) {
     res.status(500).json({ code: -1, msg: '服务器错误' })
   }

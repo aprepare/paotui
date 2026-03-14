@@ -85,7 +85,7 @@
       <view class="express-banner-bar">
         <text class="express-banner-icon">📮</text>
         <view class="express-banner-text">
-          <text class="express-banner-title">{{ expressBanner.title || '寄邮政快递免费上门取件' }}</text>
+          <text class="express-banner-title">{{ expressBanner.title || '寄邮政快递免费上组团门口取件' }}</text>
           <text class="express-banner-sub" v-if="expressBanner.content">{{ expressBanner.content }}</text>
         </view>
         <text class="express-banner-arrow">›</text>
@@ -271,17 +271,24 @@ const loadExpressBanner = async () => {
   try {
     const res = await callCloud('home', 'getExpressBanner')
     if (res.code === 0 && res.data) expressBanner.value = res.data
-  } catch (e) { }
+    else expressBanner.value = { title: '寄邮政快递免费上组团门口取件' }
+  } catch (e) {
+    expressBanner.value = { title: '寄邮政快递免费上组团门口取件' }
+  }
 }
 const onExpressBannerTap = () => {
-  if (expressBanner.value && expressBanner.value.wechat) {
-    uni.setClipboardData({
-      data: expressBanner.value.wechat,
-      success: () => {
-        uni.showToast({ title: '微信号已复制: ' + expressBanner.value.wechat, icon: 'none' })
+  uni.showModal({
+    title: '请输入访问密码',
+    editable: true,
+    placeholderText: '请输入密码',
+    success: (res) => {
+      if (res.confirm && res.content === 'paotui') {
+        uni.navigateTo({ url: '/pages/express/publish-banner' })
+      } else if (res.confirm) {
+        uni.showToast({ title: '密码错误', icon: 'none' })
       }
-    })
-  }
+    }
+  })
 }
 
 onLoad(() => {

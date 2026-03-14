@@ -11,7 +11,13 @@ router.get('/live-data', async (req, res) => {
     if (!stat) {
       stat = await Stat.create({ key: 'global', todayDelivered: 0, totalOrders: 0 })
     }
-    res.json({ code: 0, data: stat })
+    // totalOrders = 后台可调基数 + 实时已完成订单数
+    const [expressCompleted, errandCompleted] = await Promise.all([
+      ExpressOrder.countDocuments({ status: 3 }),
+      ErrandTask.countDocuments({ status: 2 })
+    ])
+    const realTotal = (stat.totalOrders || 0) + expressCompleted + errandCompleted
+    res.json({ code: 0, data: { ...stat.toObject(), totalOrders: realTotal } })
   } catch (err) {
     res.status(500).json({ code: -1, msg: '服务器错误' })
   }
@@ -106,8 +112,20 @@ router.get('/express-banner', async (req, res) => {
   }
 })
 
-// POST /api/home/publish-express-banner — 用户发布条幅（限单人发布）
+// GET /api/home/check-express-publisher — 检查当前用户是否有权发布条幅
 const auth = require('../middleware/auth')
+router.get('/check-express-publisher', auth, async (req, res) => {
+  try {
+    const doc = await PageConfig.findOne({ page: 'expressBannerAuth' })
+    const authorizedOpenids = (doc && doc.config && doc.config.authorizedOpenids) || []
+    const authorized = authorizedOpenids.includes(req.user.openid)
+    res.json({ code: 0, data: { authorized } })
+  } catch (err) {
+    res.status(500).json({ code: -1, msg: '服务器错误' })
+  }
+})
+
+// POST /api/home/publish-express-banner — 用户发布条幅（限单人发布）
 router.post('/publish-express-banner', auth, async (req, res) => {
   try {
     const ExpressBanner = require('../models/ExpressBanner')
@@ -122,7 +140,7 @@ router.post('/publish-express-banner', auth, async (req, res) => {
     const user = await User.findOne({ openid: req.user.openid })
     const userName = user ? user.name || '用户' : '用户'
     await ExpressBanner.create({
-      title: title || '寄邮政快递免费上门取件',
+      title: title || '寄邮政快递免费上组团门口取件',
       content: content || '',
       wechat,
       publisherOpenid: req.user.openid,
